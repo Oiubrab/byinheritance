@@ -43,8 +43,17 @@ subroutine randomised_list(master_killer)
 
 end subroutine randomised_list
 
-!takes in a neuron position along the matrix (left to right, up to down) with a single number and gives it's position in row/column format
-!return either the row, column
+!this function takes in row/column coordinates and returns the data position of the coordinates
+function self_pos(j,i,maximum) result(z)
+	integer,intent(in) :: j,i,maximum
+	integer :: z
+
+	z=((j-1)*maximum+i)
+
+end function self_pos
+
+!takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in row/column format
+!return either the row, column depending on the opt_pos argument
 function point_pos_matrix(z_point,high,opt_pos) result(poster)
 	integer,intent(in) :: z_point, high
 	integer :: poster
