@@ -67,7 +67,7 @@ end do
 !allocate the maximum dimensions to the brain
 !the first dimension is the number of levels (rows)
 !the second dimension is the number of possible neurons in each level (column)
-!the third dimension holds the data (:,:,1) and the weights as they relate to each of the other neurons
+!the third dimension holds the data, (j,i,((j-1)*maxim+i)), and the weights, (j,i,z) for ((j-1)*maxim+i)/=z, as they relate to each of the other neurons
 allocate(emerge(size(level_shape(:,1)),maxim,maxim*size(level_shape(:,1))))
 
 !initialize the transition list that keeps track of transitions for weight altering
@@ -108,11 +108,11 @@ do s=1,size(emerge(:,1,1))
 	do a=1,size(emerge(1,:,1))
 		do c=1,size(emerge(1,1,:))
 			!list shape conditions for the brain
-			if ((emerge_mid-a<=level_shape(s,1)) .and. (emerge_mid-a>=-level_shape(s,2)) .and. (((s-1)*maxim+a)/=c)) then
+			if ((emerge_mid-a<=level_shape(s,1)) .and. (emerge_mid-a>=-level_shape(s,2)) .and. (self_pos(s,a,maxim)/=c)) then
 				!begin with equal probabilities on data transfer (change later)
 				emerge(s,a,c)=1.0/(size(emerge(:,:,1))*2)
 			!feed initial neurons with small data starter
-			else if ((emerge_mid-a<=level_shape(s,1)) .and. (emerge_mid-a>=-level_shape(s,2)) .and. (((s-1)*maxim+a)==c)) then
+			else if ((emerge_mid-a<=level_shape(s,1)) .and. (emerge_mid-a>=-level_shape(s,2)) .and. (self_pos(s,a,maxim)==c)) then
 				emerge(s,a,c)=1.
 			end if
 		end do
@@ -144,12 +144,12 @@ do epoch=1,epoch_number
 	call CPU_Time(start_interval)
 	
 	!random generated input
-	!call RANDOM_NUMBER(eyes)
-	!call RANDOM_NUMBER(ears)
-	!call RANDOM_NUMBER(nose)
-	eyes=0
-	ears=0
-	nose=0
+	call RANDOM_NUMBER(eyes)
+	call RANDOM_NUMBER(ears)
+	call RANDOM_NUMBER(nose)
+	!eyes=0
+	!ears=0
+	!nose=0
 	!life is suffering
 	brain_stem(1,1)=brain_stem(1,1)+eyes(1)
 	brain_stem(2,2)=brain_stem(2,2)+ears(1)
@@ -196,15 +196,11 @@ do epoch=1,epoch_number
 	
 
 
-
-
-	!the randomised loop initialiser
-
-	!reshape the maker arrays as necessary (to be written)
+	!the randomised loop initialiser - ensures data transition is not positionally dependant
 	call randomised_list(matrix_pos)
 
-
-	!print*,matrix_pos,maxim
+	!reshape the emerge array as the brain grows beyond the current array bounds (to be written)
+	
 					
 
 
@@ -271,7 +267,7 @@ do epoch=1,epoch_number
 			do z=1,size(emerge(1,1,:))
 				transition_list(z)=transition_list(z)/sum(transition_list)
 					
-				if (((j-1)*maxim+i)/=z) then
+				if (self_pos(j,i,maxim)/=z) then
 
 
 					!print*,j,i,z
@@ -320,6 +316,13 @@ do epoch=1,epoch_number
 	!record the end of time epoch
 	call CPU_time(finish_interval)
 	time_interval=finish_interval-start_interval
+
+	!enact time penalty on each neuron
+	do j=1,size(brain_stem(:,1))
+		do i=1,size(brain_stem(1,:))
+			emerge(j,i,self_pos(j,i,maxim))=emerge(j,i,self_pos(j,i,maxim))*(1-time_interval)
+		end do
+	end do
 	
 end do
 
