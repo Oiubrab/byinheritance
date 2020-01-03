@@ -216,6 +216,8 @@ do epoch=1,epoch_number
 		j=point_pos_matrix(matrix_pos(s),maxim,"row")
 		i=point_pos_matrix(matrix_pos(s),maxim,"column")
 		k=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i
+
+		!put dying neurons out of their misery
 		if (emerge(j,i,k)<0.000) then
 			emerge(j,i,k)=0.0
 		end if		
@@ -242,7 +244,7 @@ do epoch=1,epoch_number
 		end do
 
 		!track a neuron
-		if ((j==4) .and. (i==5)) then
+		if ((j==3) .and. (i==6)) then
 			print*,transition_list
 			print*,emerge(j,i,:)
 		end if
