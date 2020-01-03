@@ -197,5 +197,22 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 
 end subroutine neuron_fire
 
+!this subroutine updates the weights for a neuron after it has pulled itself off
+subroutine weight_change(emerge,j,i,k,transition_list)
+
+	real,allocatable,intent(inout) :: emerge(:,:,:),transition_list(:)
+	real :: hold_unsig
+	integer,intent(in) :: j,i,k
+	integer :: z
+
+	do z=1,size(emerge(1,1,:))
+				if (k/=z) then
+					hold_unsig=transition_list(z)+sigmoid(emerge(j,i,z),"reverse")
+					emerge(j,i,z)=sigmoid(hold_unsig,"forward")
+				end if
+	end do
+
+end subroutine weight_change
+
 
 end module flesh
