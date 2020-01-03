@@ -44,7 +44,7 @@ integer :: x
 call CPU_Time(start)
 
 !hard-coded length untill I can let this go free (run forever)
-epoch_number=10
+epoch_number=1000
 
 
 
@@ -250,26 +250,8 @@ do epoch=1,epoch_number
 		end if
 
 		!update the weights for this neuron based on the activity into the neuron
-		!first, multiply each transition value by the weight
-		do z=1,size(emerge(1,1,:))
+		call weight_change(emerge,j,i,k,transition_list)
 
-			transition_list(z)=transition_list(z)*emerge(j,i,z)
-
-		end do
-	
-		!then, normalise the list and supplant the old weights in the neuron with the new ones from the list
-		if (sum(transition_list)/=0) then
-			do z=1,size(emerge(1,1,:))
-				transition_list(z)=transition_list(z)/sum(transition_list)
-					
-				if (self_pos(j,i,maxim)/=z) then
-
-					emerge(j,i,z)=transition_list(z)
-
-				end if
-			end do
-
-		end if
 	end do
 	
 	!print the brain
