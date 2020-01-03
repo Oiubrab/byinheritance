@@ -4,9 +4,13 @@ contains
 
 !each function or subroutine on a rung relies on functions or subroutines on the rung before it
 
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        rung one          !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
 subroutine print_interval(start,finish)
@@ -74,6 +78,79 @@ function point_pos_matrix(z_point,high,opt_pos) result(poster)
 
 end function point_pos_matrix
 
+!this function either applies a sigmoid or inverse sigmoid function depending on flow variable
+!one can also range strectch with range_stretch and domain stretch with domain_stretch (optional)
+!note, inverse sigmoid only goes up to 16*range_stretch
+function sigmoid(insig,flow,range_stretch,domain_stretch) result(outsig)
+	
+	real,intent(in) :: insig
+	real,intent(in),optional :: range_stretch,domain_stretch
+	real :: outsig
+	character(len=*) :: flow
+
+	!domain_stretch and range_stretch defined
+	if (present(domain_stretch) .and. present(range_stretch)) then
+		!sigmoid
+		if (flow=="forward") then
+			outsig=range_stretch/(1.+exp(-(1./domain_stretch)*insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-range_stretch*log((domain_stretch/insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if
+		end if
+
+	!domain_stretch defined
+	else if (present(domain_stretch)) then
+		!sigmoid
+		if (flow=="forward") then
+			outsig=1./(1.+exp(-(1./domain_stretch)*insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-1.*log((domain_stretch/insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if	
+		end if
+
+	!range_stretch defined
+	else if (present(range_stretch)) then
+		!sigmoid
+		if (flow=="forward") then
+			outsig=range_stretch/(1.+exp(-(1./1.)*insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-range_stretch*log((1./insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if	
+		end if
+
+	!unity sigmoid
+	else
+		!sigmoid
+		if (flow=="forward") then
+			outsig=1./(1.+exp(-insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-log((1./insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if
+		end if
+	end if
+
+end function sigmoid
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        rung two          !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
 !this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
 subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 
@@ -90,8 +167,8 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	call RANDOM_NUMBER(fate)
 	!use the distance between the neurons and weight accordingly
 	distil=exp(-((sqrt((real(f-j)**2)+(real(u-i)**2)))**2))
-	!data element of the z neuron * 1-weight of the z neuron pointing at the current neuron * weight of the current neuron pointing at the z neuron * random number * distance
-	transition=emerge(f,u,z)*distil*(1./(1.+exp(-(hope*emerge(j,i,z)-fear*emerge(f,u,k)))))
+	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
+	transition=emerge(f,u,z)*distil*sigmoid((hope*emerge(j,i,z)-fear*emerge(f,u,k)),"forward")
 
 
 	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',emerge(f,u,z),(1-emerge(f,u,k)),emerge(j,i,z),distil,j,i,f,u
