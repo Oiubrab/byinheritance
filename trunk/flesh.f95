@@ -2,6 +2,8 @@ module flesh
 implicit none
 contains
 
+!each function or subroutine on a rung relies on functions or subroutines on the rung before it
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        rung one          !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -16,7 +18,7 @@ subroutine print_interval(start,finish)
 	t_hr = floor(total_time/3600)
 	t_min = (total_time-t_hr*3600)/60
 	t_sec = total_time-t_hr*3600-t_min*60
-	print'(A14,I2,A5,I2,A7,F4.2,A4)',"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
+	print'(A14,I2,A5,I2,A7,F5.2,A4)',"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
 
 end subroutine print_interval
 
@@ -89,10 +91,10 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	!use the distance between the neurons and weight accordingly
 	distil=exp(-((sqrt((real(f-j)**2)+(real(u-i)**2)))**2))
 	!data element of the z neuron * 1-weight of the z neuron pointing at the current neuron * weight of the current neuron pointing at the z neuron * random number * distance
-	transition=emerge(f,u,z)*(1-emerge(f,u,k))*emerge(j,i,z)*fate*distil*(1./(1.+exp(-(hope*emerge(j,i,z)-fear*emerge(f,u,k)))))
+	transition=emerge(f,u,z)*distil*(1./(1.+exp(-(hope*emerge(j,i,z)-fear*emerge(f,u,k)))))
 
 
-	!print'(F0.0,F0.0,F0.0,F0.0,I2,I2,I2,I2)',emerge(f,u,z),(1-emerge(f,u,k)),emerge(j,i,z),distil,j,i,f,u
+	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',emerge(f,u,z),(1-emerge(f,u,k)),emerge(j,i,z),distil,j,i,f,u
 				
 
 	!check if the operation will drain more than the origin neuron has
