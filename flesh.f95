@@ -105,7 +105,7 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 		emerge(f,u,z)=emerge(f,u,z)-transition
 	
 		!otherwise, drain neuron dry (further neuron death algorithm to come)
-	else if (transition==emerge(f,u,z)) then
+	else if (transition>=emerge(f,u,z)) then
 		!all of the data from the z neuron is taken
 		emerge(j,i,k)=emerge(j,i,k)+emerge(f,u,z)
 	
@@ -117,5 +117,6 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	transition_list(z)=transition
 
 end subroutine neuron_fire
+
 
 end module flesh
