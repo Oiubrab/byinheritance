@@ -46,6 +46,8 @@ call CPU_Time(start)
 !hard-coded length untill I can let this go free (run forever)
 epoch_number=1000
 
+
+
 !initial allocation of neuron space
 !level_shape controls the size of a level (:)(value_left,value_right) for a certain level (row_pointer)(:) in the brain, thus note level size should always have 2 columns
 allocate(level_shape(1:5,1:2))
@@ -226,16 +228,9 @@ do epoch=1,epoch_number
 			
 			f=point_pos_matrix(z,maxim,"row")	!f is the j position of the current matrix element represented by z
 			u=point_pos_matrix(z,maxim,"column")	!u is the i position of the current matrix element represented by z
-			
 
-			!print*,j,i,z,f,u,k
-
-
-			!the if statement below controls the brain shape
-			!first condition is no action before the left side of the brain left limit in the matrix
-			!second condition stops action before the right side is reached
-			!third condition stops the neuron from acting on itself
-			!fourth condition randomises neuron connection activation
+			!the first condition stops the neuron from acting on itself
+			!the second condition skips dead neurons
 			if ((matrix_pos(s)/=z) .and. (emerge(j,i,k)/=0.)) then
 
 				call neuron_fire(emerge,f,u,k,j,i,z,transition_list)
@@ -246,10 +241,11 @@ do epoch=1,epoch_number
 			end if
 		end do
 
-
-		!print formatte,transition_list
-		!print*,' '
-
+		!track a neuron
+		if ((j==4) .and. (i==5)) then
+			print*,transition_list
+			print*,emerge(j,i,:)
+		end if
 
 		!update the weights for this neuron based on the activity into the neuron
 		!first, multiply each transition value by the weight
@@ -257,11 +253,8 @@ do epoch=1,epoch_number
 			transition_list(z)=transition_list(z)*emerge(j,i,z)
 
 
-			!print*,transition_list
-
-
 		end do
-			
+	
 		!then, normalise the list and supplant the old weights in the neuron with the new ones from the list
 		if (sum(transition_list)/=0) then
 			do z=1,size(emerge(1,1,:))
@@ -318,6 +311,8 @@ do epoch=1,epoch_number
 	time_interval=finish_interval-start_interval
 
 	!enact time penalty on each neuron
+	!this is a key part of the system's learning power
+	!this ensures against runaway neuron growth and also limits growth of the brain past a point where neuron action takes too long
 	do j=1,size(brain_stem(:,1))
 		do i=1,size(brain_stem(1,:))
 			emerge(j,i,self_pos(j,i,maxim))=emerge(j,i,self_pos(j,i,maxim))*(1-time_interval)
