@@ -154,7 +154,7 @@ end function sigmoid
 !this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
 subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 
-	real :: fate,fear,hope,transition,distil
+	real :: fate,fear,hope,transition,distil,dist
 	real, allocatable,intent(inout) :: emerge(:,:,:),transition_list(:)
 	integer :: f,u,k,j,i,z
 	
@@ -166,7 +166,8 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	call RANDOM_NUMBER(fear)
 	call RANDOM_NUMBER(fate)
 	!use the distance between the neurons and weight accordingly
-	distil=exp(-((sqrt((real(f-j)**2)+(real(u-i)**2)))**2))
+	dist=sqrt((real(f-j)**2)+(real(u-i)**2))
+	distil=exp(-(dist*(sigmoid(emerge(j,i,k),"forward")**(-1.)))**2)
 	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
 	transition=emerge(f,u,z)*distil*sigmoid((hope*emerge(j,i,z)-fear*emerge(f,u,k)),"forward")
 

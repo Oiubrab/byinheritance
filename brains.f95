@@ -254,20 +254,18 @@ do epoch=1,epoch_number
 
 	end do
 	
+
+
+
+
+
+
 	!print the brain
 	do j=1,size(emerge(:,1,1))
 		x=(j-1)*maxim
 		print formatte,emerge(j,1,x+1),emerge(j,2,x+2),emerge(j,3,x+3),emerge(j,4,x+4),emerge(j,5,x+5),emerge(j,6,x+6),emerge(j,7,x+7),&
 			emerge(j,8,x+8),emerge(j,9,x+9),emerge(j,10,x+10),emerge(j,11,x+11)
 	end do
-	
-
-	!do s=1,size(emerge(1,1,:))
-	!	!take the randomised array of matrix positions and select a neuron
-	!	j=point_pos_matrix(s,maxim,"row")
-	!	i=point_pos_matrix(s,maxim,"column")
-	!	print*,emerge(j,i,s),j,i,s
-	!end do	
 
 	!add neuron space to the emerge matrix if conditions met (to write)
 
