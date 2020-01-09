@@ -19,10 +19,14 @@ integer :: maxim=0,maxim_hold,emerge_level_shape,emerge_mid,level_mid
 integer,allocatable :: level_shape(:,:)
 real,allocatable :: emerge(:,:,:)
 
-!sense and brain stem objects
-real,dimension(1) :: eyes, ears, nose
-integer,parameter :: sense_sum=size(eyes)+size(ears)+size(nose)
+!sense/control and brain stem objects
+real,parameter :: pi=4*asin(1./sqrt(2.))
+real,dimension(1) :: eyes, left_ear, right_ear, left_finger, right_finger
+integer,parameter :: sense_sum=size(eyes)+size(left_ear)+size(right_ear)+size(left_finger)+size(right_finger)
 real,dimension(sense_sum,sense_sum+1) :: brain_stem
+
+!learning task objects
+real :: wave
 
 !debugging objects
 character(len=56) :: formatte="(F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4)"
@@ -51,7 +55,7 @@ epoch_number=1000
 !initial allocation of neuron space
 !level_shape controls the size of a level (:)(value_left,value_right) for a certain level (row_pointer)(:) in the brain, thus note level size should always have 2 columns
 allocate(level_shape(1:5,1:2))
-level_shape(1,:)=[2,1]
+level_shape(1,:)=[2,2]
 level_shape(2,:)=[2,2]
 level_shape(3,:)=[4,4]
 level_shape(4,:)=[2,2]
@@ -97,7 +101,7 @@ do s=1,size(brain_stem(:,1))
 		end if
 	end do
 end do
-print formatte,0.,0.,0.,0.,brain_stem(1,1),brain_stem(2,2),brain_stem(3,3),0.,0.,0.,0.
+print formatte,0.,0.,0.,brain_stem(1,1),brain_stem(2,2),brain_stem(3,3),brain_stem(4,4),brain_stem(5,5),0.,0.,0.
 print*,"Brain Stem"
 
 
@@ -132,7 +136,7 @@ print*," "
 
 
 
-
+!the world sits on a knife edge
 
 
 !---------------------------------
@@ -146,17 +150,26 @@ do epoch=1,epoch_number
 	call CPU_Time(start_interval)
 	
 	!random generated input
-	call RANDOM_NUMBER(eyes)
-	call RANDOM_NUMBER(ears)
-	call RANDOM_NUMBER(nose)
-	!eyes=0
-	!ears=0
-	!nose=0
+	!call RANDOM_NUMBER(eyes)
+	!call RANDOM_NUMBER(ears)
+	!call RANDOM_NUMBER(nose)
+	wave=abs(sin(real(epoch)*(pi/32.)))
+	
+	eyes=0
+	left_ear=0
+	right_ear=0
 	!life is suffering
-	brain_stem(1,1)=brain_stem(1,1)+eyes(1)
-	brain_stem(2,2)=brain_stem(2,2)+ears(1)
-	brain_stem(3,3)=brain_stem(3,3)+nose(1)
+	brain_stem(2,2)=brain_stem(2,2)+left_ear(1)
+	brain_stem(3,3)=brain_stem(3,3)+eyes(1)
+	brain_stem(4,4)=brain_stem(4,4)+right_ear(1)
 
+	left_finger=brain_stem(1,1)
+	right_finger=brain_stem(5,5)
+
+	left_ear=exp(-(wave-left_finger)**2)
+	right_ear=exp(-(wave-right_finger)**2)
+	
+	print*,wave,left_ear,left_finger,right_ear,right_finger
 	!find the midpoint of the emerge row
 	emerge_mid=(maxim/2)+1
 
@@ -192,7 +205,7 @@ do epoch=1,epoch_number
 			end if
 		end do
 	end do
-	print formatte,0.,0.,0.,0.,brain_stem(1,1),brain_stem(2,2),brain_stem(3,3),0.,0.,0.,0.
+	print formatte,0.,0.,0.,brain_stem(1,1),brain_stem(2,2),brain_stem(3,3),brain_stem(4,4),brain_stem(5,5),0.,0.,0.
 	print*,"Brain Stem"
 
 	
@@ -218,7 +231,7 @@ do epoch=1,epoch_number
 		k=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i
 
 		!put dying neurons out of their misery
-		if (emerge(j,i,k)<0.000) then
+		if (emerge(j,i,k)<0.00001) then
 			emerge(j,i,k)=0.0
 		end if		
 
@@ -244,10 +257,10 @@ do epoch=1,epoch_number
 		end do
 
 		!track a neuron
-		if ((j==3) .and. (i==6)) then
-			print*,transition_list
-			print*,emerge(j,i,:)
-		end if
+		!if ((j==3) .and. (i==6)) then
+		!	print*,transition_list
+		!	print*,emerge(j,i,:)
+		!end if
 
 		!update the weights for this neuron based on the activity into the neuron
 		call weight_change(emerge,j,i,k,transition_list)
@@ -287,9 +300,11 @@ do epoch=1,epoch_number
 	!enact time penalty on each neuron
 	!this is a key part of the system's learning power
 	!this ensures against runaway neuron growth and also limits growth of the brain past a point where neuron action takes too long
-	do j=1,size(brain_stem(:,1))
-		do i=1,size(brain_stem(1,:))
-			emerge(j,i,self_pos(j,i,maxim))=emerge(j,i,self_pos(j,i,maxim))*(1-time_interval)
+	do j=1,size(emerge(:,1,1))
+		do i=1,size(emerge(1,:,1))
+			do z=1,size(emerge(1,1,:))
+				emerge(j,i,z)=emerge(j,i,z)*(1-time_interval)
+			end do
 		end do
 	end do
 	

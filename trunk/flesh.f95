@@ -12,6 +12,8 @@ contains
 
 
 
+
+
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
 subroutine print_interval(start,finish)
 	real,intent(in) :: start, finish
@@ -25,6 +27,11 @@ subroutine print_interval(start,finish)
 	print'(A14,I2,A5,I2,A7,F5.2,A4)',"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
 
 end subroutine print_interval
+
+
+
+
+
 
 !returns a list of sequential numbers up to a length defined by the array input, in a list where the order of the numbers has been randomised
 subroutine randomised_list(master_killer)
@@ -49,6 +56,11 @@ subroutine randomised_list(master_killer)
 
 end subroutine randomised_list
 
+
+
+
+
+
 !this function takes in row/column coordinates and returns the data position of the coordinates
 function self_pos(j,i,maximum) result(z)
 	integer,intent(in) :: j,i,maximum
@@ -57,6 +69,11 @@ function self_pos(j,i,maximum) result(z)
 	z=((j-1)*maximum+i)
 
 end function self_pos
+
+
+
+
+
 
 !takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in row/column format
 !return either the row, column depending on the opt_pos argument
@@ -78,7 +95,12 @@ function point_pos_matrix(z_point,high,opt_pos) result(poster)
 
 end function point_pos_matrix
 
-!this function either applies a sigmoid or inverse sigmoid function depending on flow variable
+
+
+
+
+
+!this function either applies a sigmoid (forward) or inverse sigmoid (reverse) function depending on flow variable
 !one can also range strectch with range_stretch and domain stretch with domain_stretch (optional)
 !note, inverse sigmoid only goes up to 16*range_stretch
 function sigmoid(insig,flow,range_stretch,domain_stretch) result(outsig)
@@ -145,9 +167,13 @@ end function sigmoid
 
 
 
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        rung two          !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 
 
 
@@ -198,6 +224,10 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 
 end subroutine neuron_fire
 
+
+
+
+
 !this subroutine updates the weights for a neuron after it has pulled itself off
 subroutine weight_change(emerge,j,i,k,transition_list)
 
@@ -214,6 +244,9 @@ subroutine weight_change(emerge,j,i,k,transition_list)
 	end do
 
 end subroutine weight_change
+
+
+
 
 
 end module flesh
