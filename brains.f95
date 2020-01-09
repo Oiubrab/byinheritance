@@ -5,14 +5,11 @@ implicit none
 !eyes, ears and nose are data inputs to be determined (RANDOM_NUMBER for now)
 !time_interval to be used to time epoch to compute information degradation, total_time just to store total time of program execution
 
+!fundamental parameters
+real,parameter :: pi=4*asin(1./sqrt(2.))
+
 !timing objects
 real ::  time_interval, start, finish, start_interval, finish_interval
-
-!incrementation objects
-integer :: epoch, epoch_number, j,i,z, f,u,k, s,a,c, pos_hold
-integer,allocatable :: matrix_pos(:)
-real :: fate, transition, distil, hope, fear
-real,allocatable :: transition_list(:)
 
 !main brain objects
 integer :: maxim=0,maxim_hold,emerge_level_shape,emerge_mid,level_mid
@@ -20,10 +17,10 @@ integer,allocatable :: level_shape(:,:)
 real,allocatable :: emerge(:,:,:)
 
 !sense/control and brain stem objects
-real,parameter :: pi=4*asin(1./sqrt(2.))
 real,dimension(1) :: eyes, left_ear, right_ear, left_finger, right_finger
-integer,parameter :: sense_sum=size(eyes)+size(left_ear)+size(right_ear)+size(left_finger)+size(right_finger)
-real,dimension(sense_sum,sense_sum+1) :: brain_stem
+integer,parameter :: sense_sum=size(eyes)+size(left_ear)+size(right_ear)+size(left_finger)+size(right_finger), sense_height=3
+integer,parameter :: emerge_mid_stem=(sense_sum/2)+1
+real,dimension(sense_height,sense_sum,sense_height*sense_sum) :: brain_stem
 
 !learning task objects
 real :: wave
@@ -32,6 +29,15 @@ real :: wave
 character(len=56) :: formatte="(F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4,F9.4)"
 integer :: x
 
+!incrementation objects
+integer :: epoch, epoch_number, j,i,z, f,u,k, s,a,c, pos_hold
+integer,allocatable :: matrix_pos(:)
+
+integer,dimension(sense_sum*sense_height) :: matrix_pos_stem
+real,dimension(sense_sum*sense_height) :: transition_list_stem
+
+real :: fate, transition, distil, hope, fear
+real,allocatable :: transition_list(:)
 
 
 
@@ -48,7 +54,7 @@ integer :: x
 call CPU_Time(start)
 
 !hard-coded length untill I can let this go free (run forever)
-epoch_number=1000
+epoch_number=10
 
 
 
@@ -91,24 +97,29 @@ emerge_mid=(maxim/2)+1
 
 
 
-!initialize the brain_stem weights
-do s=1,size(brain_stem(:,1))
-	do a=1,size(brain_stem(1,:))
-		!list conditions for the brainstem
-		if (s/=a) then
-			!begin with equal probabilities for the brain stem
-			brain_stem(s,a)=1.0/(size(brain_stem(:,1))*2)
-		end if
-	end do
-end do
-print formatte,0.,0.,0.,brain_stem(1,1),brain_stem(2,2),brain_stem(3,3),brain_stem(4,4),brain_stem(5,5),0.,0.,0.
 print*,"Brain Stem"
+!initialize the brain_stem weights
+do s=1,size(brain_stem(:,1,1))
+	do a=1,size(brain_stem(1,:,1))
+		do c=1,size(brain_stem(1,1,:))
+			!list shape conditions for the brain
+			if (self_pos(s,a,sense_sum)/=c) then
+				!begin with equal probabilities on data transfer (change later)
+				brain_stem(s,a,c)=1.0/(size(brain_stem(:,:,1))*2)
+			!feed initial neurons with small data starter
+			else if (self_pos(s,a,sense_sum)==c) then
+				brain_stem(s,a,c)=1.
+			end if
+		end do
+	end do
+	x=(s-1)*sense_sum
+	print formatte,0.,0.,0.,brain_stem(s,1,x+1),brain_stem(s,2,x+2),brain_stem(s,3,x+3),brain_stem(s,4,x+4),&
+		brain_stem(s,5,x+5),0.,0.,0.
+end do
 
 
 
-
-
-
+print*,"Brain"
 !initialize the emerge weights
 do s=1,size(emerge(:,1,1))
 	do a=1,size(emerge(1,:,1))
@@ -146,30 +157,38 @@ print*," "
 
 !main brain epoch operation
 do epoch=1,epoch_number
+
+
+
+
+
+
 	!record the start time of the epoch
 	call CPU_Time(start_interval)
 	
-	!random generated input
-	!call RANDOM_NUMBER(eyes)
-	!call RANDOM_NUMBER(ears)
-	!call RANDOM_NUMBER(nose)
+
+
+
+
+
+	!simple coherence test
 	wave=abs(sin(real(epoch)*(pi/32.)))
 	
 	eyes=0
 	left_ear=0
 	right_ear=0
 	!life is suffering
-	brain_stem(2,2)=brain_stem(2,2)+left_ear(1)
-	brain_stem(3,3)=brain_stem(3,3)+eyes(1)
-	brain_stem(4,4)=brain_stem(4,4)+right_ear(1)
+	brain_stem(1,2,2)=brain_stem(1,2,2)+left_ear(1)
+	brain_stem(1,3,3)=brain_stem(1,3,3)+eyes(1)
+	brain_stem(1,4,4)=brain_stem(1,4,4)+right_ear(1)
 
-	left_finger=brain_stem(1,1)
-	right_finger=brain_stem(5,5)
+	left_finger=brain_stem(1,1,1)
+	right_finger=brain_stem(1,5,5)
 
 	left_ear=exp(-(wave-left_finger)**2)
 	right_ear=exp(-(wave-right_finger)**2)
 	
-	print*,wave,left_ear,left_finger,right_ear,right_finger
+	print*,'wave:',wave,'left_ear:',left_ear,'left_finger:',left_finger,'right_ear:',right_ear,'right_finger:',right_finger
 	!find the midpoint of the emerge row
 	emerge_mid=(maxim/2)+1
 
@@ -179,44 +198,71 @@ do epoch=1,epoch_number
 
 
 	!brain stem has small network that feeds into emerge
-	do j=1,size(brain_stem(:,1))
-		do i=1,size(brain_stem(1,:))
-			if ((j/=i) .and. (i/=sense_sum+1)) then
-				!set the distance weight
-				distil=exp(-(real(j)-real(i))**2)
-				!set the value to be added to the j neuron from the targeted i neuron
-				call RANDOM_NUMBER(fate)
-				transition=brain_stem(i,i)*brain_stem(j,i)*(1.0-brain_stem(i,j))*fate*distil
-
-
-				!print*,transition,j,i
-
-
-				!this adds some weighted (0<weight<1) amount of data from the neuron targeted by i
-				brain_stem(j,j)=brain_stem(j,j)+transition
-				!this takes the requisite data away from the i neuron
-				brain_stem(i,i)=brain_stem(i,i)-transition
-			else if (i==sense_sum+1) then
-				!this sends data from the brain stem to emerge
-				f=emerge_mid-(size(brain_stem(:,1))/2)+j-1
-				emerge(1,f,f)=emerge(1,f,f)+brain_stem(j,j)*brain_stem(j,i)
-				!this takes away the amount of data, transferred to the emerge neuron, from the current one
-				brain_stem(j,j)=brain_stem(j,j)*(1-brain_stem(j,i))
-			end if
-		end do
-	end do
-	print formatte,0.,0.,0.,brain_stem(1,1),brain_stem(2,2),brain_stem(3,3),brain_stem(4,4),brain_stem(5,5),0.,0.,0.
-	print*,"Brain Stem"
-
-	
-
 
 	!the randomised loop initialiser - ensures data transition is not positionally dependant
-	call randomised_list(matrix_pos)
+	call randomised_list(matrix_pos_stem)
+	
+	do s=1,size(brain_stem(1,1,:))
+		!take the randomised array of matrix positions and select a neuron
+		j=point_pos_matrix(matrix_pos_stem(s),sense_sum,"row")
+		i=point_pos_matrix(matrix_pos_stem(s),sense_sum,"column")
+		k=matrix_pos_stem(s)	!k is the z position of the current matrix element represented by j and i
+
+		!brain stem neurons cannot die!
+		if (brain_stem(j,i,k)<0.0001) then
+			brain_stem(j,i,k)=0.0001
+		end if		
+
+		do z=1,size(brain_stem(1,1,:))
+			
+			!initialise random fire decision weights
+			call RANDOM_NUMBER(hope)
+			call RANDOM_NUMBER(fear)
+			
+			f=point_pos_matrix(z,sense_sum,"row")	!f is the j position of the current matrix element pointed to by the weight at z
+			u=point_pos_matrix(z,sense_sum,"column")	!u is the i position of the current matrix element pointed to by the weight at z
+
+			!the first condition stops the neuron from acting on itself
+			!the second condition skips dead neurons
+			if ((matrix_pos_stem(s)/=z) .and. (brain_stem(j,i,k)/=0.)) then
+
+				call neuron_fire(brain_stem,f,u,k,j,i,z,transition_list_stem)
+
+			else
+				!ensure non active neuron references and data entries record 0
+				transition_list_stem(z)=0.0
+			end if
+		end do
+
+		!update the weights for this neuron based on the activity into the neuron
+		call weight_change(brain_stem,j,i,k,transition_list_stem)
+
+	end do
+	
+
+
+
+
+
+
+
+	!print the brain_stem
+	print*,"Brain Stem"
+	do j=1,size(brain_stem(:,1,1))
+		x=(j-1)*sense_sum
+		print formatte,0.,0.,0.,brain_stem(j,1,x+1),brain_stem(j,2,x+2),brain_stem(j,3,x+3),brain_stem(j,4,x+4),brain_stem(j,5,x+5),&
+			0.,0.,0.
+	end do	
+
+
+
+
+
+
 
 	!reshape the emerge array as the brain grows beyond the current array bounds (to be written)
-	
-					
+
+
 
 
 
@@ -224,6 +270,9 @@ do epoch=1,epoch_number
 
 	!this is the brain neuron action loop (main loop)
 
+	!the randomised loop initialiser - ensures data transition is not positionally dependant
+	call randomised_list(matrix_pos)
+	
 	do s=1,size(emerge(1,1,:))
 		!take the randomised array of matrix positions and select a neuron
 		j=point_pos_matrix(matrix_pos(s),maxim,"row")
@@ -274,6 +323,7 @@ do epoch=1,epoch_number
 
 
 	!print the brain
+	print*,"Brain"
 	do j=1,size(emerge(:,1,1))
 		x=(j-1)*maxim
 		print formatte,emerge(j,1,x+1),emerge(j,2,x+2),emerge(j,3,x+3),emerge(j,4,x+4),emerge(j,5,x+5),emerge(j,6,x+6),emerge(j,7,x+7),&

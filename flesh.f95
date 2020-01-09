@@ -34,25 +34,27 @@ end subroutine print_interval
 
 
 !returns a list of sequential numbers up to a length defined by the array input, in a list where the order of the numbers has been randomised
+!master_killer is the allocatable array argument and world_eater is the array of known size
 subroutine randomised_list(master_killer)
-	integer,allocatable,intent(inout) :: master_killer(:)
+
+	integer,dimension(*),intent(inout) :: master_killer(:)
 	integer :: roger_explosion, length, pos_hold
 	real :: despair
-		
-	length=size(master_killer)
-	!print*,length
-	!make sequential array of length defined by the array size
-	do roger_explosion=1,length
-		master_killer(roger_explosion)=roger_explosion
-	end do
 
+		length=size(master_killer)
+
+		!make sequential array of length defined by the array size
+		do roger_explosion=1,length
+			master_killer(roger_explosion)=roger_explosion
+		end do
+	
 		!swap elements until the list is randomized
-	do roger_explosion=1,length
-		call RANDOM_NUMBER(despair)
-		pos_hold=master_killer(roger_explosion)
-		master_killer(roger_explosion)=master_killer(int(length*despair)+1)
-		master_killer(int(length*despair)+1)=pos_hold
-	end do
+		do roger_explosion=1,length
+			call RANDOM_NUMBER(despair)
+			pos_hold=master_killer(roger_explosion)
+			master_killer(roger_explosion)=master_killer(int(length*despair)+1)
+			master_killer(int(length*despair)+1)=pos_hold
+		end do
 
 end subroutine randomised_list
 
@@ -181,7 +183,8 @@ end function sigmoid
 subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 
 	real :: fate,fear,hope,transition,distil,dist
-	real, allocatable,intent(inout) :: emerge(:,:,:),transition_list(:)
+	real,dimension(*),intent(inout) :: emerge(:,:,:)
+	real,dimension(*),intent(inout) :: transition_list(:)
 	integer :: f,u,k,j,i,z
 	
 
@@ -231,7 +234,8 @@ end subroutine neuron_fire
 !this subroutine updates the weights for a neuron after it has pulled itself off
 subroutine weight_change(emerge,j,i,k,transition_list)
 
-	real,allocatable,intent(inout) :: emerge(:,:,:),transition_list(:)
+	real,dimension(*),intent(inout) :: emerge(:,:,:)
+	real,dimension(*),intent(inout) :: transition_list(:)
 	real :: hold_unsig
 	integer,intent(in) :: j,i,k
 	integer :: z
