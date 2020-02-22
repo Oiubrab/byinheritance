@@ -12,14 +12,14 @@ real,parameter :: pi=4*asin(1./sqrt(2.))
 real ::  time_interval, start, finish, start_interval, finish_interval
 
 !main brain objects
-integer :: maxim=0,maxim_hold,emerge_level_shape,emerge_mid,level_mid
+integer :: maxim=0,maxim_hold,blood_level_shape,blood_mid,level_mid
 integer,allocatable :: level_shape(:,:)
-real,allocatable :: emerge(:,:,:)
+real,allocatable :: blood(:,:,:)
 
 !sense/control and brain stem objects
 real,dimension(1) :: eyes, left_ear, right_ear, left_finger, right_finger
 integer,parameter :: sense_sum=size(eyes)+size(left_ear)+size(right_ear)+size(left_finger)+size(right_finger), sense_height=3
-integer,parameter :: emerge_mid_stem=(sense_sum/2)+1
+integer,parameter :: blood_mid_stem=(sense_sum/2)+1
 real,dimension(sense_height,sense_sum,sense_height*sense_sum) :: brain_stem
 real,dimension(sense_sum) :: sense_weights
 
@@ -68,7 +68,7 @@ level_shape(3,:)=[4,4]
 level_shape(4,:)=[2,2]
 level_shape(5,:)=[5,4]
 
-!emerge is the cerebellum and is made with the maximum amout of columns needed to fit all the levels
+!blood is the cerebellum and is made with the maximum amout of columns needed to fit all the levels
 !find the maximum level size
 do i=1,size(level_shape(:,1))
 	maxim_hold=2*maxval(level_shape(i,:))+1
@@ -81,17 +81,17 @@ end do
 !the first dimension is the number of levels (rows)
 !the second dimension is the number of possible neurons in each level (column)
 !the third dimension holds the data, (j,i,((j-1)*maxim+i)), and the weights, (j,i,z) for ((j-1)*maxim+i)/=z, as they relate to each of the other neurons
-allocate(emerge(size(level_shape(:,1)),maxim,maxim*size(level_shape(:,1))))
+allocate(blood(size(level_shape(:,1)),maxim,maxim*size(level_shape(:,1))))
 
 !initialize the transition list that keeps track of transitions for weight altering
-allocate(transition_list(1:size(emerge(1,1,:)-1)))
+allocate(transition_list(1:size(blood(1,1,:)-1)))
 
 !initialise the randomised position marker arrays
-allocate(matrix_pos(1:size(emerge(1,1,:))))
+allocate(matrix_pos(1:size(blood(1,1,:))))
 
 
-!find the midpoint of the emerge row
-emerge_mid=(maxim/2)+1
+!find the midpoint of the blood row
+blood_mid=(maxim/2)+1
 
 
 
@@ -121,29 +121,33 @@ end do
 
 
 print*,"Brain"
-!initialize the emerge weights
-do s=1,size(emerge(:,1,1))
-	do a=1,size(emerge(1,:,1))
-		do c=1,size(emerge(1,1,:))
+!initialize the blood weights
+do s=1,size(blood(:,1,1))
+	do a=1,size(blood(1,:,1))
+		do c=1,size(blood(1,1,:))
 			!list shape conditions for the brain
-			if ((emerge_mid-a<=level_shape(s,1)) .and. (emerge_mid-a>=-level_shape(s,2)) .and. (self_pos(s,a,maxim)/=c)) then
+			if ((blood_mid-a<=level_shape(s,1)) .and. (blood_mid-a>=-level_shape(s,2)) .and. (self_pos(s,a,maxim)/=c)) then
 				!begin with equal probabilities on data transfer (change later)
-				emerge(s,a,c)=1.0/(size(emerge(:,:,1))*2)
+				blood(s,a,c)=1.0/(size(blood(:,:,1))*2)
 			!feed initial neurons with small data starter
-			else if ((emerge_mid-a<=level_shape(s,1)) .and. (emerge_mid-a>=-level_shape(s,2)) .and. (self_pos(s,a,maxim)==c)) then
-				emerge(s,a,c)=1.
+			else if ((blood_mid-a<=level_shape(s,1)) .and. (blood_mid-a>=-level_shape(s,2)) .and. (self_pos(s,a,maxim)==c)) then
+				blood(s,a,c)=1.
 			end if
 		end do
 	end do
 	x=(s-1)*maxim
-	print formatte,emerge(s,1,x+1),emerge(s,2,x+2),emerge(s,3,x+3),emerge(s,4,x+4),emerge(s,5,x+5),emerge(s,6,x+6),emerge(s,7,x+7),&
-		emerge(s,8,x+8),emerge(s,9,x+9),emerge(s,10,x+10),emerge(s,11,x+11)
+	print formatte,blood(s,1,x+1),blood(s,2,x+2),blood(s,3,x+3),blood(s,4,x+4),blood(s,5,x+5),blood(s,6,x+6),blood(s,7,x+7),&
+		blood(s,8,x+8),blood(s,9,x+9),blood(s,10,x+10),blood(s,11,x+11)
 end do
 print*,"round 0"
 print*," "
 
 !establish the sense weight beginning
 sense_weights=[0.5,0.5,0.5,0.5,0.5]
+
+
+
+
 
 
 
@@ -209,15 +213,15 @@ do epoch=1,epoch_number
 
 	
 	print*,'wave:',wave,'left_ear:',left_ear,'left_finger:',left_finger,'right_ear:',right_ear,'right_finger:',right_finger
-	!find the midpoint of the emerge row
-	emerge_mid=(maxim/2)+1
+	!find the midpoint of the blood row
+	blood_mid=(maxim/2)+1
 
 
 
 
 
 
-	!brain stem has small network that feeds into emerge
+	!brain stem has small network that feeds into blood
 
 	!the randomised loop initialiser - ensures data transition is not positionally dependant
 	call randomised_list(matrix_pos_stem)
@@ -280,7 +284,7 @@ do epoch=1,epoch_number
 
 
 
-	!reshape the emerge array as the brain grows beyond the current array bounds (to be written)
+	!reshape the blood array as the brain grows beyond the current array bounds (to be written)
 
 
 
@@ -293,18 +297,18 @@ do epoch=1,epoch_number
 	!the randomised loop initialiser - ensures data transition is not positionally dependant
 	call randomised_list(matrix_pos)
 	
-	do s=1,size(emerge(1,1,:))
+	do s=1,size(blood(1,1,:))
 		!take the randomised array of matrix positions and select a neuron
 		j=point_pos_matrix(matrix_pos(s),maxim,"row")
 		i=point_pos_matrix(matrix_pos(s),maxim,"column")
 		k=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i
 
 		!put dying neurons out of their misery
-		if (emerge(j,i,k)<0.00001) then
-			emerge(j,i,k)=0.0
+		if (blood(j,i,k)<0.00001) then
+			blood(j,i,k)=0.0
 		end if		
 
-		do z=1,size(emerge(1,1,:))
+		do z=1,size(blood(1,1,:))
 			
 			!initialise random fire decision weights
 			call RANDOM_NUMBER(hope)
@@ -315,9 +319,9 @@ do epoch=1,epoch_number
 
 			!the first condition stops the neuron from acting on itself
 			!the second condition skips dead neurons
-			if ((matrix_pos(s)/=z) .and. (emerge(j,i,k)/=0.)) then
+			if ((matrix_pos(s)/=z) .and. (blood(j,i,k)/=0.)) then
 
-				call neuron_fire(emerge,f,u,k,j,i,z,transition_list)
+				call neuron_fire(blood,f,u,k,j,i,z,transition_list)
 
 			else
 				!ensure non active neuron references and data entries record 0
@@ -328,11 +332,11 @@ do epoch=1,epoch_number
 		!track a neuron
 		!if ((j==3) .and. (i==6)) then
 		!	print*,transition_list
-		!	print*,emerge(j,i,:)
+		!	print*,blood(j,i,:)
 		!end if
 
 		!update the weights for this neuron based on the activity into the neuron
-		call weight_change(emerge,j,i,k,transition_list)
+		call weight_change(blood,j,i,k,transition_list)
 
 	end do
 	
@@ -344,13 +348,13 @@ do epoch=1,epoch_number
 
 	!print the brain
 	print*,"Brain"
-	do j=1,size(emerge(:,1,1))
+	do j=1,size(blood(:,1,1))
 		x=(j-1)*maxim
-		print formatte,emerge(j,1,x+1),emerge(j,2,x+2),emerge(j,3,x+3),emerge(j,4,x+4),emerge(j,5,x+5),emerge(j,6,x+6),emerge(j,7,x+7),&
-			emerge(j,8,x+8),emerge(j,9,x+9),emerge(j,10,x+10),emerge(j,11,x+11)
+		print formatte,blood(j,1,x+1),blood(j,2,x+2),blood(j,3,x+3),blood(j,4,x+4),blood(j,5,x+5),blood(j,6,x+6),blood(j,7,x+7),&
+			blood(j,8,x+8),blood(j,9,x+9),blood(j,10,x+10),blood(j,11,x+11)
 	end do
 
-	!add neuron space to the emerge matrix if conditions met (to write)
+	!add neuron space to the blood matrix if conditions met (to write)
 
 	!activate more neurons in the matrix if conditions are met (to write)
 	
@@ -370,10 +374,10 @@ do epoch=1,epoch_number
 	!enact time penalty on each neuron
 	!this is a key part of the system's learning power
 	!this ensures against runaway neuron growth and also limits growth of the brain past a point where neuron action takes too long
-	do j=1,size(emerge(:,1,1))
-		do i=1,size(emerge(1,:,1))
-			do z=1,size(emerge(1,1,:))
-				emerge(j,i,z)=emerge(j,i,z)*(1-time_interval)
+	do j=1,size(blood(:,1,1))
+		do i=1,size(blood(1,:,1))
+			do z=1,size(blood(1,1,:))
+				blood(j,i,z)=blood(j,i,z)*(1-time_interval)
 			end do
 		end do
 	end do

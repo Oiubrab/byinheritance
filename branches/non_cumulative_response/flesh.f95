@@ -64,11 +64,11 @@ end subroutine randomised_list
 
 
 !this function takes in row/column coordinates and returns the data position of the coordinates
-function self_pos(j,i,maximum) result(z)
-	integer,intent(in) :: j,i,maximum
+function self_pos(j,i,maximum_row_size) result(z)
+	integer,intent(in) :: j,i,maximum_row_size
 	integer :: z
 
-	z=((j-1)*maximum+i)
+	z=((j-1)*maximum_row_size+i)
 
 end function self_pos
 
