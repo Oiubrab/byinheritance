@@ -21,6 +21,7 @@ real,dimension(1) :: eyes, left_ear, right_ear, left_finger, right_finger
 integer,parameter :: sense_sum=size(eyes)+size(left_ear)+size(right_ear)+size(left_finger)+size(right_finger), sense_height=3
 integer,parameter :: emerge_mid_stem=(sense_sum/2)+1
 real,dimension(sense_height,sense_sum,sense_height*sense_sum) :: brain_stem
+real,dimension(sense_sum) :: sense_weights
 
 !learning task objects
 real :: wave
@@ -54,7 +55,7 @@ real,allocatable :: transition_list(:)
 call CPU_Time(start)
 
 !hard-coded length untill I can let this go free (run forever)
-epoch_number=10
+epoch_number=10000
 
 
 
@@ -141,7 +142,8 @@ end do
 print*,"round 0"
 print*," "
 
-
+!establish the sense weight beginning
+sense_weights=[0.5,0.5,0.5,0.5,0.5]
 
 
 
@@ -172,21 +174,39 @@ do epoch=1,epoch_number
 
 
 	!simple coherence test
-	wave=abs(sin(real(epoch)*(pi/32.)))
+	wave=1. !abs(sin(real(epoch)*(pi/32.)))
 	
 	eyes=0
 	left_ear=0
 	right_ear=0
 	!life is suffering
+	do j=1, size(brain_stem(1,1,:))
+		if (j/=1) then
+			sense_weights(1)=sigmoid(sigmoid(sense_weights(1),'reverse')+sigmoid(brain_stem(1,1,j),'reverse'),'forward')
+		end if
+	end do
+
+	do j=1, size(brain_stem(1,5,:))
+		if (j/=5) then
+			sense_weights(5)=sigmoid(sigmoid(sense_weights(5),'reverse')+sigmoid(brain_stem(1,1,j),'reverse'),'forward')
+		end if
+	end do
+		
+	left_finger=sense_weights(1)*brain_stem(1,1,1)
+	brain_stem(1,1,1)=brain_stem(1,1,1)*(1-sense_weights(1))
+	right_finger=sense_weights(1)*brain_stem(1,5,5)
+	brain_stem(1,5,5)=brain_stem(1,5,5)*(1-sense_weights(5))
+		
+	left_ear=exp(-(wave-left_finger)**2)
+	right_ear=exp(-(wave-right_finger)**2)
+
 	brain_stem(1,2,2)=brain_stem(1,2,2)+left_ear(1)
 	brain_stem(1,3,3)=brain_stem(1,3,3)+eyes(1)
 	brain_stem(1,4,4)=brain_stem(1,4,4)+right_ear(1)
 
-	left_finger=brain_stem(1,1,1)
-	right_finger=brain_stem(1,5,5)
 
-	left_ear=exp(-(wave-left_finger)**2)
-	right_ear=exp(-(wave-right_finger)**2)
+
+
 	
 	print*,'wave:',wave,'left_ear:',left_ear,'left_finger:',left_finger,'right_ear:',right_ear,'right_finger:',right_finger
 	!find the midpoint of the emerge row
