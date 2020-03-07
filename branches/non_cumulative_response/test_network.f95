@@ -59,7 +59,7 @@ do thrash=0,15
 
 	!then conflicts are checked for
 	!for each position j,i, conflicts are tested throughout the matrix at m,l
-	tester_conflict=0
+	tester_conflict=1
 	do while (tester_conflict==1)
 		tester_conflict=0
 
@@ -92,26 +92,29 @@ do thrash=0,15
 
 				end if
 				
-				!find the lucky neuron that gets to blow it's load
-				call RANDOM_NUMBER(fuck)
-				h=0
-				tester_multi=0
-				do while (tester_multi==0)
-					h=h+1
-					!this determines which neuron gets to input data into the target
-					if (fuck<(real(h)/real(g-1))) then
-						tester_multi=1
-					end if
-				end do 	
+				if (tester_conflict==1) then
+					!find the lucky neuron that gets to blow it's load
+					call RANDOM_NUMBER(fuck)
+					h=0
+					tester_multi=0
+					do while (tester_multi==0)
+						h=h+1
+						!this determines which neuron gets to input data into the target
+						if (fuck<(real(h)/real(g-1))) then
+							tester_multi=1
+						end if
+					end do 	
 
-				!the unlucky neurons now must find another target
-				g=2
-				do while (multi_target(g)>0)
-					if (g/=h+1) then
-						call neuron_fire(brain,brain_freeze,point_pos_matrix(multi_target(g),maximum_columns,"column"),&
-							point_pos_matrix(multi_target(g),maximum_columns,"row"),maximum_columns,maximum_rows)
-					end if
-				end do
+					!the unlucky neurons now must find another target
+					g=2
+					do while (multi_target(g)>0)
+						if (g/=h+1) then
+							call neuron_fire(brain,brain_freeze,point_pos_matrix(multi_target(g),maximum_columns,"column"),&
+								point_pos_matrix(multi_target(g),maximum_columns,"row"),maximum_columns,maximum_rows)
+						end if
+					end do
+
+				end if
 
 			end do
 		end do
