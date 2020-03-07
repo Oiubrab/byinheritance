@@ -3,9 +3,10 @@ use flesh
 implicit none
 
 real,parameter :: pi=4*asin(1./sqrt(2.))
-integer :: thrash,i,j,k !i=rows, j=columns
+integer :: thrash,i,l,m,j,k,h,g,tester_conflict,tester_multi !i,l=rows, j,m=columns, k=self_pos, g=multi_pos, h=conflict numerator, tester_conflict=true/false conflicts found, tester_multi= true; data donor chosen
 integer,parameter :: maximum_columns=5,maximum_rows=5
 integer, dimension(25,maximum_columns,maximum_rows) :: brain
+integer,dimension(9) :: multi_target
 integer, dimension(maximum_columns,maximum_rows) :: brain_freeze !records target of data shift
 real :: fuck,me
 character(len=16) :: formatte="(I2,I2,I2,I2,I2)"
@@ -39,7 +40,7 @@ do thrash=0,15
 			brain(self_pos(i,3,maximum_columns),3,i),brain(self_pos(i,4,maximum_columns),4,i),brain(self_pos(i,5,maximum_columns),5,i)
 	end do
 
-	!move all the ones
+	!all the transitions are first recorded in the brain_freeze matrix
 
 	!first, zero out brain_freeze
 	do i=1,size(brain(1,1,:))
@@ -51,162 +52,81 @@ do thrash=0,15
 	do i=1,size(brain(1,1,:))
 		do j=1,size(brain(1,:,1))
 
-			!data is in the 3rd address, that corresponds to the position of the row/column, counting left to right, up to down
-			k=self_pos(i,j,maximum_columns)
-
-			if (brain(k,j,i)==1) then
-
-				!first case is anything off of the border
-
-				if (((i/=1) .and. (i/=maximum_rows)) .and. ((j/=1) .and. (j/=maximum_columns))) then
-
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<0.125) then
-						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
-					else if (fuck<0.25) then
-						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
-					else if (fuck<0.375) then
-						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
-					else if (fuck<0.5) then
-						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)					
-					else if (fuck<0.625) then
-						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
-					else if (fuck<0.75) then
-						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)
-					else if (fuck<0.875) then
-						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
-					else
-						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
-					end if
-					print*,"case1",i,j
-
-
-				! first set of cases - on the border of the matrix but not in the corner
-
-				else if ((i==1) .and. ((j/=1) .and. (j/=maximum_columns))) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<0.2) then
-						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
-					else if (fuck<0.4) then
-						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
-					else if (fuck<0.6) then
-						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)
-					else if (fuck<0.8) then
-						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)				
-					else
-						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
-					end if
-					print*,"case2",i,j
-				else if ((i==maximum_rows) .and. ((j/=1) .and. (j/=maximum_columns))) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<0.2) then
-						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
-					else if (fuck<0.4) then
-						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
-					else if (fuck<0.6) then
-						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
-					else if (fuck<0.8) then
-						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)				
-					else
-						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
-					end if
-					print*,"case3",i,j
-				else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==1)) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<0.2) then
-						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
-					else if (fuck<0.4) then
-						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
-					else if (fuck<0.6) then
-						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
-					else if (fuck<0.8) then
-						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)					
-					else
-						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
-					end if
-					print*,"case4",i,j
-				else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==maximum_columns)) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<0.2) then
-						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
-					else if (fuck<0.4) then
-						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
-					else if (fuck<0.6) then
-						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
-					else if (fuck<0.8) then
-						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)				
-					else
-						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
-					end if
-					print*,"case5",i,j
-
-
-					!second set of cases - in the corner of the matrix
-
-				else if ((i==1) .and. (j==1)) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<1.0/3.0) then
-						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
-					else if (fuck<2.0/3.0) then
-						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)			
-					else
-						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
-					end if
-					print*,"case6",i,j
-				else if ((i==1) .and. (j==maximum_columns)) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<1.0/3.0) then
-						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
-					else if (fuck<2.0/3.0) then
-						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)				
-					else
-						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
-					end if
-					print*,"case7",i,j
-				else if ((i==maximum_rows) .and. (j==1)) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<1.0/3.0) then
-						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
-					else if (fuck<2.0/3.0) then
-						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)			
-					else
-						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
-					end if
-					print*,"case8",i,j
-				else if ((i==maximum_rows) .and. (j==maximum_columns)) then
-					
-					
-					call RANDOM_NUMBER(fuck)
-					if (fuck<1.0/3.0) then
-						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
-					else if (fuck<2.0/3.0) then
-						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)			
-					else
-						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
-					end if
-					print*,"case9",i,j
-
-				end if
-
-			end if
+			call neuron_fire(brain,brain_freeze,j,i,maximum_columns,maximum_rows)
 
 		end do
 	end do
+
+	!then conflicts are checked for
+	!for each position j,i, conflicts are tested throughout the matrix at m,l
+	tester_conflict=0
+	do while (tester_conflict==1)
+		tester_conflict=0
+
+		do i=1,size(brain_freeze(1,:))
+			do j=1,size(brain_freeze(:,1))
+
+				!only check non-zero entries
+				if (brain_freeze(j,i)/=0) then
+					multi_target=(/0,0,0,0,0,0,0,0,0/)
+
+					do l=1,size(brain_freeze(1,:))
+						do m=1,size(brain_freeze(:,1))
+							
+							!store all the target values in the multi_target array
+							if ((brain_freeze(j,i)==brain_freeze(m,l)) .and. (multi_target(1)==0)) then
+								multi_target(1)=brain_freeze(j,i)
+								multi_target(2)=self_pos(i,j,maximum_columns)
+								multi_target(3)=self_pos(l,m,maximum_columns)
+								tester_conflict=1
+								g=3
+							else if (brain_freeze(j,i)==brain_freeze(m,l)) then
+								do while (multi_target(g)>0)
+									g=g+1
+								end do
+								multi_target(g)=self_pos(l,m,maximum_columns)
+							end if
+
+						end do
+					end do
+
+				end if
+				
+				!find the lucky neuron that gets to blow it's load
+				call RANDOM_NUMBER(fuck)
+				h=0
+				tester_multi=0
+				do while (tester_multi==0)
+					h=h+1
+					!this determines which neuron gets to input data into the target
+					if (fuck<(real(h)/real(g-1))) then
+						tester_multi=1
+					end if
+				end do 	
+
+				!the unlucky neurons now must find another target
+				g=2
+				do while (multi_target(g)>0)
+					if (g/=h+1) then
+						call neuron_fire(brain,brain_freeze,point_pos_matrix(multi_target(g),maximum_columns,"column"),&
+							point_pos_matrix(multi_target(g),maximum_columns,"row"),maximum_columns,maximum_rows)
+					end if
+				end do
+
+			end do
+		end do
+
+	end do
+
+	!finally, transact the recorded transitions in brain_freeze
+	do i=1,size(brain(1,1,:))
+		do j=1,size(brain(1,:,1))
+			brain(self_pos(i,j,maximum_columns),j,i)=0
+			brain(brain_freeze(j,i),point_pos_matrix(brain_freeze(j,i),maximum_columns,"column"),&
+							point_pos_matrix(brain_freeze(j,i),maximum_columns,"row"))=1
+		end do
+	end do
+
 	print*,"Brain After",thrash+1
 	do i=1,size(brain(1,1,:))
 		print formatte,brain(self_pos(i,1,maximum_columns),1,i),brain(self_pos(i,2,maximum_columns),2,i),&

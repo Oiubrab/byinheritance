@@ -180,77 +180,169 @@ end function sigmoid
 
 
 !this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
-subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
+subroutine neuron_fire(brain,brain_freeze,j,i,maximum_columns,maximum_rows)
 
-	real :: fate,fear,hope,transition,distil,dist
-	real,dimension(*),intent(inout) :: emerge(:,:,:)
-	real,dimension(*),intent(inout) :: transition_list(:)
-	integer :: f,u,k,j,i,z
+	real :: fuck
+	integer,dimension(*),intent(inout) :: brain(:,:,:)
+	integer,dimension(*),intent(inout) :: brain_freeze(:,:)
+	integer,intent(in) :: j,i,maximum_columns,maximum_rows
+	integer :: k
 	
+	!data is in the 3rd address, that corresponds to the position of the row/column, counting left to right, up to down
+	k=self_pos(i,j,maximum_columns)
 
-	!here the neuron data transition is operated
-				
-	!set the prospective transitionn value random multipliers
-	call RANDOM_NUMBER(hope)
-	call RANDOM_NUMBER(fear)
-	call RANDOM_NUMBER(fate)
-	!use the distance between the neurons and weight accordingly
-	dist=sqrt((real(f-j)**2)+(real(u-i)**2))
-	distil=exp(-(dist*(sigmoid(emerge(j,i,k),"forward")**(-1.)))**2)
-	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-	transition=emerge(f,u,z)*distil*sigmoid((hope*emerge(j,i,z)-fear*emerge(f,u,k)),"forward")
+	if (brain(k,j,i)==1) then
+
+		!first case is anything off of the border
+
+		if (((i/=1) .and. (i/=maximum_rows)) .and. ((j/=1) .and. (j/=maximum_columns))) then
+
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<0.125) then
+				brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
+			else if (fuck<0.25) then
+				brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
+			else if (fuck<0.375) then
+				brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
+			else if (fuck<0.5) then
+				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)					
+			else if (fuck<0.625) then
+				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
+			else if (fuck<0.75) then
+				brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)
+			else if (fuck<0.875) then
+				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
+			else
+				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
+			end if
+			print*,"case1",i,j
 
 
-	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',emerge(f,u,z),(1-emerge(f,u,k)),emerge(j,i,z),distil,j,i,f,u
-				
+		! first set of cases - on the border of the matrix but not in the corner
 
-	!check if the operation will drain more than the origin neuron has
-	if (transition<emerge(f,u,z)) then
-				
-		!the equation below is: emerge(entry holding data for this position) = emerge(entry holding data for this position) + amount of data from the z neuron
-		emerge(j,i,k)=emerge(j,i,k)+transition
+		else if ((i==1) .and. ((j/=1) .and. (j/=maximum_columns))) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<0.2) then
+				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
+			else if (fuck<0.4) then
+				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
+			else if (fuck<0.6) then
+				brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)
+			else if (fuck<0.8) then
+				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)				
+			else
+				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
+			end if
+			print*,"case2",i,j
+		else if ((i==maximum_rows) .and. ((j/=1) .and. (j/=maximum_columns))) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<0.2) then
+				brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
+			else if (fuck<0.4) then
+				brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
+			else if (fuck<0.6) then
+				brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
+			else if (fuck<0.8) then
+				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)				
+			else
+				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
+			end if
+			print*,"case3",i,j
+		else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==1)) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<0.2) then
+				brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
+			else if (fuck<0.4) then
+				brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
+			else if (fuck<0.6) then
+				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
+			else if (fuck<0.8) then
+				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)					
+			else
+				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
+			end if
+			print*,"case4",i,j
+		else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==maximum_columns)) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<0.2) then
+				brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
+			else if (fuck<0.4) then
+				brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
+			else if (fuck<0.6) then
+				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
+			else if (fuck<0.8) then
+				brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)				
+			else
+				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
+			end if
+			print*,"case5",i,j
 
-		!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-		emerge(f,u,z)=emerge(f,u,z)-transition
-	
-		!otherwise, drain neuron dry (further neuron death algorithm to come)
-	else if (transition>=emerge(f,u,z)) then
-		!all of the data from the z neuron is taken
-		emerge(j,i,k)=emerge(j,i,k)+emerge(f,u,z)
-	
-		!this takes away all the data, transferred to the current neuron, from the z neuron
-		emerge(f,u,z)=0.0
+
+			!second set of cases - in the corner of the matrix
+
+		else if ((i==1) .and. (j==1)) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<1.0/3.0) then
+				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
+			else if (fuck<2.0/3.0) then
+				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)			
+			else
+				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
+			end if
+			print*,"case6",i,j
+		else if ((i==1) .and. (j==maximum_columns)) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<1.0/3.0) then
+				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
+			else if (fuck<2.0/3.0) then
+				brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)				
+			else
+				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
+			end if
+			print*,"case7",i,j
+		else if ((i==maximum_rows) .and. (j==1)) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<1.0/3.0) then
+				brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
+			else if (fuck<2.0/3.0) then
+				brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)			
+			else
+				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
+			end if
+			print*,"case8",i,j
+		else if ((i==maximum_rows) .and. (j==maximum_columns)) then
+			
+			
+			call RANDOM_NUMBER(fuck)
+			if (fuck<1.0/3.0) then
+				brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
+			else if (fuck<2.0/3.0) then
+				brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)			
+			else
+				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
+			end if
+			print*,"case9",i,j
+
+		end if
+
 	end if
-				
-	!add the transition to the list for weight altering
-	transition_list(z)=transition
 
 end subroutine neuron_fire
-
-
-
-
-
-!this subroutine updates the weights for a neuron after it has pulled itself off
-subroutine weight_change(emerge,j,i,k,transition_list)
-
-	real,dimension(*),intent(inout) :: emerge(:,:,:)
-	real,dimension(*),intent(inout) :: transition_list(:)
-	real :: hold_unsig
-	integer,intent(in) :: j,i,k
-	integer :: z
-
-	do z=1,size(emerge(1,1,:))
-				if (k/=z) then
-					hold_unsig=transition_list(z)+sigmoid(emerge(j,i,z),"reverse")
-					emerge(j,i,z)=sigmoid(hold_unsig,"forward")
-				end if
-	end do
-
-end subroutine weight_change
-
-
-
 
 
 end module flesh
