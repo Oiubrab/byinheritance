@@ -3,14 +3,17 @@ use flesh
 implicit none
 
 real,parameter :: pi=4*asin(1./sqrt(2.))
-integer :: thrash,i,j,k
+integer :: thrash,i,j,k !i=rows, j=columns
 integer,parameter :: maximum_columns=5,maximum_rows=5
 integer, dimension(25,maximum_columns,maximum_rows) :: brain
+integer, dimension(maximum_columns,maximum_rows) :: brain_freeze !records target of data shift
 real :: fuck,me
 character(len=16) :: formatte="(I2,I2,I2,I2,I2)"
 
+!make sure the matrix starts off with zeros
 do i=1,size(brain(1,1,:))
 	do j=1,size(brain(1,:,1))
+		brain_freeze(j,i)=0
 		do k=1,size(brain(:,1,1))
 			brain(k,j,i)=0
 		end do
@@ -20,11 +23,12 @@ end do
 do thrash=0,15
 
 	!inject ones into matrix
+	!here this is done in a sweeping pattern, from left to right, then back to left
 
 	if ((-1)**((thrash/maximum_rows)+1)==-1) then
-		brain(mod(thrash,maximum_columns)+1,mod(thrash,maximum_columns)+1,1)=1
+		brain(mod(thrash,maximum_columns)+1,mod(thrash,maximum_columns)+1,1)=1 !move from left to right
 	else
-		brain(maximum_columns-mod(thrash,maximum_columns),maximum_columns-mod(thrash,maximum_columns),1)=1	
+		brain(maximum_columns-mod(thrash,maximum_columns),maximum_columns-mod(thrash,maximum_columns),1)=1 !move from right to left
 	end if	
 	
 	!print the matrix before it gets operated on
@@ -36,6 +40,13 @@ do thrash=0,15
 	end do
 
 	!move all the ones
+
+	!first, zero out brain_freeze
+	do i=1,size(brain(1,1,:))
+		do j=1,size(brain(1,:,1))
+			brain_freeze(j,i)=0
+		end do
+	end do
 
 	do i=1,size(brain(1,1,:))
 		do j=1,size(brain(1,:,1))
@@ -49,24 +60,24 @@ do thrash=0,15
 
 				if (((i/=1) .and. (i/=maximum_rows)) .and. ((j/=1) .and. (j/=maximum_columns))) then
 
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<0.125) then
-						brain(self_pos(i-1,j-1,maximum_columns),j-1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
 					else if (fuck<0.25) then
-						brain(self_pos(i-1,j,maximum_columns),j,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
 					else if (fuck<0.375) then
-						brain(self_pos(i-1,j+1,maximum_columns),j+1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
 					else if (fuck<0.5) then
-						brain(self_pos(i,j-1,maximum_columns),j-1,i)=1					
+						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)					
 					else if (fuck<0.625) then
-						brain(self_pos(i,j+1,maximum_columns),j+1,i)=1
+						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 					else if (fuck<0.75) then
-						brain(self_pos(i+1,j-1,maximum_columns),j-1,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)
 					else if (fuck<0.875) then
-						brain(self_pos(i+1,j,maximum_columns),j,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
 					else
-						brain(self_pos(i+1,j+1,maximum_columns),j+1,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 					end if
 					print*,"case1",i,j
 
@@ -75,66 +86,66 @@ do thrash=0,15
 
 				else if ((i==1) .and. ((j/=1) .and. (j/=maximum_columns))) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<0.2) then
-						brain(self_pos(i,j-1,maximum_columns),j-1,i)=1
+						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
 					else if (fuck<0.4) then
-						brain(self_pos(i,j+1,maximum_columns),j+1,i)=1
+						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 					else if (fuck<0.6) then
-						brain(self_pos(i+1,j-1,maximum_columns),j-1,i-1)=1
+						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)
 					else if (fuck<0.8) then
-						brain(self_pos(i+1,j,maximum_columns),j,i+1)=1					
+						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)				
 					else
-						brain(self_pos(i+1,j+1,maximum_columns),j+1,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 					end if
 					print*,"case2",i,j
 				else if ((i==maximum_rows) .and. ((j/=1) .and. (j/=maximum_columns))) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<0.2) then
-						brain(self_pos(i-1,j-1,maximum_columns),j-1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
 					else if (fuck<0.4) then
-						brain(self_pos(i-1,j,maximum_columns),j,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
 					else if (fuck<0.6) then
-						brain(self_pos(i-1,j+1,maximum_columns),j+1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
 					else if (fuck<0.8) then
-						brain(self_pos(i,j-1,maximum_columns),j-1,i)=1					
+						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)				
 					else
-						brain(self_pos(i,j+1,maximum_columns),j+1,i)=1
+						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 					end if
 					print*,"case3",i,j
 				else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==1)) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<0.2) then
-						brain(self_pos(i-1,j,maximum_columns),j,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
 					else if (fuck<0.4) then
-						brain(self_pos(i-1,j+1,maximum_columns),j+1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)
 					else if (fuck<0.6) then
-						brain(self_pos(i,j+1,maximum_columns),j+1,i)=1
+						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 					else if (fuck<0.8) then
-						brain(self_pos(i+1,j,maximum_columns),j,i+1)=1					
+						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)					
 					else
-						brain(self_pos(i+1,j+1,maximum_columns),j+1,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 					end if
 					print*,"case4",i,j
 				else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==maximum_columns)) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<0.2) then
-						brain(self_pos(i-1,j-1,maximum_columns),j-1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
 					else if (fuck<0.4) then
-						brain(self_pos(i-1,j,maximum_columns),j,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
 					else if (fuck<0.6) then
-						brain(self_pos(i,j-1,maximum_columns),j-1,i)=1
+						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
 					else if (fuck<0.8) then
-						brain(self_pos(i+1,j-1,maximum_columns),j-1,i+1)=1					
+						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)				
 					else
-						brain(self_pos(i+1,j,maximum_columns),j,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
 					end if
 					print*,"case5",i,j
 
@@ -143,50 +154,50 @@ do thrash=0,15
 
 				else if ((i==1) .and. (j==1)) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<1.0/3.0) then
-						brain(self_pos(i,j+1,maximum_columns),j+1,i)=1
+						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 					else if (fuck<2.0/3.0) then
-						brain(self_pos(i+1,j,maximum_columns),j,i+1)=1				
+						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)			
 					else
-						brain(self_pos(i+1,j+1,maximum_columns),j+1,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 					end if
 					print*,"case6",i,j
 				else if ((i==1) .and. (j==maximum_columns)) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<1.0/3.0) then
-						brain(self_pos(i,j-1,maximum_columns),j-1,i)=1
+						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
 					else if (fuck<2.0/3.0) then
-						brain(self_pos(i+1,j-1,maximum_columns),j-1,i+1)=1				
+						brain_freeze(j,i)=self_pos(i+1,j-1,maximum_columns)				
 					else
-						brain(self_pos(i+1,j,maximum_columns),j,i+1)=1
+						brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
 					end if
 					print*,"case7",i,j
 				else if ((i==maximum_rows) .and. (j==1)) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<1.0/3.0) then
-						brain(self_pos(i-1,j,maximum_columns),j,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)
 					else if (fuck<2.0/3.0) then
-						brain(self_pos(i-1,j+1,maximum_columns),j+1,i-1)=1				
+						brain_freeze(j,i)=self_pos(i-1,j+1,maximum_columns)			
 					else
-						brain(self_pos(i+1,j+1,maximum_columns),j+1,i+1)=1
+						brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 					end if
 					print*,"case8",i,j
 				else if ((i==maximum_rows) .and. (j==maximum_columns)) then
 					
-					brain(k,j,i)=0
+					
 					call RANDOM_NUMBER(fuck)
 					if (fuck<1.0/3.0) then
-						brain(self_pos(i-1,j-1,maximum_columns),j-1,i-1)=1
+						brain_freeze(j,i)=self_pos(i-1,j-1,maximum_columns)
 					else if (fuck<2.0/3.0) then
-						brain(self_pos(i-1,j,maximum_columns),j,i-1)=1				
+						brain_freeze(j,i)=self_pos(i-1,j,maximum_columns)			
 					else
-						brain(self_pos(i,j-1,maximum_columns),j-1,i)=1
+						brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
 					end if
 					print*,"case9",i,j
 
