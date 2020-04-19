@@ -4,21 +4,22 @@ implicit none
 
 integer :: cycles,maximum_columns,maximum_rows,lag,active_data
 character(len=2) :: data_cha
-character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha
+character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed
 character(len=:),allocatable :: print_row
 real,parameter :: pi=4*asin(1./sqrt(2.))
-integer :: thrash,i,l,m,j,h,k,g,tester_conflict,tester_multi !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, tester_conflict=true/false conflicts found, tester_multi= true; data donor chosen
+integer :: thrash,i,l,m,j,h,k,g,tester_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, tester_conflict=true/false conflicts found
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 integer,dimension(9) :: multi_target
-real :: fuck,me,start,finish
+real :: fuck,start,finish
 
 call CPU_Time(start)
 
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.5)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.6)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program valves cycles maximum_rows maximum_columns lag'
+	WRITE(*,*)'./program valves cycles maximum_rows maximum_columns lag printed'
 	WRITE(*,*)'valves: closed left_open'
+	WRITE(*,*)'printed: yes no debug'
 	STOP
 ENDIF
 !set the valves and cycles variables
@@ -27,10 +28,20 @@ CALL GET_COMMAND_ARGUMENT(2,cycled)
 CALL GET_COMMAND_ARGUMENT(3,size_rows)
 CALL GET_COMMAND_ARGUMENT(4,size_columns)
 CALL GET_COMMAND_ARGUMENT(5,lag_cha)
+CALL GET_COMMAND_ARGUMENT(6,printed)
 READ(size_rows,*)maximum_rows
 READ(size_columns,*)maximum_columns
 READ(cycled,*)cycles
 READ(lag_cha,*)lag
+
+if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
+	WRITE(*,*)'Execute program by format:'
+	WRITE(*,*)'./program valves cycles maximum_rows maximum_columns lag printed'
+	WRITE(*,*)'valves: closed left_open'
+	WRITE(*,*)'printed: yes no debug'
+	stop
+end if
+
 !print*,maximum_rows,maximum_columns
 !set the arrays
 allocate(brain(1:maximum_columns*maximum_rows,1:maximum_columns,1:maximum_rows))
@@ -72,18 +83,20 @@ do thrash=0,cycles-1
 	end do
 
 	!print the matrix before it gets operated on
-	!print*,"Brain Before",thrash+1,active_data
-	do l=1,size(brain(1,1,:))
-		do m=1,size(brain(1,:,1))
+	if ((printed=='yes') .or. (printed=='debug')) then
+		print*,"Brain Before",thrash+1,active_data
+		do l=1,size(brain(1,1,:))
+			do m=1,size(brain(1,:,1))
 
-			write(data_cha,"(I2)")brain(self_pos(l,m,maximum_columns),m,l)
-			print_row(m*2-1:m*2)=data_cha
-			
+				write(data_cha,"(I2)")brain(self_pos(l,m,maximum_columns),m,l)
+				print_row(m*2-1:m*2)=data_cha
+				
+			end do
+			print *,print_row
+
 		end do
-		!print *,print_row
-
-	end do
-	!print*," "
+		print*," "
+	end if
 
 	!all the transitions are first recorded in the brain_freeze matrix
 
@@ -214,11 +227,18 @@ do thrash=0,cycles-1
 
 	end do
 
-	!print*,"Brain Freeze After",thrash+1
-	!do i=1,size(brain_freeze(1,:))
-	!	print formatte,brain_freeze(1,i),brain_freeze(2,i),brain_freeze(3,i),brain_freeze(4,i),brain_freeze(5,i)
-	!end do
-	!print*," "
+	!debuggling: print brain_freeze 
+	if (printed=='debug') then
+		print*,"Brain Freeze After",thrash+1
+		do l=1,size(brain_freeze(1,:))
+			do m=1,size(brain_freeze(:,1))
+				write(data_cha,"(I2)")brain_freeze(m,l)
+				print_row(m*2-1:m*2)=data_cha
+			end do
+			print *,print_row
+		end do
+		print*," "
+	end if
 
 	!finally, transact the recorded transitions in brain_freeze
 	call reflect(brain,brain_freeze,valves)
@@ -233,15 +253,18 @@ do thrash=0,cycles-1
 		end do
 	end do
 
-	!print*,"Brain After",thrash+1,active_data
-	do l=1,size(brain(1,1,:))
-		do m=1,size(brain(1,:,1))
-			write(data_cha,"(I2)")brain(self_pos(l,m,maximum_columns),m,l)
-			print_row(m*2-1:m*2)=data_cha
+	!if requested a printout, print brain after the transitions are completed
+	if ((printed=='yes') .or. (printed=='debug')) then
+		print*,"Brain After",thrash+1,active_data
+		do l=1,size(brain(1,1,:))
+			do m=1,size(brain(1,:,1))
+				write(data_cha,"(I2)")brain(self_pos(l,m,maximum_columns),m,l)
+				print_row(m*2-1:m*2)=data_cha
+			end do
+			print *,print_row
 		end do
-		!print *,print_row
-	end do
-	!print*," "
+		print*," "
+	end if
 
 end do
 

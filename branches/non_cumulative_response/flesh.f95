@@ -178,6 +178,7 @@ end function sigmoid
 
 
 
+!this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
 subroutine reflect(brain,brain_freeze,valve_selector)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
@@ -186,15 +187,20 @@ subroutine reflect(brain,brain_freeze,valve_selector)
 	character(len=*) :: valve_selector
 
 	!set maximums
-	maximum_columns=size(brain(1,1,:))
+	maximum_columns=size(brain(1,:,1))
 	maximum_rows=size(brain(1,1,:))
+
+	!select which sides of the matrix are open to data movement
 
 	if (valve_selector=="closed") then
 
 		do i=1,size(brain(1,1,:))
 			do j=1,size(brain(1,:,1))
+				!if there is a transition in brain_freeze:
 				if (brain_freeze(j,i)/=0) then
+					!remove the data from the entry it is currently inhabiting
 					brain(self_pos(i,j,maximum_columns),j,i)=brain(self_pos(i,j,maximum_columns),j,i)-1
+					!add the data to the target entry
 					brain(brain_freeze(j,i),point_pos_matrix(brain_freeze(j,i),maximum_columns,"column"),&
 						point_pos_matrix(brain_freeze(j,i),maximum_columns,"row"))=brain(brain_freeze(j,i),&
 						point_pos_matrix(brain_freeze(j,i),maximum_columns,"column"),&
@@ -210,7 +216,9 @@ subroutine reflect(brain,brain_freeze,valve_selector)
 				
 				!normal data dransfer
 				if ((brain_freeze(j,i)>0) .and. (brain_freeze(j,i)<(maximum_columns*maximum_rows+1))) then
+					!remove the data from the entry it is currently inhabiting
 					brain(self_pos(i,j,maximum_columns),j,i)=brain(self_pos(i,j,maximum_columns),j,i)-1
+					!add the data to the target entry
 					brain(brain_freeze(j,i),point_pos_matrix(brain_freeze(j,i),maximum_columns,"column"),&
 						point_pos_matrix(brain_freeze(j,i),maximum_columns,"row"))=brain(brain_freeze(j,i),&
 						point_pos_matrix(brain_freeze(j,i),maximum_columns,"column"),&
@@ -241,11 +249,11 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)
 	integer,intent(in) :: j,i
-	integer :: k,maximum_columns,maximum_rows
+	integer :: maximum_columns,maximum_rows
 	character(len=*) :: valve_selector
 
 	!set maximums
-	maximum_columns=size(brain(1,1,:))
+	maximum_columns=size(brain(1,:,1))
 	maximum_rows=size(brain(1,1,:))
 
 	!first case is anything off of the border
@@ -282,7 +290,6 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 
 		else if ((i==1) .and. ((j/=1) .and. (j/=maximum_columns))) then
 			
-			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<0.2) then
 				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
@@ -296,8 +303,9 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 			end if
 			!print*,"top_side",i,j,brain_freeze(j,i)
+
+
 		else if ((i==maximum_rows) .and. ((j/=1) .and. (j/=maximum_columns))) then
-			
 			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<0.2) then
@@ -312,8 +320,9 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 			end if
 			!print*,"bottom_side",i,j,brain_freeze(j,i)
-		else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==1)) then
-			
+
+
+		else if (((i/=maximum_rows) .and. (i/=1)) .and. (j==1)) then
 			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<0.2) then
@@ -328,8 +337,9 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 			end if
 			!print*,"left_side",i,j,brain_freeze(j,i)
-		else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==maximum_columns)) then
-			
+
+
+		else if ((i/=maximum_rows) .and. ((i/=1)) .and. (j==maximum_columns)) then
 			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<0.2) then
@@ -350,7 +360,6 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 
 		else if ((i==1) .and. (j==1)) then
 			
-			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<1.0/3.0) then
 				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
@@ -360,8 +369,9 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i+1,j+1,maximum_columns)
 			end if
 			!print*,"top_left_corner",i,j,brain_freeze(j,i)
+
+
 		else if ((i==1) .and. (j==maximum_columns)) then
-			
 			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<1.0/3.0) then
@@ -372,8 +382,9 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i+1,j,maximum_columns)
 			end if
 			!print*,"top_right_corner",i,j,brain_freeze(j,i)
+
+
 		else if ((i==maximum_rows) .and. (j==1)) then
-			
 			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<1.0/3.0) then
@@ -384,8 +395,9 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i,j+1,maximum_columns)
 			end if
 			!print*,"bottom_left_corner",i,j,brain_freeze(j,i)
+
+
 		else if ((i==maximum_rows) .and. (j==maximum_columns)) then
-			
 			
 			call RANDOM_NUMBER(fuck)
 			if (fuck<1.0/3.0) then
@@ -396,6 +408,7 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 				brain_freeze(j,i)=self_pos(i,j-1,maximum_columns)
 			end if
 			!print*,"bottom_right_corner",i,j,brain_freeze(j,i)
+
 
 		end if
 
@@ -477,7 +490,7 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 			end if
 			!print*,"bottom_side",i,j,brain_freeze(j,i)
 
-		else if (((i/=1) .and. (i/=maximum_columns)) .and. (j==maximum_columns)) then
+		else if (((i/=1) .and. (i/=maximum_rows)) .and. (j==maximum_columns)) then
 			
 			
 			call RANDOM_NUMBER(fuck)
