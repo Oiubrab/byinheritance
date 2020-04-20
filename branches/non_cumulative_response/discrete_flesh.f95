@@ -1,4 +1,4 @@
-module flesh
+module discrete_flesh
 implicit none
 contains
 
@@ -591,4 +591,4 @@ subroutine neuron_pre_fire(brain,brain_freeze,j,i,valve_selector)
 end subroutine neuron_pre_fire
 
 
-end module flesh
+end module discrete_flesh

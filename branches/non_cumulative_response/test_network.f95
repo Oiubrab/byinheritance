@@ -1,5 +1,5 @@
 program test_network
-use flesh
+use discrete_flesh
 implicit none
 
 integer :: cycles,maximum_columns,maximum_rows,lag,active_data
