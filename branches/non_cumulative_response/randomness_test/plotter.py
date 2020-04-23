@@ -7,12 +7,10 @@ f.close()
 
 random_array = numpy.asarray(lines)
 
-print(lines)
 print(random_array)
-print(type(random_array[1]))
 
 #plot a histogram of the random variable
-plt.hist(random_array,bins=8)
+plt.hist(random_array,bins=100)
 plt.title('Histogram of selection')
 plt.xlabel('selection')
 plt.ylabel('number')
