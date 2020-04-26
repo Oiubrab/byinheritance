@@ -315,7 +315,7 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i,valve_selector)
 
 			allocate(brain_select(1:8))
 			brain_select=[self_pos(i-1,j-1,maximum_columns),self_pos(i-1,j,maximum_columns),&
-				self_pos(i-1,j+1,maximum_columns),self_pos(i-1,j+1,maximum_columns),&
+				self_pos(i-1,j+1,maximum_columns),self_pos(i,j-1,maximum_columns),&
 				self_pos(i,j+1,maximum_columns),self_pos(i+1,j-1,maximum_columns),&
 				self_pos(i+1,j,maximum_columns),self_pos(i+1,j+1,maximum_columns)]
 			!print*,"everywhere",i,j,brain_freeze(j,i)
