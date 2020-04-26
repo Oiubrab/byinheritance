@@ -8,6 +8,7 @@ character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed
 character(len=:),allocatable :: print_row
 real,parameter :: pi=4*asin(1./sqrt(2.))
 integer :: thrash,i,l,m,j,h,k,g,tester_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, tester_conflict=true/false conflicts found
+integer,dimension(2) :: j_i
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 integer,dimension(9) :: multi_target
 real :: fuck,start,finish
@@ -113,7 +114,8 @@ do thrash=0,cycles-1
 
 			!data is in the 3rd address, that corresponds to the position of the row/column, counting left to right, up to down
 			if (brain(self_pos(i,j,maximum_columns),j,i)==1) then
-				call neuron_pre_fire(brain,brain_freeze,j,i,valves)
+				j_i=[j,i]
+				call neuron_pre_fire(brain,brain_freeze,j_i,valves)
 			end if
 
 		end do
@@ -208,8 +210,7 @@ do thrash=0,cycles-1
 					do while (multi_target(g)>0)
 						if (g/=h) then
 							!print*,"I fuck like a beast",tester_conflict
-							call neuron_pre_fire(brain,brain_freeze,point_pos_matrix(multi_target(g),maximum_columns,"column"),&
-								point_pos_matrix(multi_target(g),maximum_columns,"row"),valves)
+							call neuron_pre_fire(brain,brain_freeze,point_pos_matrix(multi_target(g),maximum_columns),valves)
 						end if
 						g=g+1
 					end do
@@ -242,6 +243,17 @@ do thrash=0,cycles-1
 
 	!finally, transact the recorded transitions in brain_freeze
 	call reflect(brain,brain_freeze,valves)
+
+	!steadily detract brain probability weithts
+	do l=1,size(brain(1,1,:))
+		do m=1,size(brain(1,:,1))
+			do h=1,size(brain(:,1,1))
+				if ((brain(h,m,l)>1) .and. (self_pos(l,m,maximum_columns)/=h)) then
+					brain(h,m,l)=brain(h,m,l)-1
+				end if
+			end do
+		end do
+	end do	
 
 	!count how much data is in brain
 	active_data=0

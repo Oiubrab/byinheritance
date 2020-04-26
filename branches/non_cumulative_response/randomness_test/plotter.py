@@ -15,3 +15,10 @@ plt.title('Histogram of selection')
 plt.xlabel('selection')
 plt.ylabel('number')
 plt.show()
+
+#plot a histogram of the random variable
+plt.hist(random_array,bins=8)
+plt.title('Histogram of selection')
+plt.xlabel('selection')
+plt.ylabel('number')
+plt.show()
