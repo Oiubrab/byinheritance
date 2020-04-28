@@ -55,7 +55,7 @@ real,allocatable :: transition_list(:)
 call CPU_Time(start)
 
 !hard-coded length untill I can let this go free (run forever)
-epoch_number=10000
+epoch_number=100
 
 
 
@@ -143,7 +143,7 @@ print*,"round 0"
 print*," "
 
 !establish the sense weight beginning
-sense_weights=[0.5,0.5,0.5,0.5,0.5]
+sense_weights=[1.5,1.5,1.5,1.5,1.5]
 
 
 
@@ -180,17 +180,6 @@ do epoch=1,epoch_number
 	left_ear=0
 	right_ear=0
 	!life is suffering
-	do j=1, size(brain_stem(1,1,:))
-		if (j/=1) then
-			sense_weights(1)=sigmoid(sigmoid(sense_weights(1),'reverse')+sigmoid(brain_stem(1,1,j),'reverse'),'forward')
-		end if
-	end do
-
-	do j=1, size(brain_stem(1,5,:))
-		if (j/=5) then
-			sense_weights(5)=sigmoid(sigmoid(sense_weights(5),'reverse')+sigmoid(brain_stem(1,1,j),'reverse'),'forward')
-		end if
-	end do
 		
 	left_finger=sense_weights(1)*brain_stem(1,1,1)
 	brain_stem(1,1,1)=brain_stem(1,1,1)*(1-sense_weights(1))
