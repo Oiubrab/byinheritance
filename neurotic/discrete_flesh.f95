@@ -257,10 +257,10 @@ subroutine reflect(brain,brain_freeze,valve_selector)
 					!remove the data from the entry it is currently inhabiting
 					brain(self_pos(i,j,maximum_columns),j,i)=brain(self_pos(i,j,maximum_columns),j,i)-1
 
-					if ((brain_freeze(j,i)>maximum_columns+3) .or. (brain_freeze(j,i)<(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))&
-						.or. (mod(brain_freeze(j,i),(maximum_columns+2))/=1) .or. &
+					if ((brain_freeze(j,i)>maximum_columns+3) .and. (brain_freeze(j,i)<(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))&
+						.and. (mod(brain_freeze(j,i),(maximum_columns+2))/=1) .and. &
 						(mod(brain_freeze(j,i),(maximum_columns+2))/=0)) then
-
+						
 						!add the data to the target entry
 						j_i=point_pos_matrix(brain_freeze(j,i),maximum_columns)
 						brain(brain_freeze(j,i),j_i(1),j_i(2))=brain(brain_freeze(j,i),j_i(1),j_i(2))+1
