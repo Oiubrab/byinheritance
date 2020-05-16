@@ -1,24 +1,31 @@
 program network
 use discrete_flesh
+use cudafor
 implicit none
 
-integer :: cycles,maximum_columns,maximum_rows,lag,active_data
+integer :: cycles,maximum_columns,maximum_rows,lag,active_data,grave=0
 character(len=2) :: data_cha
-character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed
+character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha
 character(len=:),allocatable :: print_row
 real,parameter :: pi=4*asin(1./sqrt(2.))
 integer :: thrash,i,l,m,j,h,k,g,test_overlap_conflict,test_outside_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, test_overlap_conflict=true/false conflicts found
+integer :: neuron_row,neuron_column
 integer,dimension(2) :: j_i
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 integer,dimension(9) :: multi_target
 real :: fuck,start,finish
+integer :: bottom, left, right, top
 
+!for the time record          
 call CPU_Time(start)
 
+!make this a new run
+call random_seed()
+
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.6)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.8)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program valves cycles maximum_rows maximum_columns lag printed'
+	WRITE(*,*)'./program valves cycles maximum_columns maximum_rows neuron_column neuron_row lag printed'
 	WRITE(*,*)'valves: closed left_open'
 	WRITE(*,*)'printed: yes no debug'
 	STOP
@@ -26,18 +33,22 @@ ENDIF
 !set the valves and cycles variables
 CALL GET_COMMAND_ARGUMENT(1,valves)
 CALL GET_COMMAND_ARGUMENT(2,cycled)
-CALL GET_COMMAND_ARGUMENT(3,size_rows)
-CALL GET_COMMAND_ARGUMENT(4,size_columns)
-CALL GET_COMMAND_ARGUMENT(5,lag_cha)
-CALL GET_COMMAND_ARGUMENT(6,printed)
+CALL GET_COMMAND_ARGUMENT(3,size_columns)
+CALL GET_COMMAND_ARGUMENT(4,size_rows)
+CALL GET_COMMAND_ARGUMENT(5,neuron_column_cha)
+CALL GET_COMMAND_ARGUMENT(6,neuron_row_cha)
+CALL GET_COMMAND_ARGUMENT(7,lag_cha)
+CALL GET_COMMAND_ARGUMENT(8,printed)
 READ(size_rows,*)maximum_rows
 READ(size_columns,*)maximum_columns
+READ(neuron_column_cha,*)neuron_column
+READ(neuron_row_cha,*)neuron_row
 READ(cycled,*)cycles
 READ(lag_cha,*)lag
 
 if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program valves cycles maximum_rows maximum_columns lag printed'
+	WRITE(*,*)'./program valves cycles maximum_columns maximum_rows neuron_column neuron_row lag printed'
 	WRITE(*,*)'valves: closed left_open'
 	WRITE(*,*)'printed: yes no debug'
 	stop
@@ -65,17 +76,66 @@ do i=1,size(brain(1,1,:))
 	end do
 end do
 
+top=10
+bottom=0
+left=100
+right=100
+
 do thrash=0,cycles-1
 	call sleep(lag)
-	!inject ones into matrix
+	
+	!test:inject ones into matrix
 	!here this is done in a sweeping pattern, from left to right, then back to left
 
 	if ((-1)**((thrash/size(brain(1,:,1)))+1)==-1) then
+		!add data to column
 		brain(mod(thrash,maximum_columns)+4+maximum_columns,mod(thrash,size(brain(1,:,1)))+1,1)=1 !move from left to right
 	else
+		!add data to column
 		brain((maximum_columns*2+3)-mod(thrash,maximum_columns),&
 			size(brain(1,:,1))-mod(thrash,size(brain(1,:,1))),1)=1 !move from right to left
 	end if	
+	
+	!adjust top side probabilities
+	do j=1,size(brain(1,:,1))
+		if (brain(self_pos(2,j,maximum_columns),j,1)<top) then
+			brain(self_pos(2,j,maximum_columns),j,1)=top
+		end if
+	end do
+	
+	!adjust bottom side probabilities
+	do j=1,size(brain(1,:,1))
+		if (brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)<bottom) then
+			brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)=bottom
+		end if
+	end do
+	
+	!adjust left side probabilities
+	do i=1,size(brain(1,1,:))
+		if (brain(self_pos(i,2,maximum_columns),1,i)<left) then
+			brain(self_pos(i,2,maximum_columns),1,i)=left
+		end if
+	end do
+	
+	!adjust right side probabilities	
+	do i=1,size(brain(1,1,:))
+		if (brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)<right) then
+			brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)=right
+		end if
+	end do
+	
+	!print probabilities for an individual neuron
+	if (printed=="debug") then
+		print'(A37,I0,A9,I0)',"The probability enhancer for column ",neuron_column," and row ",neuron_row
+		print*,"(column,row), is:"
+		do i=1,size(brain(:,1,1))
+			if (brain(i,neuron_column,neuron_row)>0) then
+				j_i=point_pos_matrix(i,maximum_columns)
+				print'(A6,I2,A1,I2,A4,I0)',"For (",j_i(1),",",j_i(2),") p:",brain(i,neuron_column,neuron_row)
+			end if
+		end do
+		print*," "
+	end if
 	
 	!count how much data is in brain
 	active_data=0
@@ -89,7 +149,7 @@ do thrash=0,cycles-1
 
 	!print the matrix before it gets operated on
 	if ((printed=='yes') .or. (printed=='debug')) then
-		print*,"Brain Before",thrash+1,active_data
+		print'(A13,I0,A14,I0,A12,I0)',"Brain Before ",thrash+1," active data: ",active_data," dead data: ",grave
 		do l=1,size(brain(1,1,:))
 			do m=1,size(brain(1,:,1))
 
@@ -267,13 +327,13 @@ do thrash=0,cycles-1
 	end if
 
 	!finally, transact the recorded transitions in brain_freeze
-	call reflect(brain,brain_freeze,valves)
+	call reflect(brain,brain_freeze,valves,grave)
 
 	!steadily detract brain probability weights
 	do l=1,size(brain(1,1,:))
 		do m=1,size(brain(1,:,1))
 			do h=1,size(brain(:,1,1))
-				if ((brain(h,m,l)>1) .and. (self_pos(l,m,maximum_columns)/=h)) then
+				if ((brain(h,m,l)>0) .and. (self_pos(l,m,maximum_columns)/=h)) then
 					brain(h,m,l)=brain(h,m,l)-1
 				end if
 			end do
@@ -292,7 +352,7 @@ do thrash=0,cycles-1
 
 	!if requested a printout, print brain after the transitions are completed
 	if ((printed=='yes') .or. (printed=='debug')) then
-		print*,"Brain After",thrash+1,active_data
+		print'(A12,I0,A14,I0,A12,I0)',"Brain After ",thrash+1," active data: ",active_data," dead data: ",grave
 		do l=1,size(brain(1,1,:))
 			do m=1,size(brain(1,:,1))
 				write(data_cha,"(I2)")brain(self_pos(l,m,maximum_columns),m,l)
