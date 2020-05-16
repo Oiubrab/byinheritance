@@ -87,23 +87,12 @@ end function self_pos
 !takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in (column,row) format
 function point_pos_matrix(z_point,high) result(poster)
 	integer,intent(in) :: z_point, high
-	integer :: z,row
+	integer :: z
 	integer,dimension(2) :: poster
 
-	!transform the buffer back into the bare matrix
-	row=(z_point-1)/(high+2)
-	z=z_point-((high+2)+row*2-1)
-
-	!give options for the row or column
-
-	if (z<=high) then
-		poster(2)=1
-	else
-		poster(2)=((z-1)/high)+1	!this is the row position of the current matrix element represented by z
-	end if
-
-	poster(1)=z-((z-1)/high)*high	!this is the column position of the current matrix element represented by z
-
+	!poster(2)=row, poster(1)=column
+	poster(2)=(z_point-1)/(high+2)
+	poster(1)=z_point-poster(2)*(high+2)-1
 
 end function point_pos_matrix
 
@@ -194,7 +183,8 @@ subroutine selector(brain_select,brain_freeze,brain,j,i)
 
 	!number of rungs must equal the number of possible neuron selections
 	allocate(rungs(1:size(brain_select)))
-
+	rungs=[0,0,0,0,0,0,0,0]
+	
 	!base incrementation of the rungs must be monotonic
 	increment=1/float(size(brain_select))
 
@@ -203,11 +193,18 @@ subroutine selector(brain_select,brain_freeze,brain,j,i)
 	!set the rungs - ranges for each selection
 	rungs(1)=increment+float(brain(brain_select(1),j,i))
 	do n=2,size(brain_select)
-		rungs(n)=rungs(n-1)+increment+brain(brain_select(n),j,i)
+		rungs(n)=rungs(n-1)+increment+float(brain(brain_select(n),j,i))
 	end do
 
 	!scale the fuck to be the same range as the rungs set
 	fuck=fuck*rungs(size(rungs))
+	
+	!if (j==2 .and. i==1) then
+	!	print*,brain_select
+	!	print*,rungs
+	!	print*,fuck
+	!	print*,increment
+	!end if
 	
 	!place the chosen pointer in the brain_freeze j,i position
 	do n=1,size(brain_select)
@@ -236,10 +233,11 @@ end subroutine selector
 
 
 !this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
-subroutine reflect(brain,brain_freeze,valve_selector)
+subroutine reflect(brain,brain_freeze,valve_selector,dead)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)	
+	integer,intent(inout) :: dead
 	integer :: i,j,maximum_columns,maximum_rows
 	integer,dimension(2) :: j_i
 	character(len=*) :: valve_selector
@@ -257,6 +255,7 @@ subroutine reflect(brain,brain_freeze,valve_selector)
 					!remove the data from the entry it is currently inhabiting
 					brain(self_pos(i,j,maximum_columns),j,i)=brain(self_pos(i,j,maximum_columns),j,i)-1
 
+					!for now, only transition data if it is not heading off the board
 					if ((brain_freeze(j,i)>maximum_columns+3) .and. (brain_freeze(j,i)<(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))&
 						.and. (mod(brain_freeze(j,i),(maximum_columns+2))/=1) .and. &
 						(mod(brain_freeze(j,i),(maximum_columns+2))/=0)) then
@@ -266,7 +265,8 @@ subroutine reflect(brain,brain_freeze,valve_selector)
 						brain(brain_freeze(j,i),j_i(1),j_i(2))=brain(brain_freeze(j,i),j_i(1),j_i(2))+1
 
 					else
-
+						
+						dead=dead+1
 						!the data must be transmitted to another address or discarded					
 
 					end if
@@ -308,7 +308,11 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i)
 		self_pos(i-1,j+1,maximum_columns),self_pos(i,j-1,maximum_columns),&
 		self_pos(i,j+1,maximum_columns),self_pos(i+1,j-1,maximum_columns),&
 		self_pos(i+1,j,maximum_columns),self_pos(i+1,j+1,maximum_columns)]
-
+	
+	!if (j_i(1)==1 .and. j_i(2)==2) then
+	!	print*,brain_select
+	!end if
+	
 	call selector(brain_select,brain_freeze,brain,j,i)
 
 end subroutine neuron_pre_fire
