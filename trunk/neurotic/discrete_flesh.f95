@@ -272,7 +272,7 @@ subroutine reflect(brain,brain_freeze,valve_selector,dead)
 					end if
 
 					!add to the corresponding probability variable
-					brain(brain_freeze(j,i),j,i)=brain(brain_freeze(j,i),j,i)+2
+					brain(brain_freeze(j,i),j,i)=brain(brain_freeze(j,i),j,i)+3
 
 				end if
 			end do
