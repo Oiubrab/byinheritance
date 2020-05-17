@@ -318,4 +318,113 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i)
 end subroutine neuron_pre_fire
 
 
+
+
+
+
+!this is the boundary conditions subroutine, where boundaries are given in (bottom, left, right, top) format
+subroutine bondage(brain,boundaries)
+
+	integer,dimension(*),intent(inout) :: brain(:,:,:)
+	integer,dimension(4),intent(in) :: boundaries
+	integer :: maximum_columns,maximum_rows,j,i
+	
+	!set maximum columns, rows
+	maximum_columns=size(brain(1,:,1))
+	maximum_rows=size(brain(1,1,:))
+	
+	!adjust top side probabilities
+	do j=1,size(brain(1,:,1))
+		!in the corners
+		if ((j==1) .or. (j==size(brain(1,:,1)))) then
+			if (brain(self_pos(2,j,maximum_columns),j,1)<boundaries(4)) then
+				brain(self_pos(2,j,maximum_columns),j,1)=boundaries(4)
+			end if
+		else
+			!one row down
+			do i=1,3
+				if (brain(self_pos(2,j-2+i,maximum_columns),j,1)<boundaries(4)) then
+					brain(self_pos(2,j-2+i,maximum_columns),j,1)=boundaries(4)
+				end if
+			end do
+			!left and right
+			do i=1,3
+				if ((brain(self_pos(1,j-2+i,maximum_columns),j,1)<boundaries(4)) .and. (j-2+i/=j)) then
+					brain(self_pos(1,j-2+i,maximum_columns),j,1)=boundaries(4)
+				end if
+			end do
+		end if
+	end do
+	
+	!adjust bottom side probabilities
+	do j=1,size(brain(1,:,1))
+		!in the corners
+		if ((j==1) .or. (j==size(brain(1,:,1)))) then	
+			if (brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)<boundaries(1)) then
+				brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)=boundaries(1)
+			end if
+		else
+			!one row up
+			do i=1,3
+				if (brain(self_pos(maximum_rows-1,j-2+i,maximum_columns),j,maximum_rows)<boundaries(1)) then
+					brain(self_pos(maximum_rows-1,j-2+i,maximum_columns),j,maximum_rows)=boundaries(1)
+				end if
+			end do
+			!left and right
+			do i=1,3
+				if ((brain(self_pos(maximum_rows,j-2+i,maximum_columns),j,maximum_rows)<boundaries(1)) .and. (j-2+i/=j)) then
+					brain(self_pos(maximum_rows,j-2+i,maximum_columns),j,maximum_rows)=boundaries(1)
+				end if
+			end do
+		end if
+	end do
+	
+	!adjust left side probabilities
+	do i=1,size(brain(1,1,:))
+		!in the corners
+		if ((i==1) .or. (i==size(brain(1,:,1)))) then	
+			if (brain(self_pos(i,2,maximum_columns),1,i)<boundaries(2)) then
+				brain(self_pos(i,2,maximum_columns),1,i)=boundaries(2)
+			end if
+		else
+			!one column right
+			do j=1,3
+				if (brain(self_pos(i-2+j,2,maximum_columns),1,i)<boundaries(2)) then
+					brain(self_pos(i-2+j,2,maximum_columns),1,i)=boundaries(2)
+				end if
+			end do
+			!up and down
+			do j=1,3
+				if ((brain(self_pos(i-2+j,1,maximum_columns),1,i)<boundaries(2)) .and. (i-2+j/=i)) then
+					brain(self_pos(i-2+j,1,maximum_columns),1,i)=boundaries(2)
+				end if
+			end do
+		end if
+	end do
+	
+	!adjust right side probabilities	
+	do i=1,size(brain(1,1,:))
+		!in the corners
+		if ((i==1) .or. (i==size(brain(1,:,1)))) then	
+			if (brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)<boundaries(3)) then
+				brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)=boundaries(3)
+			end if
+		else
+			!one column left
+			do j=1,3
+				if (brain(self_pos(i-2+j,maximum_columns-1,maximum_columns),maximum_columns,i)<boundaries(3)) then
+					brain(self_pos(i-2+j,maximum_columns-1,maximum_columns),maximum_columns,i)=boundaries(3)
+				end if
+			end do
+			!up and down
+			do j=1,3
+				if ((brain(self_pos(i-2+j,maximum_columns,maximum_columns),maximum_columns,i)<boundaries(3)) .and. (i-2+j/=i)) then
+					brain(self_pos(i-2+j,maximum_columns,maximum_columns),maximum_columns,i)=boundaries(3)
+				end if
+			end do
+		end if
+	end do
+	
+end subroutine bondage
+	
 end module discrete_flesh
