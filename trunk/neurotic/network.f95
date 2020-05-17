@@ -7,14 +7,17 @@ integer :: cycles,maximum_columns,maximum_rows,lag,active_data,grave=0
 character(len=2) :: data_cha
 character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha
 character(len=:),allocatable :: print_row
-real,parameter :: pi=4*asin(1./sqrt(2.))
+
 integer :: thrash,i,l,m,j,h,k,g,test_overlap_conflict,test_outside_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, test_overlap_conflict=true/false conflicts found
 integer :: neuron_row,neuron_column
 integer,dimension(2) :: j_i
+
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 integer,dimension(9) :: multi_target
+
 real :: fuck,start,finish
-integer :: bottom, left, right, top
+
+integer,dimension(4) :: boundaries !(bottom, left, right, top)
 
 !for the time record          
 call CPU_Time(start)
@@ -76,10 +79,8 @@ do i=1,size(brain(1,1,:))
 	end do
 end do
 
-top=10
-bottom=0
-left=100
-right=100
+! boundaries variable records weights off of (bottom, left, right, top)
+boundaries=[0,1000,1000,1000]
 
 do thrash=0,cycles-1
 	call sleep(lag)
@@ -96,33 +97,8 @@ do thrash=0,cycles-1
 			size(brain(1,:,1))-mod(thrash,size(brain(1,:,1))),1)=1 !move from right to left
 	end if	
 	
-	!adjust top side probabilities
-	do j=1,size(brain(1,:,1))
-		if (brain(self_pos(2,j,maximum_columns),j,1)<top) then
-			brain(self_pos(2,j,maximum_columns),j,1)=top
-		end if
-	end do
-	
-	!adjust bottom side probabilities
-	do j=1,size(brain(1,:,1))
-		if (brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)<bottom) then
-			brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)=bottom
-		end if
-	end do
-	
-	!adjust left side probabilities
-	do i=1,size(brain(1,1,:))
-		if (brain(self_pos(i,2,maximum_columns),1,i)<left) then
-			brain(self_pos(i,2,maximum_columns),1,i)=left
-		end if
-	end do
-	
-	!adjust right side probabilities	
-	do i=1,size(brain(1,1,:))
-		if (brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)<right) then
-			brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)=right
-		end if
-	end do
+	!enact boundary conditions
+	call bondage(brain,boundaries)
 	
 	!print probabilities for an individual neuron
 	if (printed=="debug") then

@@ -10,7 +10,7 @@ implicit none
 real,parameter :: pi=4*asin(1./sqrt(2.))
 
 !input variables
-character(len=10000) :: maxim_column_cha,maxim_row_cha,lag_cha
+character(len=10000) :: maxim_column_cha,maxim_row_cha,lag_cha,epoch_number_cha
 
 !timing objects
 real ::  time_interval, start, finish, start_interval, finish_interval
@@ -35,15 +35,17 @@ character(len=print_length) :: data_cha
 character(len=:),allocatable :: print_row
 
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.3)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.4)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program maximum_columns, maximum_rows lag'
+	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag'
 	STOP
 ENDIF
 !set the column/row variables
-CALL GET_COMMAND_ARGUMENT(1,maxim_column_cha)
-CALL GET_COMMAND_ARGUMENT(2,maxim_row_cha)
-CALL GET_COMMAND_ARGUMENT(3,lag_cha)
+CALL GET_COMMAND_ARGUMENT(1,epoch_number_cha)
+CALL GET_COMMAND_ARGUMENT(2,maxim_column_cha)
+CALL GET_COMMAND_ARGUMENT(3,maxim_row_cha)
+CALL GET_COMMAND_ARGUMENT(4,lag_cha)
+READ(epoch_number_cha,*)epoch_number
 READ(maxim_column_cha,*)maxim_column
 READ(maxim_row_cha,*)maxim_row
 READ(lag_cha,*)lag
@@ -58,13 +60,6 @@ READ(lag_cha,*)lag
 
 
 call CPU_Time(start)
-
-!hard-coded length untill I can let this go free (run forever)
-epoch_number=20000
-
-
-
-!initial allocation of neuron space
 
 
 !allocate the maximum dimensions to the brain
