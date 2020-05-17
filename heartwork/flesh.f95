@@ -195,10 +195,10 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	call RANDOM_NUMBER(fear)
 	call RANDOM_NUMBER(fate)
 	!use the distance between the neurons and weight accordingly
-	dist=sqrt((real(f-j)**2)+(real(u-i)**2))
+	dist=sqrt((real(k-z)**2)+(real(u-i)**2))
 	distil=exp(-(dist*(sigmoid(emerge(j,i,k),"forward")**(-1.)))**2)
 	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-	transition=emerge(f,u,z)*distil*sigmoid((hope*emerge(j,i,z)-fear*emerge(f,u,k)),"forward")
+	transition=emerge(f,u,z)*distil*sigmoid((hope*emerge(f,i,k)-fear*emerge(j,u,z)),"forward")
 
 
 	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',emerge(f,u,z),(1-emerge(f,u,k)),emerge(j,i,z),distil,j,i,f,u
@@ -223,7 +223,7 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	end if
 				
 	!add the transition to the list for weight altering
-	transition_list(z)=transition
+	transition_list(f)=transition
 
 end subroutine neuron_fire
 
@@ -240,10 +240,10 @@ subroutine weight_change(emerge,j,i,k,transition_list)
 	integer,intent(in) :: j,i,k
 	integer :: z
 
-	do z=1,size(emerge(1,1,:))
-				if (k/=z) then
-					hold_unsig=transition_list(z)+sigmoid(emerge(j,i,z),"reverse")
-					emerge(j,i,z)=sigmoid(hold_unsig,"forward")
+	do z=1,size(emerge(:,1,1))
+				if (j/=z) then
+					hold_unsig=transition_list(z)+sigmoid(emerge(z,i,k),"reverse")
+					emerge(z,i,k)=sigmoid(hold_unsig,"forward")
 				end if
 	end do
 
