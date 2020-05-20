@@ -1,4 +1,4 @@
-program blood
+program bloody
 use flesh
 use cudafor
 implicit none
@@ -17,7 +17,7 @@ real ::  time_interval, start, finish, start_interval, finish_interval
 
 !main brain objects
 integer :: maxim_column,maxim_row
-real,allocatable :: emerge(:,:,:)
+real,allocatable :: blood(:,:,:)
 
 !network objects
 integer,allocatable :: brain(:,:,:)
@@ -81,30 +81,30 @@ call CPU_Time(start)
 !the first dimension is the number of levels (rows)
 !the second dimension is the number of possible neurons in each level (column)
 !the third dimension holds the data, (j,i,((j-1)*maxim_column+i)), and the weights, (j,i,z) for ((j-1)*maxim_column+i)/=z, as they relate to each of the other neurons
-allocate(emerge(maxim_row*maxim_column,maxim_column,maxim_row))
+allocate(blood(maxim_row*maxim_column,maxim_column,maxim_row))
 allocate(brain(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
 
 !initialize the transition list that keeps track of transitions for weight altering
-allocate(transition_list(1:size(emerge(:,1,1)-1)))
+allocate(transition_list(1:size(blood(:,1,1)-1)))
 
 !initialise the randomised position marker arrays
-allocate(matrix_pos(1:size(emerge(:,1,1))))
+allocate(matrix_pos(1:size(blood(:,1,1))))
 
 !initialise printer
 allocate(character(maxim_column*print_length+7) :: print_row)
 
 !heartwork is the first network to run
-!so we mst first test if this is the first epoch and initialize both brain and emerge
+!so we mst first test if this is the first epoch and initialize both brain and blood
 INQUIRE(FILE="neurotic.txt", EXIST=file_exists)
 if (file_exists .eqv. .false.) then
 
 	epoch=1
 
-	!initialize the emerge weights
-	do s=1,size(emerge(1,1,:))
-		do a=1,size(emerge(1,:,1))
-			do c=1,size(emerge(:,1,1))
-				emerge(c,a,s)=1.
+	!initialize the blood weights
+	do s=1,size(blood(1,1,:))
+		do a=1,size(blood(1,:,1))
+			do c=1,size(blood(:,1,1))
+				blood(c,a,s)=0.001
 			end do
 		end do
 	end do
@@ -121,10 +121,10 @@ if (file_exists .eqv. .false.) then
 	!print the initial brain
 	if (printed=="yes") then 
 		print'(A7)',"Brain 0"
-		do s=1,size(emerge(1,1,:))
-			do a=1,size(emerge(1,:,1))
+		do s=1,size(blood(1,1,:))
+			do a=1,size(blood(1,:,1))
 
-				write(data_cha,"(F7.3)")emerge(self_pos(s,a,maxim_column),a,s)
+				write(data_cha,"(F7.3)")blood(self_pos(s,a,maxim_column),a,s)
 				print_row(a*print_length:a*print_length+7)=data_cha
 				
 			end do
@@ -151,9 +151,9 @@ else
 
 	!retrieve previous network and move ahead epoch counter
 	open(unit=1,file="neurotic.txt")
-	do s=1,size(emerge(1,1,:))
-		do a=1,size(emerge(1,:,1))
-			read(1,*) emerge(:,a,s)
+	do s=1,size(blood(1,1,:))
+		do a=1,size(blood(1,:,1))
+			read(1,*) blood(:,a,s)
 		end do
 	end do
 	do s=1,size(brain(1,1,:))
@@ -169,10 +169,12 @@ else
 
 	!simple tester
 	do x=1,8
-		if (epoch>(50*x)) then
-			emerge(1,1,1)=emerge(1,1,1)+0.00001*(10**x)
-			emerge(self_pos(maxim_row,1,maxim_column),1,maxim_row)=emerge(self_pos(maxim_row,1,maxim_column),1,maxim_row)++0.00001*(10**x)
-						emerge(self_pos(maxim_row/2,1,maxim_column),1,maxim_row/2)=emerge(self_pos(maxim_row/2,1,maxim_column),1,maxim_row/2)++0.00001*(10**x)
+		if (epoch>(10*x)) then
+			blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
+			!blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
+			!	blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
+			blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
+				blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
 		end if
 	end do
 
@@ -187,22 +189,22 @@ else
 	!the randomised loop initialiser - ensures data transition is not positionally dependant
 	call randomised_list(matrix_pos)
 	
-	do s=1,size(emerge(:,1,1))
+	do s=1,size(blood(:,1,1))
 		!take the randomised array of matrix positions and select a neuron
 		k=point_pos_matrix(matrix_pos(s),maxim_column,"row")
 		i=point_pos_matrix(matrix_pos(s),maxim_column,"column")
 		j=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i	
 
-		do f=1,size(emerge(:,1,1))
+		do f=1,size(blood(:,1,1))
 		
 			z=point_pos_matrix(f,maxim_column,"row")	!f is the j position of the current matrix element represented by z
 			u=point_pos_matrix(f,maxim_column,"column")	!u is the i position of the current matrix element represented by z
 
 			!the first condition stops the neuron from acting on itself
 			!the second condition skips dead neurons
-			if ((j/=f) .and. (emerge(j,i,k)/=0.)) then
+			if ((j/=f) .and. (blood(j,i,k)/=0.)) then
 
-				call neuron_fire(emerge,f,u,k,j,i,z,transition_list)
+				call neuron_fire(blood,f,u,k,j,i,z,transition_list)
 
 			else
 				!ensure non active neuron references and data entries record 0
@@ -213,11 +215,11 @@ else
 		!track a neuron
 		!if ((j==3) .and. (i==6)) then
 		!	print*,transition_list
-		!	print*,emerge(j,i,:)
+		!	print*,blood(j,i,:)
 		!end if
 
 		!update the weights for this neuron based on the activity into the neuron
-		call weight_change(emerge,j,i,k,transition_list)
+		call weight_change(blood,j,i,k,transition_list)
 
 	end do
 	
@@ -230,10 +232,10 @@ else
 	!print the brain
 	if ((printed=="yes") .or. (printed=='debug')) then
 		print'(A6,I0)',"Brain ",epoch
-		do s=1,size(emerge(1,1,:))
-			do a=1,size(emerge(1,:,1))
+		do s=1,size(blood(1,1,:))
+			do a=1,size(blood(1,:,1))
 
-				write(data_cha,"(F7.3)")emerge(self_pos(s,a,maxim_column),a,s)
+				write(data_cha,"(F7.3)")blood(self_pos(s,a,maxim_column),a,s)
 				print_row(a*print_length:a*print_length+7)=data_cha
 				
 			end do
@@ -250,10 +252,10 @@ else
 	!this is a key part of the system's learning power
 	!this ensures against runaway neuron growth and also limits growth of the brain past a point where neuron action takes too long
 
-	do z=1,size(emerge(1,1,:))
-		do i=1,size(emerge(1,:,1))
-			do j=1,size(emerge(:,1,1))
-				emerge(j,i,z)=emerge(j,i,z)*(1-time_interval)
+	do z=1,size(blood(1,1,:))
+		do i=1,size(blood(1,:,1))
+			do j=1,size(blood(:,1,1))
+				blood(j,i,z)=blood(j,i,z)*(1-time_interval)
 			end do
 		end do
 	end do
@@ -265,9 +267,9 @@ end if
 
 !save the networks to file
 open(unit=2,file="heartwork.txt")
-do s=1,size(emerge(1,1,:))
-	do a=1,size(emerge(1,:,1))
-		write(2,*) emerge(:,a,s)
+do s=1,size(blood(1,1,:))
+	do a=1,size(blood(1,:,1))
+		write(2,*) blood(:,a,s)
 	end do
 end do
 do s=1,size(brain(1,1,:))

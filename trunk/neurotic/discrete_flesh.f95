@@ -322,6 +322,57 @@ end subroutine neuron_pre_fire
 
 
 
+!this increases the weights sending data towards a neuron, dependant on heartwork
+subroutine infusion(brain,blood)
+
+	integer,dimension(*),intent(inout) :: brain(:,:,:)
+	real,dimension(*),intent(in) :: blood(:,:,:)
+	integer :: i,j,k,k_adj
+	
+	do i=1,size(brain(1,1,:))
+		do j=1,size(brain(1,:,1))
+			!setup the position
+			k=self_pos(i,j,size(brain(1,:,1)))
+			k_adj=k-1-size(blood(1,:,1))-i*2
+			!add the blood data to the weights into each neuron
+			if ((j/=1) .and. (i/=1)) then
+				brain(k,j-1,i-1)=brain(k,j-1,i-1)+int(blood(k_adj,j,i)*(10**3))
+				!if ((j==8) .and. (i==8)) then
+				!	print*,brain(k,j-1,i-1),int(blood(k_adj,j,i)*(10**3))
+				!end if
+			end if
+			if (i/=1) then
+				brain(k,j,i-1)=brain(k,j,i-1)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
+				brain(k,j+1,i-1)=brain(k,j+1,i-1)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			if (j/=1) then
+				brain(k,j-1,i)=brain(k,j-1,i)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			if (j/=size(brain(1,:,1))) then
+				brain(k,j+1,i)=brain(k,j+1,i)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
+				brain(k,j-1,i+1)=brain(k,j-1,i+1)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			if (i/=size(brain(1,1,:))) then
+				brain(k,j,i+1)=brain(k,j,i+1)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
+				brain(k,j+1,i+1)=brain(k,j+1,i+1)+int(blood(k_adj,j,i)*(10**3))
+			end if
+			
+		end do
+	end do
+
+end subroutine infusion
+
+
+
+
+
+
 !this is the boundary conditions subroutine, where boundaries are given in (bottom, left, right, top) format
 subroutine bondage(brain,boundaries)
 
