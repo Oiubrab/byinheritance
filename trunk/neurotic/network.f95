@@ -29,7 +29,7 @@ call random_seed()
 IF(COMMAND_ARGUMENT_COUNT().NE.8)THEN
 	WRITE(*,*)'Execute program by format:'
 	WRITE(*,*)'./program valves cycles maximum_columns maximum_rows neuron_column neuron_row lag printed'
-	WRITE(*,*)'valves: closed left_open'
+	WRITE(*,*)'valves: closed open bottom_open'
 	WRITE(*,*)'printed: yes no debug'
 	STOP
 ENDIF
@@ -52,7 +52,7 @@ READ(lag_cha,*)lag
 if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	WRITE(*,*)'Execute program by format:'
 	WRITE(*,*)'./program valves cycles maximum_columns maximum_rows neuron_column neuron_row lag printed'
-	WRITE(*,*)'valves: closed left_open'
+	WRITE(*,*)'valves: closed open bottom_open'
 	WRITE(*,*)'printed: yes no debug'
 	stop
 end if
@@ -65,10 +65,6 @@ allocate(character(maximum_columns*2+1) :: print_row)
 !print*,size(brain(1,:,1)),size(brain(1,:,1))
 !print*,len(print_row)
 
-!expand maximum_rows and maximum_columns to include buffer zone
-maximum_columns=maximum_columns
-maximum_rows=maximum_rows
-
 !make sure the matrix starts off with zeros
 do i=1,size(brain(1,1,:))
 	do j=1,size(brain(1,:,1))
@@ -80,7 +76,10 @@ do i=1,size(brain(1,1,:))
 end do
 
 ! boundaries variable records weights off of (bottom, left, right, top)
-boundaries=[0,1000,1000,1000]
+boundaries=[0,0,0,0]
+
+
+!let the extinction begin
 
 do thrash=0,cycles-1
 	call sleep(lag)
@@ -198,10 +197,24 @@ do thrash=0,cycles-1
 						!print*,brain_freeze(j,i),j,i
 					end do
 				end if
+				
+				if ((valves=="bottom_open") .and. (brain_freeze(j,i)/=0)) then
+					do while ((brain_freeze(j,i)<maximum_columns+4) .or. &
+						(mod(brain_freeze(j,i),(maximum_columns+2))==1) .or. &
+						(mod(brain_freeze(j,i),(maximum_columns+2))==0))	
+
+						test_outside_conflict=1
+						j_i=[j,i]
+						!print*,maximum_columns+4,(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2)-2,&
+						!	mod(brain_freeze(j,i),(maximum_columns+2)),mod(brain_freeze(j,i),(maximum_columns+2))
+						!print*,brain_freeze(j,i),j,i
+						call neuron_pre_fire(brain,brain_freeze,j_i)
+						!print*,brain_freeze(j,i),j,i
+					end do
+				end if
 
 				!only check non-zero entries
 				if (brain_freeze(j,i)/=0) then
-					multi_target=(/0,0,0,0,0,0,0,0,0/)
 					!print*,multi_target
 
 					do l=1,size(brain_freeze(1,:))
@@ -212,81 +225,24 @@ do thrash=0,cycles-1
 
 							!store all the target values in the multi_target array
 							if ((j/=m) .or. (i/=l)) then
-								if ((brain_freeze(j,i)==brain_freeze(m,l)) .and. (multi_target(1)==0)) then
-									multi_target(1)=brain_freeze(j,i)
-									!positions of the offending double data darsterdly duo deliniated in multi_target
-									multi_target(2)=self_pos(i,j,maximum_columns)
-									multi_target(3)=self_pos(l,m,maximum_columns)
+								if (brain_freeze(j,i)==brain_freeze(m,l)) then
+								
+									j_i=[m,l]
+									call neuron_pre_fire(brain,brain_freeze,j_i)
 									test_overlap_conflict=1
-									!g holds the place before the first 0 entry in multi_target
-									g=3
-
-									!print*,multi_target
-
-								else if (brain_freeze(j,i)==brain_freeze(m,l)) then
-									!g is moved to the first 0 entry in multi_target
-									do while (multi_target(g)>0)
-										g=g+1
-									end do
-
-									multi_target(g)=self_pos(l,m,maximum_columns)
-
-									!print*,multi_target
-
+									
 								end if
-								!the last g is the address of the last address of origin in multi_target
-							end if
 
-							!print*,"and then some",test_overlap_conflict
+							end if
 
 						end do
 					end do
 
 				end if
-
-
-
-				!print*,"balls to the wall",test_overlap_conflict
-
-
-
-				if (test_overlap_conflict==1) then
-					!find the lucky neuron that gets to blow it's load
-					!initialise h so that the first do loop can randomise h
-					h=0
-					do while ((h==0) .or. (h==1))
-						call RANDOM_NUMBER(fuck)
-						h=fuck*(g+1)
-					end do
-
-					!print*,"fuck like an animal",test_overlap_conflict
-					!the unlucky neurons now must find another target
-					
-					g=2
-
-					do while (multi_target(g)>0)
-						if (g/=h) then
-
-							!print*,"I fuck like a beast",test_overlap_conflict
-
-							j_i=point_pos_matrix(multi_target(g),maximum_columns)
-							call neuron_pre_fire(brain,brain_freeze,j_i)
-
-						end if
-						g=g+1
-					end do
-
-				end if
-
-
-
+				
 			end do
 		end do
-
-
-
-
-
+		
 	end do
 
 	!debuggling: print brain_freeze 
@@ -304,6 +260,8 @@ do thrash=0,cycles-1
 
 	!finally, transact the recorded transitions in brain_freeze
 	call reflect(brain,brain_freeze,valves,grave)
+
+	!pass to heartwork
 
 	!steadily detract brain probability weights
 	do l=1,size(brain(1,1,:))
