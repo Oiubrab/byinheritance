@@ -14,18 +14,22 @@ then
 
 else
 
+	cd heartwork
+	pgfortran -traceback flesh.f95 blood.f95 -o megalomaniac_blood
+	cd ../neurotic
+	pgfortran -traceback discrete_flesh.f95 network.f95 -o megalomaniac_network
+	cd ..
+
 	for i in $(seq 1 $2)
 	do
 
 		cd heartwork
-		pgfortran -traceback flesh.f95 blood.f95 -o megalomaniac_blood
-		./megalomaniac_blood $3 $4 $5 $6
+		./megalomaniac_blood $3 $4 $6
 		if [ -f 'network.txt' ]; then rm network.txt; fi
 		mv heartwork.txt ../neurotic
 		cd ..
 
 		cd neurotic
-		pgfortran -traceback discrete_flesh.f95 network.f95 -o megalomaniac_network
 		./megalomaniac_network $1 $3 $4 1 15 $5 $6
 		if [ -f 'heartwork.txt' ]; then rm heartwork.txt; fi
 		mv neurotic.txt ../heartwork

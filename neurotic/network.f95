@@ -83,12 +83,12 @@ read(1,*) grave
 close(1)	
 
 ! boundaries variable records weights off of (bottom, left, right, top)
-boundaries=[0,0,0,0]
+boundaries=[0,100,100,50]
 
 
 !let the extinction begin
 
-call sleep(lag)
+
 
 !test:inject ones into matrix
 !here this is done in a sweeping pattern, from left to right, then back to left
@@ -323,4 +323,8 @@ close(2)
 
 call CPU_Time(finish)
 call print_interval(start,finish)
+
+!lag it if necessary
+call sleep(lag)
+
 end program
