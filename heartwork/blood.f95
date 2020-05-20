@@ -10,7 +10,7 @@ implicit none
 real,parameter :: pi=4*asin(1./sqrt(2.))
 
 !input variables
-character(len=10000) :: maxim_column_cha,maxim_row_cha,lag_cha,epoch_number_cha
+character(len=10000) :: maxim_column_cha,maxim_row_cha,lag_cha,printed
 
 !timing objects
 real ::  time_interval, start, finish, start_interval, finish_interval
@@ -19,11 +19,15 @@ real ::  time_interval, start, finish, start_interval, finish_interval
 integer :: maxim_column,maxim_row
 real,allocatable :: emerge(:,:,:)
 
+!network objects
+integer,allocatable :: brain(:,:,:)
+integer :: active_data,grave
+
 !debugging objects
 integer :: x
 
 !incrementation objects
-integer :: epoch, epoch_number, j,i,z, f,u,k, s,a,c, pos_hold, lag
+integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold, lag
 integer,allocatable :: matrix_pos(:)
 
 real :: fate, transition, distil
@@ -34,21 +38,35 @@ integer :: print_length=7
 character(len=print_length) :: data_cha
 character(len=:),allocatable :: print_row
 
+!file checking
+logical :: file_exists
+
+!make this a new run
+call random_seed()
+
 !prepare command line options
 IF(COMMAND_ARGUMENT_COUNT().NE.4)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag'
+	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag printed'
+	WRITE(*,*)'printed: yes no'
 	STOP
 ENDIF
+
 !set the column/row variables
-CALL GET_COMMAND_ARGUMENT(1,epoch_number_cha)
-CALL GET_COMMAND_ARGUMENT(2,maxim_column_cha)
-CALL GET_COMMAND_ARGUMENT(3,maxim_row_cha)
-CALL GET_COMMAND_ARGUMENT(4,lag_cha)
-READ(epoch_number_cha,*)epoch_number
+CALL GET_COMMAND_ARGUMENT(1,maxim_column_cha)
+CALL GET_COMMAND_ARGUMENT(2,maxim_row_cha)
+CALL GET_COMMAND_ARGUMENT(3,lag_cha)
+CALL GET_COMMAND_ARGUMENT(4,printed)
 READ(maxim_column_cha,*)maxim_column
 READ(maxim_row_cha,*)maxim_row
 READ(lag_cha,*)lag
+
+if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
+	WRITE(*,*)'Execute program by format:'
+	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag printed'
+	WRITE(*,*)'printed: yes no'
+	stop
+end if
 
 
 
@@ -62,12 +80,11 @@ READ(lag_cha,*)lag
 call CPU_Time(start)
 
 
-!allocate the maximum dimensions to the brain
 !the first dimension is the number of levels (rows)
 !the second dimension is the number of possible neurons in each level (column)
 !the third dimension holds the data, (j,i,((j-1)*maxim_column+i)), and the weights, (j,i,z) for ((j-1)*maxim_column+i)/=z, as they relate to each of the other neurons
-
 allocate(emerge(maxim_row*maxim_column,maxim_column,maxim_row))
+allocate(brain(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
 
 !initialize the transition list that keeps track of transitions for weight altering
 allocate(transition_list(1:size(emerge(:,1,1)-1)))
@@ -78,28 +95,47 @@ allocate(matrix_pos(1:size(emerge(:,1,1))))
 !initialise printer
 allocate(character(maxim_column*print_length+7) :: print_row)
 
-!initialize the emerge weights
-do s=1,size(emerge(1,1,:))
-	do a=1,size(emerge(1,:,1))
-		do c=1,size(emerge(:,1,1))
-			emerge(c,a,s)=1.
+!heartwork is the first network to run
+!so we mst first test if this is the first epoch and initialize both brain and emerge
+INQUIRE(FILE="neurotic.txt", EXIST=file_exists)
+if (file_exists .eqv. .false.) then
+
+	epoch=1
+
+	!initialize the emerge weights
+	do s=1,size(emerge(1,1,:))
+		do a=1,size(emerge(1,:,1))
+			do c=1,size(emerge(:,1,1))
+				emerge(c,a,s)=1.
+			end do
 		end do
 	end do
-end do
-
-!print the initial brain
-print'(A7)',"Brain 0"
-do s=1,size(emerge(1,1,:))
-	do a=1,size(emerge(1,:,1))
-
-		write(data_cha,"(F7.3)")emerge(self_pos(s,a,maxim_column),a,s)
-		print_row(a*print_length:a*print_length+7)=data_cha
-		
+	
+	!initialize the brain weights
+	do s=1,size(brain(1,1,:))
+		do a=1,size(brain(1,:,1))
+			do c=1,size(brain(:,1,1))
+				brain(c,a,s)=0
+			end do
+		end do
 	end do
-	print *,print_row
 
-end do
-print*," "
+	!print the initial brain
+	if (printed=="yes") then 
+		print'(A7)',"Brain 0"
+		do s=1,size(emerge(1,1,:))
+			do a=1,size(emerge(1,:,1))
+
+				write(data_cha,"(F7.3)")emerge(self_pos(s,a,maxim_column),a,s)
+				print_row(a*print_length:a*print_length+7)=data_cha
+				
+			end do
+			print *,print_row
+
+		end do
+		print*," "
+
+	end if
 
 
 
@@ -113,9 +149,27 @@ print*," "
 
 
 !main brain epoch operation
-do epoch=1,epoch_number
+else
 
 	call sleep(lag)
+
+	!retrieve previous network and move ahead epoch counter
+	open(unit=1,file="neurotic.txt")
+	do s=1,size(emerge(1,1,:))
+		do a=1,size(emerge(1,:,1))
+			read(1,*) emerge(:,a,s)
+		end do
+	end do
+	do s=1,size(brain(1,1,:))
+		do a=1,size(brain(1,:,1))
+			read(1,*) brain(:,a,s)
+		end do
+	end do
+	read(1,*) epoch
+	read(1,*) active_data
+	read(1,*) grave
+	epoch=epoch+1
+	close(1)	
 
 	!simple tester
 	do x=1,8
@@ -178,18 +232,21 @@ do epoch=1,epoch_number
 
 
 	!print the brain
-	print'(A6,I0)',"Brain ",epoch
-	do s=1,size(emerge(1,1,:))
-		do a=1,size(emerge(1,:,1))
+	if ((printed=="yes") .or. (printed/='debug')) then
+		print'(A6,I0)',"Brain ",epoch
+		do s=1,size(emerge(1,1,:))
+			do a=1,size(emerge(1,:,1))
 
-			write(data_cha,"(F7.3)")emerge(self_pos(s,a,maxim_column),a,s)
-			print_row(a*print_length:a*print_length+7)=data_cha
-			
+				write(data_cha,"(F7.3)")emerge(self_pos(s,a,maxim_column),a,s)
+				print_row(a*print_length:a*print_length+7)=data_cha
+				
+			end do
+			print *,print_row
+
 		end do
-		print *,print_row
-
-	end do
-	print*," "
+		print*," "
+	
+	end if
 
 	!pass to neurotic
 
@@ -205,13 +262,27 @@ do epoch=1,epoch_number
 		end do
 	end do
 	
+end if
+
+
+
+
+!save the networks to file
+open(unit=2,file="heartwork.txt")
+do s=1,size(emerge(1,1,:))
+	do a=1,size(emerge(1,:,1))
+		write(2,*) emerge(:,a,s)
+	end do
 end do
-
-
-
-
-
-
+do s=1,size(brain(1,1,:))
+	do a=1,size(brain(1,:,1))
+		write(2,*) brain(:,a,s)
+	end do
+end do
+write(2,*) epoch
+write(2,*) active_data
+write(2,*) grave
+close(2)
 
 
 !----------------------------
