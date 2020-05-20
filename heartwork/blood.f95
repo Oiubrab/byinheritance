@@ -191,19 +191,7 @@ do epoch=1,epoch_number
 	end do
 	print*," "
 
-	!add neuron space to the emerge matrix if conditions met (to write)
-
-	!activate more neurons in the matrix if conditions are met (to write)
-	
-
-
-
-
-
-	
-	!record the end of time epoch
-	call CPU_time(finish_interval)
-	time_interval=finish_interval-start_interval
+	!pass to neurotic
 
 	!enact time penalty on each neuron
 	!this is a key part of the system's learning power
