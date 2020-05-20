@@ -10,7 +10,7 @@ implicit none
 real,parameter :: pi=4*asin(1./sqrt(2.))
 
 !input variables
-character(len=10000) :: maxim_column_cha,maxim_row_cha,lag_cha,printed
+character(len=10000) :: maxim_column_cha,maxim_row_cha,printed
 
 !timing objects
 real ::  time_interval, start, finish, start_interval, finish_interval
@@ -27,7 +27,7 @@ integer :: active_data,grave
 integer :: x
 
 !incrementation objects
-integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold, lag
+integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold
 integer,allocatable :: matrix_pos(:)
 
 real :: fate, transition, distil
@@ -45,7 +45,7 @@ logical :: file_exists
 call random_seed()
 
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.4)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.3)THEN
 	WRITE(*,*)'Execute program by format:'
 	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag printed'
 	WRITE(*,*)'printed: yes no'
@@ -55,11 +55,9 @@ ENDIF
 !set the column/row variables
 CALL GET_COMMAND_ARGUMENT(1,maxim_column_cha)
 CALL GET_COMMAND_ARGUMENT(2,maxim_row_cha)
-CALL GET_COMMAND_ARGUMENT(3,lag_cha)
-CALL GET_COMMAND_ARGUMENT(4,printed)
+CALL GET_COMMAND_ARGUMENT(3,printed)
 READ(maxim_column_cha,*)maxim_column
 READ(maxim_row_cha,*)maxim_row
-READ(lag_cha,*)lag
 
 if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	WRITE(*,*)'Execute program by format:'
@@ -151,8 +149,6 @@ if (file_exists .eqv. .false.) then
 !main brain epoch operation
 else
 
-	call sleep(lag)
-
 	!retrieve previous network and move ahead epoch counter
 	open(unit=1,file="neurotic.txt")
 	do s=1,size(emerge(1,1,:))
@@ -232,7 +228,7 @@ else
 
 
 	!print the brain
-	if ((printed=="yes") .or. (printed/='debug')) then
+	if ((printed=="yes") .or. (printed=='debug')) then
 		print'(A6,I0)',"Brain ",epoch
 		do s=1,size(emerge(1,1,:))
 			do a=1,size(emerge(1,:,1))
