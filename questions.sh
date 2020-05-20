@@ -30,14 +30,14 @@ else
 		cd ..
 
 		cd neurotic
-		./megalomaniac_network $1 $3 $4 1 15 $5 $6
+		./megalomaniac_network $1 $3 $4 9 9 $5 $6
 		if [ -f 'heartwork.txt' ]; then rm heartwork.txt; fi
 		mv neurotic.txt ../heartwork
 		cd ..
 
 	done
 
-	if [ -f 'heartwork/neurotic.txt' ]; then rm heartwork/neurotic.txt; fi
-	if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
+	#if [ -f 'heartwork/neurotic.txt' ]; then rm heartwork/neurotic.txt; fi
+	#if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 	
 fi

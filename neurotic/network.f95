@@ -13,7 +13,7 @@ integer :: neuron_row,neuron_column
 integer,dimension(2) :: j_i
 
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
-real,allocatable :: emerge(:,:,:)
+real,allocatable :: blood(:,:,:)
 integer,dimension(9) :: multi_target
 
 real :: fuck,start,finish
@@ -58,7 +58,7 @@ end if
 
 !print*,maximum_rows,maximum_columns
 !set the arrays
-allocate(emerge(maximum_rows*maximum_columns,maximum_columns,maximum_rows))
+allocate(blood(maximum_rows*maximum_columns,maximum_columns,maximum_rows))
 allocate(brain(1:maximum_columns*maximum_rows+2*(maximum_columns+maximum_rows)-4,1:maximum_columns,1:maximum_rows))
 allocate(brain_freeze(1:maximum_columns,1:maximum_rows))
 allocate(character(maximum_columns*2+1) :: print_row)
@@ -67,9 +67,9 @@ allocate(character(maximum_columns*2+1) :: print_row)
 
 !retrieve previous network and move ahead thrash counter
 open(unit=1,file="heartwork.txt")
-do i=1,size(emerge(1,1,:))
-	do j=1,size(emerge(1,:,1))
-		read(1,*) emerge(:,j,i)
+do i=1,size(blood(1,1,:))
+	do j=1,size(blood(1,:,1))
+		read(1,*) blood(:,j,i)
 	end do
 end do
 do i=1,size(brain(1,1,:))
@@ -87,20 +87,25 @@ boundaries=[0,100,100,50]
 
 
 !let the extinction begin
-
+!print*,blood(:,8,8)
+call infusion(brain,blood)
 
 
 !test:inject ones into matrix
 !here this is done in a sweeping pattern, from left to right, then back to left
 
-if ((-1)**((thrash/size(brain(1,:,1)))+1)==-1) then
-	!add data to column
-	brain(mod(thrash,maximum_columns)+4+maximum_columns,mod(thrash,size(brain(1,:,1)))+1,1)=1 !move from left to right
-else
-	!add data to column
-	brain((maximum_columns*2+3)-mod(thrash,maximum_columns),&
-		size(brain(1,:,1))-mod(thrash,size(brain(1,:,1))),1)=1 !move from right to left
-end if	
+!if ((-1)**((thrash/size(brain(1,:,1)))+1)==-1) then
+!	!add data to column
+!	brain(mod(thrash,maximum_columns)+4+maximum_columns,mod(thrash,size(brain(1,:,1)))+1,1)=1 !move from left to right
+!else
+!	!add data to column
+!	brain((maximum_columns*2+3)-mod(thrash,maximum_columns),&
+!		size(brain(1,:,1))-mod(thrash,size(brain(1,:,1))),1)=1 !move from right to left
+!end if	
+
+if (brain(18,5,1)==0) then
+	brain(18,5,1)=1
+end if
 
 !enact boundary conditions
 call bondage(brain,boundaries)
@@ -304,11 +309,11 @@ if ((printed=='yes') .or. (printed=='debug')) then
 end if
 
 
-
+!write the networks to file
 open(unit=2,file="neurotic.txt")
-do i=1,size(emerge(1,1,:))
-	do j=1,size(emerge(1,:,1))
-		write(2,*) emerge(:,j,i)
+do i=1,size(blood(1,1,:))
+	do j=1,size(blood(1,:,1))
+		write(2,*) blood(:,j,i)
 	end do
 end do
 do i=1,size(brain(1,1,:))
