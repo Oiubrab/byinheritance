@@ -3,19 +3,22 @@ use discrete_flesh
 use cudafor
 implicit none
 
+!printing objects
 integer :: cycles,maximum_columns,maximum_rows,lag,active_data,grave=0
 character(len=2) :: data_cha
 character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha
 character(len=:),allocatable :: print_row
 
+!incrementation and limiting objects
 integer :: thrash,i,l,m,j,h,k,g,test_overlap_conflict,test_outside_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, test_overlap_conflict=true/false conflicts found
 integer :: neuron_row,neuron_column
 integer,dimension(2) :: j_i
 
+!network objects
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 real,allocatable :: blood(:,:,:)
-integer,dimension(9) :: multi_target
 
+!time and chance
 real :: fuck,start,finish
 
 integer,dimension(4) :: boundaries !(bottom, left, right, top)
@@ -83,11 +86,11 @@ read(1,*) grave
 close(1)	
 
 ! boundaries variable records weights off of (bottom, left, right, top)
-boundaries=[0,100,100,50]
+boundaries=[0,0,0,0]
 
 
 !let the extinction begin
-!print*,blood(:,8,8)
+!affect the brain with the blood multipliers
 call infusion(brain,blood)
 
 
@@ -103,8 +106,8 @@ call infusion(brain,blood)
 !		size(brain(1,:,1))-mod(thrash,size(brain(1,:,1))),1)=1 !move from right to left
 !end if	
 
-if (brain(18,5,1)==0) then
-	brain(18,5,1)=1
+if (brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)==0) then
+	brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)=1
 end if
 
 !enact boundary conditions
@@ -237,8 +240,23 @@ do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1))
 						!store all the target values in the multi_target array
 						if ((j/=m) .or. (i/=l)) then
 							if (brain_freeze(j,i)==brain_freeze(m,l)) then
-							
-								j_i=[m,l]
+								
+								!The neuron with the biggest weight gets first dibs
+								if (brain(brain_freeze(j,i),m,l)<brain(brain_freeze(m,l),j,i)) then
+									j_i=[m,l]
+								else if (brain(brain_freeze(j,i),m,l)>brain(brain_freeze(m,l),j,i)) then
+									j_i=[j,i]
+								else
+									!if weights are equal, randomise selection
+									call random_number(fuck)
+									if (fuck>0.5) then
+										j_i=[m,l]
+									else
+										j_i=[j,i]
+									end if
+									
+								end if
+									
 								call neuron_pre_fire(brain,brain_freeze,j_i)
 								test_overlap_conflict=1
 								

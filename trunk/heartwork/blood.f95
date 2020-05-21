@@ -167,8 +167,13 @@ else
 	epoch=epoch+1
 	close(1)	
 
+	!affect the blood with the brain multipliers
+	call electroviolence(brain,blood)
+
+	!blood(self_pos(5,10,maxim_column),10,5)=blood(self_pos(5,10,maxim_column),10,5)+1.
+
 	!simple tester
-	do x=1,8
+	do x=1,6
 		if (epoch>(10*x)) then
 			blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
 			!blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&

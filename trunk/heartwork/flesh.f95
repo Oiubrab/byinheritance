@@ -78,7 +78,7 @@ end function self_pos
 
 
 !takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in row/column format
-!return either the row, column depending on the opt_pos argument
+!return either the row, column depending on the opt_pos argument, high=maximum columns
 function point_pos_matrix(z_point,high,opt_pos) result(poster)
 	integer,intent(in) :: z_point, high
 	integer :: poster
@@ -180,10 +180,10 @@ end function sigmoid
 
 
 !this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
-subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
+subroutine neuron_fire(blood,f,u,k,j,i,z,transition_list)
 
 	real :: fate,fear,hope,transition,distil,dist
-	real,dimension(*),intent(inout) :: emerge(:,:,:)
+	real,dimension(*),intent(inout) :: blood(:,:,:)
 	real,dimension(*),intent(inout) :: transition_list(:)
 	integer :: f,u,k,j,i,z
 	
@@ -196,30 +196,34 @@ subroutine neuron_fire(emerge,f,u,k,j,i,z,transition_list)
 	call RANDOM_NUMBER(fate)
 	!use the distance between the neurons and weight accordingly
 	dist=sqrt((real(k-z)**2)+(real(u-i)**2))
-	distil=exp(-(dist*(sigmoid(emerge(j,i,k),"forward")**(-1.)))**2)
+	distil=exp(-(dist*(sigmoid(blood(j,i,k),"forward")**(-1.)))**2)
 	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-	transition=emerge(f,u,z)*distil*sigmoid((hope*emerge(f,i,k)-fear*emerge(j,u,z)),"forward")
+	transition=blood(f,u,z)*distil*sigmoid((hope*blood(f,i,k)-fear*blood(j,u,z)),"forward")
 
+	
+	!if ((i==2) .and. (j==9)) then
+	!	print*,transition
+	!end if
 
-	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',emerge(f,u,z),(1-emerge(f,u,k)),emerge(j,i,z),distil,j,i,f,u
+	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',blood(f,u,z),(1-blood(f,u,k)),blood(j,i,z),distil,j,i,f,u
 				
 
 	!check if the operation will drain more than the origin neuron has
-	if (transition<emerge(f,u,z)) then
+	if (transition<blood(f,u,z)) then
 				
-		!the equation below is: emerge(entry holding data for this position) = emerge(entry holding data for this position) + amount of data from the z neuron
-		emerge(j,i,k)=emerge(j,i,k)+transition
+		!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
+		blood(j,i,k)=blood(j,i,k)+transition
 
 		!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-		emerge(f,u,z)=emerge(f,u,z)-transition
+		blood(f,u,z)=blood(f,u,z)-transition
 	
 		!otherwise, drain neuron dry (further neuron death algorithm to come)
-	else if (transition>=emerge(f,u,z)) then
+	else if (transition>=blood(f,u,z)) then
 		!all of the data from the z neuron is taken
-		emerge(j,i,k)=emerge(j,i,k)+emerge(f,u,z)
+		blood(j,i,k)=blood(j,i,k)+blood(f,u,z)
 	
 		!this takes away all the data, transferred to the current neuron, from the z neuron
-		emerge(f,u,z)=0.0
+		blood(f,u,z)=0.0
 	end if
 				
 	!add the transition to the list for weight altering
@@ -231,19 +235,108 @@ end subroutine neuron_fire
 
 
 
-!this subroutine updates the weights for a neuron after it has pulled itself off
-subroutine weight_change(emerge,j,i,k,transition_list)
 
-	real,dimension(*),intent(inout) :: emerge(:,:,:)
+subroutine electroviolence(brain,blood)
+
+	integer,dimension(*),intent(in) :: brain(:,:,:)
+	real,dimension(*),intent(inout) :: blood(:,:,:)
+	integer :: i,j,k,k_adj,addup,l,m
+	real :: distance,distort,addup_sig,shock
+	
+	do i=1,size(blood(1,1,:))
+		do j=1,size(blood(1,:,1))
+
+			!set k for brain
+			k_adj=self_pos(i,j,size(blood(1,:,1)))+1+size(brain(1,:,1))+i*2
+			
+			if (brain(k_adj,j,i)==1) then
+				
+				!initialise the summing variable
+				addup=0
+				
+				if ((j/=1) .and. (i/=1)) then
+					addup=addup+brain(k_adj,j-1,i-1)
+				end if
+				if (i/=1) then
+					addup=addup+brain(k_adj,j,i-1)
+				end if
+				if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
+					addup=addup+brain(k_adj,j+1,i-1)
+				end if
+				if (j/=1) then
+					addup=addup+brain(k_adj,j-1,i)
+				end if
+				if (j/=size(brain(1,:,1))) then
+					addup=addup+brain(k_adj,j+1,i)
+				end if
+				if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
+					addup=addup+brain(k_adj,j-1,i+1)
+				end if
+				if (i/=size(brain(1,1,:))) then
+					addup=addup+brain(k_adj,j,i+1)
+				end if
+				if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
+					addup=addup+brain(k_adj,j+1,i+1)
+				end if
+
+				!if ((i==2) .and. (j==9)) then
+				!	print*,"before",blood(k,j,i)
+				!end if
+				
+				!take data from other vessels and place it in this one
+				do k=1,size(blood(:,1,1))
+					if (k/=self_pos(i,j,size(blood(1,:,1)))) then
+					
+						l=point_pos_matrix(k,size(blood(1,:,1)),"row")
+						m=point_pos_matrix(k,size(blood(1,:,1)),"column")
+						distance=sqrt((float(l-i)**2)+(float(m-j)**2))
+						distort=exp(-(distance)**2)
+						addup_sig=sigmoid(float(addup),"forward",domain_stretch=2.)
+						shock=distort*addup_sig*blood(k,m,l)
+					
+						if (shock<blood(k,m,l)) then
+							!print*,"fu"
+							blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+shock
+							blood(k,m,l)=blood(k,m,l)-shock
+						else
+							blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+blood(k,m,l)
+							blood(k,m,l)=0.
+						end if
+					end if
+					
+				end do
+						
+				
+				!if ((i==2) .and. (j==9)) then
+				!	print*,addup,float(addup)
+				!	print*,"after",blood(k,j,i)
+				!end if
+			end if
+			
+
+		end do
+	end do
+
+end subroutine electroviolence
+
+
+
+
+
+
+!this subroutine updates the weights for a neuron after it has pulled itself off
+subroutine weight_change(blood,j,i,k,transition_list)
+
+	real,dimension(*),intent(inout) :: blood(:,:,:)
 	real,dimension(*),intent(inout) :: transition_list(:)
 	real :: hold_unsig
 	integer,intent(in) :: j,i,k
 	integer :: z
 
-	do z=1,size(emerge(:,1,1))
+	do z=1,size(blood(:,1,1))
 				if (j/=z) then
-					hold_unsig=transition_list(z)+sigmoid(emerge(z,i,k),"reverse")
-					emerge(z,i,k)=sigmoid(hold_unsig,"forward")
+					hold_unsig=transition_list(z)+sigmoid(blood(z,i,k),"reverse")
+					blood(z,i,k)=sigmoid(hold_unsig,"forward")
 				end if
 	end do
 
