@@ -337,9 +337,6 @@ subroutine infusion(brain,blood)
 			!add the blood data to the weights into each neuron
 			if ((j/=1) .and. (i/=1)) then
 				brain(k,j-1,i-1)=brain(k,j-1,i-1)+int(blood(k_adj,j,i)*(10**3))
-				!if ((j==8) .and. (i==8)) then
-				!	print*,brain(k,j-1,i-1),int(blood(k_adj,j,i)*(10**3))
-				!end if
 			end if
 			if (i/=1) then
 				brain(k,j,i-1)=brain(k,j,i-1)+int(blood(k_adj,j,i)*(10**3))
@@ -358,6 +355,9 @@ subroutine infusion(brain,blood)
 			end if
 			if (i/=size(brain(1,1,:))) then
 				brain(k,j,i+1)=brain(k,j,i+1)+int(blood(k_adj,j,i)*(10**3))
+			!test case - to see data able to escape
+			else
+				brain(k+2+size(brain(1,:,1)),j,i)=brain(k+2+size(brain(1,:,1)),j,i)+int(blood(k_adj,j,i)*(10**3))
 			end if
 			if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
 				brain(k,j+1,i+1)=brain(k,j+1,i+1)+int(blood(k_adj,j,i)*(10**3))
