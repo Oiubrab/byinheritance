@@ -199,13 +199,6 @@ subroutine selector(brain_select,brain_freeze,brain,j,i)
 	!scale the fuck to be the same range as the rungs set
 	fuck=fuck*rungs(size(rungs))
 	
-	!if (j==2 .and. i==1) then
-	!	print*,brain_select
-	!	print*,rungs
-	!	print*,fuck
-	!	print*,increment
-	!end if
-	
 	!place the chosen pointer in the brain_freeze j,i position
 	do n=1,size(brain_select)
 		if (fuck<rungs(n)) then
@@ -293,7 +286,7 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)
 	integer,dimension(2),intent(in) :: j_i
 	integer :: maximum_columns,maximum_rows,j,i
-	integer,allocatable :: brain_select(:)
+	integer,dimension(8) :: brain_select
 
 	!set maximums and position
 	maximum_columns=size(brain(1,:,1))
@@ -303,16 +296,11 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i)
 
 	call random_number(fuck)
 
-	allocate(brain_select(1:8))
 	brain_select=[self_pos(i-1,j-1,maximum_columns),self_pos(i-1,j,maximum_columns),&
 		self_pos(i-1,j+1,maximum_columns),self_pos(i,j-1,maximum_columns),&
 		self_pos(i,j+1,maximum_columns),self_pos(i+1,j-1,maximum_columns),&
 		self_pos(i+1,j,maximum_columns),self_pos(i+1,j+1,maximum_columns)]
-	
-	!if (j_i(1)==1 .and. j_i(2)==2) then
-	!	print*,brain_select
-	!end if
-	
+
 	call selector(brain_select,brain_freeze,brain,j,i)
 
 end subroutine neuron_pre_fire
@@ -323,11 +311,12 @@ end subroutine neuron_pre_fire
 
 
 !this increases the weights sending data towards a neuron, dependant on heartwork
-subroutine infusion(brain,blood)
+subroutine infusion(brain,blood,scaling)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	real,dimension(*),intent(in) :: blood(:,:,:)
 	integer :: i,j,k,k_adj
+	real,intent(in) :: scaling
 	
 	do i=1,size(brain(1,1,:))
 		do j=1,size(brain(1,:,1))
@@ -336,31 +325,31 @@ subroutine infusion(brain,blood)
 			k_adj=k-1-size(blood(1,:,1))-i*2
 			!add the blood data to the weights into each neuron
 			if ((j/=1) .and. (i/=1)) then
-				brain(k,j-1,i-1)=brain(k,j-1,i-1)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j-1,i-1)=brain(k,j-1,i-1)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if (i/=1) then
-				brain(k,j,i-1)=brain(k,j,i-1)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j,i-1)=brain(k,j,i-1)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
-				brain(k,j+1,i-1)=brain(k,j+1,i-1)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j+1,i-1)=brain(k,j+1,i-1)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if (j/=1) then
-				brain(k,j-1,i)=brain(k,j-1,i)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j-1,i)=brain(k,j-1,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if (j/=size(brain(1,:,1))) then
-				brain(k,j+1,i)=brain(k,j+1,i)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j+1,i)=brain(k,j+1,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
-				brain(k,j-1,i+1)=brain(k,j-1,i+1)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j-1,i+1)=brain(k,j-1,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if (i/=size(brain(1,1,:))) then
-				brain(k,j,i+1)=brain(k,j,i+1)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j,i+1)=brain(k,j,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			!test case - to see data able to escape
 			else
-				brain(k+2+size(brain(1,:,1)),j,i)=brain(k+2+size(brain(1,:,1)),j,i)+int(blood(k_adj,j,i)*(10**3))
+				brain(k+2+size(brain(1,:,1)),j,i)=brain(k+2+size(brain(1,:,1)),j,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
-				brain(k,j+1,i+1)=brain(k,j+1,i+1)+int(blood(k_adj,j,i)*(10**3))
+				brain(k,j+1,i+1)=brain(k,j+1,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
 			
 		end do
