@@ -6,11 +6,12 @@ implicit none
 !printing objects
 integer :: cycles,maximum_columns,maximum_rows,lag,active_data,grave=0
 character(len=2) :: data_cha
-character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha
+character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha,multiplier_scaling_cha
 character(len=:),allocatable :: print_row
 
 !incrementation and limiting objects
-integer :: thrash,i,l,m,j,h,k,g,test_overlap_conflict,test_outside_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, test_overlap_conflict=true/false conflicts found
+real :: multiplier_scaling
+integer :: thrash,i,l,m,j,h,k,g,test_overlap_conflict,test_outside_conflict,test_condition_conflict !i,l=rows, j,m=columns, g=multi_pos, h=conflict numerator, test_overlap_conflict=true/false conflicts found
 integer :: neuron_row,neuron_column
 integer,dimension(2) :: j_i
 
@@ -30,9 +31,9 @@ call CPU_Time(start)
 call random_seed()
 
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.7)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.8)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program valves maximum_columns maximum_rows neuron_column neuron_row lag printed'
+	WRITE(*,*)'./program valves maximum_columns maximum_rows neuron_column neuron_row lag multiplier_scaling printed'
 	WRITE(*,*)'valves: closed open bottom_open'
 	WRITE(*,*)'printed: yes no debug'
 	STOP
@@ -44,16 +45,18 @@ CALL GET_COMMAND_ARGUMENT(3,size_rows)
 CALL GET_COMMAND_ARGUMENT(4,neuron_column_cha)
 CALL GET_COMMAND_ARGUMENT(5,neuron_row_cha)
 CALL GET_COMMAND_ARGUMENT(6,lag_cha)
-CALL GET_COMMAND_ARGUMENT(7,printed)
+CALL GET_COMMAND_ARGUMENT(7,multiplier_scaling_cha)
+CALL GET_COMMAND_ARGUMENT(8,printed)
 READ(size_rows,*)maximum_rows
 READ(size_columns,*)maximum_columns
+READ(multiplier_scaling_cha,*)multiplier_scaling
 READ(neuron_column_cha,*)neuron_column
 READ(neuron_row_cha,*)neuron_row
 READ(lag_cha,*)lag
 
 if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program valves maximum_columns maximum_rows neuron_column neuron_row lag printed'
+	WRITE(*,*)'./program valves maximum_columns maximum_rows neuron_column neuron_row lag multiplier_scaling printed'
 	WRITE(*,*)'valves: closed open bottom_open'
 	WRITE(*,*)'printed: yes no debug'
 	stop
@@ -91,7 +94,7 @@ boundaries=[0,0,0,0]
 
 !let the extinction begin
 !affect the brain with the blood multipliers
-call infusion(brain,blood)
+call infusion(brain,blood,multiplier_scaling)
 
 
 !test:inject ones into matrix
@@ -178,64 +181,58 @@ end do
 !for each position j,i, conflicts are tested throughout the matrix at m,l
 test_overlap_conflict=1
 test_outside_conflict=1
-do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1))
+test_condition_conflict=1
+do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1)  .or. (test_condition_conflict==1))
 
+	test_condition_conflict=0
 	test_overlap_conflict=0
 	test_outside_conflict=0
-
-	!print*,"hello from the gutter",test_overlap_conflict
-
-
-
-
 	
 	!this whole do loop checks at each brain position, each other position
 	do i=1,size(brain_freeze(1,:))
 		do j=1,size(brain_freeze(:,1))
 
-			!print*,"roger explosion",test_overlap_conflict
-
-			!check if neuron target is outside the matrix
+			!switch closing the network, keeping all the data inside
 			if ((valves=="closed") .and. (brain_freeze(j,i)/=0)) then
-				do while ((brain_freeze(j,i)<maximum_columns+4) .or. &
+				if ((brain_freeze(j,i)<maximum_columns+4) .or. &
 					(brain_freeze(j,i)>(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+1))&
 					.or. (mod(brain_freeze(j,i),(maximum_columns+2))==1) .or. &
-					(mod(brain_freeze(j,i),(maximum_columns+2))==0))	
+					(mod(brain_freeze(j,i),(maximum_columns+2))==0)) then	
 
 					test_outside_conflict=1
 					j_i=[j,i]
-					!print*,maximum_columns+4,(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2)-2,&
-					!	mod(brain_freeze(j,i),(maximum_columns+2)),mod(brain_freeze(j,i),(maximum_columns+2))
-					!print*,brain_freeze(j,i),j,i
+
 					call neuron_pre_fire(brain,brain_freeze,j_i)
-					!print*,brain_freeze(j,i),j,i
-				end do
+
+				end if
 			end if
 			
+			!switch closing the network, except for the bottom interface
 			if ((valves=="bottom_open") .and. (brain_freeze(j,i)/=0)) then
-				do while ((brain_freeze(j,i)<maximum_columns+4) .or. &
+				if ((brain_freeze(j,i)<maximum_columns+4) .or. &
 					(mod(brain_freeze(j,i),(maximum_columns+2))==1) .or. &
-					(mod(brain_freeze(j,i),(maximum_columns+2))==0))	
+					(mod(brain_freeze(j,i),(maximum_columns+2))==0)) then
 
 					test_outside_conflict=1
 					j_i=[j,i]
-					!print*,maximum_columns+4,(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2)-2,&
-					!	mod(brain_freeze(j,i),(maximum_columns+2)),mod(brain_freeze(j,i),(maximum_columns+2))
-					!print*,brain_freeze(j,i),j,i
+
 					call neuron_pre_fire(brain,brain_freeze,j_i)
-					!print*,brain_freeze(j,i),j,i
-				end do
+
+				end if
+			end if
+
+			!ensure each neuron that is coming in has space (being built)
+			if (brain_freeze(j,i)==self_pos(1,maximum_columns/2,maximum_columns)) then
+				test_condition_conflict=1
+				j_i=[j,i]
+				call neuron_pre_fire(brain,brain_freeze,j_i)
 			end if
 
 			!only check non-zero entries
 			if (brain_freeze(j,i)/=0) then
-				!print*,multi_target
 
 				do l=1,size(brain_freeze(1,:))
 					do m=1,size(brain_freeze(:,1))
-						
-						!print*,"fuck you",test_overlap_conflict
-						!print*,j,m,i,l,brain_freeze(j,i),brain_freeze(m,l),multi_target(1)
 
 						!store all the target values in the multi_target array
 						if ((j/=m) .or. (i/=l)) then
@@ -274,6 +271,8 @@ do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1))
 	
 end do
 
+brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)=1
+
 !debuggling: print brain_freeze 
 if (printed=='debug') then
 	print*,"Brain Freeze After",thrash
@@ -289,8 +288,6 @@ end if
 
 !finally, transact the recorded transitions in brain_freeze
 call reflect(brain,brain_freeze,valves,grave)
-
-!pass to heartwork
 
 !steadily detract brain probability weights
 do l=1,size(brain(1,1,:))
@@ -345,7 +342,9 @@ write(2,*) grave
 close(2)
 
 call CPU_Time(finish)
-call print_interval(start,finish)
+if ((printed=="yes") .or. (printed=='debug')) then
+	call print_interval(start,finish)
+end if
 
 !lag it if necessary
 call sleep(lag)

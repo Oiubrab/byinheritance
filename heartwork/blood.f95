@@ -10,7 +10,7 @@ implicit none
 real,parameter :: pi=4*asin(1./sqrt(2.))
 
 !input variables
-character(len=10000) :: maxim_column_cha,maxim_row_cha,printed
+character(len=10000) :: maxim_column_cha,maxim_row_cha,printed,multiplier_scaling_cha
 
 !timing objects
 real ::  time_interval, start, finish, start_interval, finish_interval
@@ -30,7 +30,7 @@ integer :: x
 integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold
 integer,allocatable :: matrix_pos(:)
 
-real :: fate, transition, distil
+real :: fate, transition, distil,multiplier_scaling
 real,allocatable :: transition_list(:)
 
 !printing objects
@@ -45,9 +45,9 @@ logical :: file_exists
 call random_seed()
 
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.3)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.4)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag printed'
+	WRITE(*,*)'./program epoch_number maximum_columns maximum_rows scaling printed'
 	WRITE(*,*)'printed: yes no'
 	STOP
 ENDIF
@@ -55,13 +55,15 @@ ENDIF
 !set the column/row variables
 CALL GET_COMMAND_ARGUMENT(1,maxim_column_cha)
 CALL GET_COMMAND_ARGUMENT(2,maxim_row_cha)
-CALL GET_COMMAND_ARGUMENT(3,printed)
+CALL GET_COMMAND_ARGUMENT(3,multiplier_scaling_cha)
+CALL GET_COMMAND_ARGUMENT(4,printed)
+READ(multiplier_scaling_cha,*)multiplier_scaling
 READ(maxim_column_cha,*)maxim_column
 READ(maxim_row_cha,*)maxim_row
 
 if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows lag printed'
+	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows scaling printed'
 	WRITE(*,*)'printed: yes no'
 	stop
 end if
@@ -168,16 +170,14 @@ else
 	close(1)	
 
 	!affect the blood with the brain multipliers
-	call electroviolence(brain,blood)
-
-	!blood(self_pos(5,10,maxim_column),10,5)=blood(self_pos(5,10,maxim_column),10,5)+1.
+	call electroviolence(brain,blood,multiplier_scaling)
 
 	!simple tester
 	do x=1,6
 		if (epoch>(10*x)) then
 			blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
-			!blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
-			!	blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
+			blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
+				blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
 			blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
 				blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
 		end if
@@ -217,12 +217,6 @@ else
 			end if
 		end do
 
-		!track a neuron
-		!if ((j==3) .and. (i==6)) then
-		!	print*,transition_list
-		!	print*,blood(j,i,:)
-		!end if
-
 		!update the weights for this neuron based on the activity into the neuron
 		call weight_change(blood,j,i,k,transition_list)
 
@@ -251,12 +245,9 @@ else
 	
 	end if
 
-	!pass to neurotic
-
 	!enact time penalty on each neuron
 	!this is a key part of the system's learning power
 	!this ensures against runaway neuron growth and also limits growth of the brain past a point where neuron action takes too long
-
 	do z=1,size(blood(1,1,:))
 		do i=1,size(blood(1,:,1))
 			do j=1,size(blood(:,1,1))
@@ -295,5 +286,7 @@ close(2)
 
 
 call CPU_Time(finish)
-call print_interval(start,finish)
+if ((printed=="yes") .or. (printed=='debug')) then
+	call print_interval(start,finish)
+end if
 end program

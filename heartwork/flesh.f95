@@ -198,15 +198,7 @@ subroutine neuron_fire(blood,f,u,k,j,i,z,transition_list)
 	dist=sqrt((real(k-z)**2)+(real(u-i)**2))
 	distil=exp(-(dist*(sigmoid(blood(j,i,k),"forward")**(-1.)))**2)
 	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-	transition=blood(f,u,z)*distil*sigmoid((hope*blood(f,i,k)-fear*blood(j,u,z)),"forward")
-
-	
-	!if ((i==2) .and. (j==9)) then
-	!	print*,transition
-	!end if
-
-	!print'(F0.4,F0.4,F0.4,F0.4,I2,I2,I2,I2)',blood(f,u,z),(1-blood(f,u,k)),blood(j,i,z),distil,j,i,f,u
-				
+	transition=blood(f,u,z)*distil*sigmoid((hope*blood(f,i,k)-fear*blood(j,u,z)),"forward")			
 
 	!check if the operation will drain more than the origin neuron has
 	if (transition<blood(f,u,z)) then
@@ -236,12 +228,13 @@ end subroutine neuron_fire
 
 
 
-subroutine electroviolence(brain,blood)
+subroutine electroviolence(brain,blood,scaling)
 
 	integer,dimension(*),intent(in) :: brain(:,:,:)
 	real,dimension(*),intent(inout) :: blood(:,:,:)
 	integer :: i,j,k,k_adj,addup,l,m
 	real :: distance,distort,addup_sig,shock
+	real,intent(in) :: scaling
 	
 	do i=1,size(blood(1,1,:))
 		do j=1,size(blood(1,:,1))
@@ -278,10 +271,6 @@ subroutine electroviolence(brain,blood)
 				if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
 					addup=addup+brain(k_adj,j+1,i+1)
 				end if
-
-				!if ((i==2) .and. (j==9)) then
-				!	print*,"before",blood(k,j,i)
-				!end if
 				
 				!take data from other vessels and place it in this one
 				do k=1,size(blood(:,1,1))
@@ -292,7 +281,7 @@ subroutine electroviolence(brain,blood)
 						distance=sqrt((float(l-i)**2)+(float(m-j)**2))
 						distort=exp(-(distance)**2)
 						addup_sig=sigmoid(float(addup),"forward",domain_stretch=2.)
-						shock=distort*addup_sig*blood(k,m,l)
+						shock=distort*addup_sig*blood(k,m,l)*scaling
 					
 						if (shock<blood(k,m,l)) then
 							!print*,"fu"
@@ -305,12 +294,7 @@ subroutine electroviolence(brain,blood)
 					end if
 					
 				end do
-						
-				
-				!if ((i==2) .and. (j==9)) then
-				!	print*,addup,float(addup)
-				!	print*,"after",blood(k,j,i)
-				!end if
+
 			end if
 			
 
