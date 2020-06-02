@@ -1,4 +1,5 @@
 module flesh
+use cudafor
 implicit none
 contains
 
@@ -63,9 +64,10 @@ end subroutine randomised_list
 
 
 
+!cannot use this with CUDA as it is a function. Here, equation is put directly into CUDA kernels
 !this function takes in row/column coordinates and returns the data position of the coordinates
-function self_pos(j,i,maximum) result(z)
-	integer,intent(in) :: j,i,maximum
+attributes(device,host) function self_pos(j,i,maximum) result(z)
+	integer,intent(in),value :: j,i,maximum
 	integer :: z
 
 	z=((j-1)*maximum+i)
@@ -77,95 +79,18 @@ end function self_pos
 
 
 
-!takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in row/column format
-!return either the row, column depending on the opt_pos argument, high=maximum columns
-function point_pos_matrix(z_point,high,opt_pos) result(poster)
+!takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in (column,row) format
+attributes(device,host) subroutine point_pos_matrix(z_point,high,poster)
 	integer,intent(in) :: z_point, high
-	integer :: poster
-	character(len=*),intent(in) :: opt_pos
+	integer :: i
+	integer,dimension(2),intent(inout) :: poster
 
 	!give options for the row or column
-	if (opt_pos=="row") then
-		if (z_point<=high) then
-			poster=1
-		else
-			poster=((z_point-1)/high)+1	!this is the j position of the current matrix element represented by z_point
-		end if
-	else if (opt_pos=="column") then
-		poster=z_point-((z_point-1)/high)*high	!this is the i position of the current matrix element represented by z
-	end if
+	poster(2)=ceiling(float(z_point)/float(high))
+	poster(1)=z_point-(poster(2)-1)*high
 
-end function point_pos_matrix
+end subroutine point_pos_matrix
 
-
-
-
-
-
-!this function either applies a sigmoid (forward) or inverse sigmoid (reverse) function depending on flow variable
-!one can also range strectch with range_stretch and domain stretch with domain_stretch (optional)
-!note, inverse sigmoid only goes up to 16*range_stretch
-function sigmoid(insig,flow,range_stretch,domain_stretch) result(outsig)
-	
-	real,intent(in) :: insig
-	real,intent(in),optional :: range_stretch,domain_stretch
-	real :: outsig
-	character(len=*) :: flow
-
-	!domain_stretch and range_stretch defined
-	if (present(domain_stretch) .and. present(range_stretch)) then
-		!sigmoid
-		if (flow=="forward") then
-			outsig=range_stretch/(1.+exp(-(1./domain_stretch)*insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-range_stretch*log((domain_stretch/insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if
-		end if
-
-	!domain_stretch defined
-	else if (present(domain_stretch)) then
-		!sigmoid
-		if (flow=="forward") then
-			outsig=1./(1.+exp(-(1./domain_stretch)*insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-1.*log((domain_stretch/insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if	
-		end if
-
-	!range_stretch defined
-	else if (present(range_stretch)) then
-		!sigmoid
-		if (flow=="forward") then
-			outsig=range_stretch/(1.+exp(-(1./1.)*insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-range_stretch*log((1./insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if	
-		end if
-
-	!unity sigmoid
-	else
-		!sigmoid
-		if (flow=="forward") then
-			outsig=1./(1.+exp(-insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-log((1./insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if
-		end if
-	end if
-
-end function sigmoid
 
 
 
@@ -179,127 +104,79 @@ end function sigmoid
 
 
 
-!this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
-subroutine neuron_fire(blood,f,u,k,j,i,z,transition_list)
 
-	real :: fate,fear,hope,transition,distil,dist
-	real,dimension(*),intent(inout) :: blood(:,:,:)
-	real,dimension(*),intent(inout) :: transition_list(:)
-	integer :: f,u,k,j,i,z
-	
+attributes(global) subroutine electroviolence(brain,blood,scaling)
 
-	!here the neuron data transition is operated
-				
-	!set the prospective transitionn value random multipliers
-	call RANDOM_NUMBER(hope)
-	call RANDOM_NUMBER(fear)
-	call RANDOM_NUMBER(fate)
-	!use the distance between the neurons and weight accordingly
-	dist=sqrt((real(k-z)**2)+(real(u-i)**2))
-	distil=exp(-(dist*(sigmoid(blood(j,i,k),"forward")**(-1.)))**2)
-	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-	transition=blood(f,u,z)*distil*sigmoid((hope*blood(f,i,k)-fear*blood(j,u,z)),"forward")			
-
-	!check if the operation will drain more than the origin neuron has
-	if (transition<blood(f,u,z)) then
-				
-		!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
-		blood(j,i,k)=blood(j,i,k)+transition
-
-		!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-		blood(f,u,z)=blood(f,u,z)-transition
-	
-		!otherwise, drain neuron dry (further neuron death algorithm to come)
-	else if (transition>=blood(f,u,z)) then
-		!all of the data from the z neuron is taken
-		blood(j,i,k)=blood(j,i,k)+blood(f,u,z)
-	
-		!this takes away all the data, transferred to the current neuron, from the z neuron
-		blood(f,u,z)=0.0
-	end if
-				
-	!add the transition to the list for weight altering
-	transition_list(f)=transition
-
-end subroutine neuron_fire
-
-
-
-
-
-
-subroutine electroviolence(brain,blood,scaling)
-
-	integer,dimension(*),intent(in) :: brain(:,:,:)
-	real,dimension(*),intent(inout) :: blood(:,:,:)
+	integer,dimension(*),intent(in),device :: brain(:,:,:)
+	real,dimension(*),intent(inout),device :: blood(:,:,:)
 	integer :: i,j,k,k_adj,addup,l,m
-	real :: distance,distort,addup_sig,shock
-	real,intent(in) :: scaling
+	integer,dimension(2),shared :: m_l
+	real :: distance,distort,addup_sig,shock,activation=2.
+	real,intent(in),value :: scaling
+
+	i = blockDim%x * (blockIdx%x - 1) + threadIdx%x
+	j = blockDim%y * (blockIdx%y - 1) + threadIdx%y
 	
-	do i=1,size(blood(1,1,:))
-		do j=1,size(blood(1,:,1))
+	if ((size(blood(1,1,:))>=i) .and. (size(blood(1,:,1))>=j)) then
 
-			!set k for brain
-			k_adj=self_pos(i,j,size(blood(1,:,1)))+1+size(brain(1,:,1))+i*2
+		!set k for brain
+		k_adj=self_pos(i,j,size(blood(1,:,1)))+1+size(brain(1,:,1))+i*2
+		
+		if (brain(k_adj,j,i)==1) then
 			
-			if (brain(k_adj,j,i)==1) then
-				
-				!initialise the summing variable
-				addup=0
-				
-				if ((j/=1) .and. (i/=1)) then
-					addup=addup+brain(k_adj,j-1,i-1)
-				end if
-				if (i/=1) then
-					addup=addup+brain(k_adj,j,i-1)
-				end if
-				if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
-					addup=addup+brain(k_adj,j+1,i-1)
-				end if
-				if (j/=1) then
-					addup=addup+brain(k_adj,j-1,i)
-				end if
-				if (j/=size(brain(1,:,1))) then
-					addup=addup+brain(k_adj,j+1,i)
-				end if
-				if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
-					addup=addup+brain(k_adj,j-1,i+1)
-				end if
-				if (i/=size(brain(1,1,:))) then
-					addup=addup+brain(k_adj,j,i+1)
-				end if
-				if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
-					addup=addup+brain(k_adj,j+1,i+1)
-				end if
-				
-				!take data from other vessels and place it in this one
-				do k=1,size(blood(:,1,1))
-					if (k/=self_pos(i,j,size(blood(1,:,1)))) then
-					
-						l=point_pos_matrix(k,size(blood(1,:,1)),"row")
-						m=point_pos_matrix(k,size(blood(1,:,1)),"column")
-						distance=sqrt((float(l-i)**2)+(float(m-j)**2))
-						distort=exp(-(distance)**2)
-						addup_sig=sigmoid(float(addup),"forward",domain_stretch=2.)
-						shock=distort*addup_sig*blood(k,m,l)*scaling
-					
-						if (shock<blood(k,m,l)) then
-							!print*,"fu"
-							blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+shock
-							blood(k,m,l)=blood(k,m,l)-shock
-						else
-							blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+blood(k,m,l)
-							blood(k,m,l)=0.
-						end if
-					end if
-					
-				end do
-
+			!initialise the summing variable
+			addup=0
+			
+			if ((j/=1) .and. (i/=1)) then
+				addup=addup+brain(k_adj,j-1,i-1)
+			end if
+			if (i/=1) then
+				addup=addup+brain(k_adj,j,i-1)
+			end if
+			if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
+				addup=addup+brain(k_adj,j+1,i-1)
+			end if
+			if (j/=1) then
+				addup=addup+brain(k_adj,j-1,i)
+			end if
+			if (j/=size(brain(1,:,1))) then
+				addup=addup+brain(k_adj,j+1,i)
+			end if
+			if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
+				addup=addup+brain(k_adj,j-1,i+1)
+			end if
+			if (i/=size(brain(1,1,:))) then
+				addup=addup+brain(k_adj,j,i+1)
+			end if
+			if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
+				addup=addup+brain(k_adj,j+1,i+1)
 			end if
 			
+			!take data from other vessels and place it in this one
+			do k=1,size(blood(:,1,1))
+				if (k/=self_pos(i,j,size(blood(1,:,1)))) then
+				
+					call point_pos_matrix(k,size(blood(1,:,1)),m_l)
+					distance=sqrt((float(m_l(2)-i)**2)+(float(m_l(1)-j)**2))
+					distort=exp(-(distance)**2)
+					addup_sig=1./(1.+exp(-(1./activation)*float(addup)))
+					shock=distort*addup_sig*blood(k,m_l(1),m_l(2))*scaling
+				
+					if (shock<blood(k,m_l(1),m_l(2))) then
+						!print*,"fu"
+						blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+shock
+						blood(k,m_l(1),m_l(2))=blood(k,m_l(1),m_l(2))-shock
+					else
+						blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+blood(k,m_l(1),m_l(2))
+						blood(k,m_l(1),m_l(2))=0.
+					end if
+				end if
+				
+			end do
 
-		end do
-	end do
+		end if
+			
+	end if
 
 end subroutine electroviolence
 
@@ -308,23 +185,73 @@ end subroutine electroviolence
 
 
 
-!this subroutine updates the weights for a neuron after it has pulled itself off
-subroutine weight_change(blood,j,i,k,transition_list)
+!this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
+attributes(global) subroutine neuron_fire(blood,matrix_pos,hope,fear,fate)
 
+	real :: transition,distil,dist,hold_unsig
+	real,value :: fate,fear,hope
 	real,dimension(*),intent(inout) :: blood(:,:,:)
-	real,dimension(*),intent(inout) :: transition_list(:)
-	real :: hold_unsig
-	integer,intent(in) :: j,i,k
-	integer :: z
+	integer,dimension(*),intent(in) :: matrix_pos(:)
+	integer,dimension(2) :: i_k,u_z
+	integer :: f,u,k,j,i,z,s,s_max,f_max
+	
+	!setup the gpu variables
+	s_max=size(blood(:,1,1)); f_max=size(blood(:,1,1))
+	
+	s = blockDim%x * (blockIdx%x - 1) + threadIdx%x
+	f = blockDim%y * (blockIdx%y - 1) + threadIdx%y
+	
+	if ((s_max>=s) .and. (f_max>=f)) then
 
-	do z=1,size(blood(:,1,1))
-				if (j/=z) then
-					hold_unsig=transition_list(z)+sigmoid(blood(z,i,k),"reverse")
-					blood(z,i,k)=sigmoid(hold_unsig,"forward")
-				end if
-	end do
+		!take the randomised array of matrix positions and select a neuron
+		call point_pos_matrix(matrix_pos(s),size(blood(1,:,1)),i_k)
+		j=matrix_pos(s)	!j is the z position of the current matrix element represented by i and k	
+		
+		!f is the j position of the current matrix element represented by z
+		call point_pos_matrix(f,size(blood(1,:,1)),u_z)	!u is the i position of the current matrix element represented by z
 
-end subroutine weight_change
+		!the first condition stops the neuron from acting on itself
+		!the second condition skips dead neurons
+		if ((j/=f) .and. (blood(j,i,k)/=0.)) then	
+
+			!here the neuron data transition is operated
+						
+			!use the distance between the neurons and weight accordingly
+			dist=sqrt((real(i_k(2)-u_z(2))**2)+(real(u_z(1)-i_k(1))**2))
+			!sigmoid wrapped in a gaussian
+			distil=exp(-(dist*((1./(1.+exp(-blood(j,i_k(1),i_k(2)))))**(-1.)))**2)
+			!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
+			transition=blood(f,u_z(1),u_z(2))*distil*(1./(1.+exp(-((hope*blood(f,i_k(1),i_k(2))-fear*blood(j,u_z(1),u_z(2)))))))
+
+			!check if the operation will drain more than the origin neuron has
+			if (transition<blood(f,u_z(1),u_z(2))) then
+						
+				!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
+				blood(j,i_k(1),i_k(2))=blood(j,i_k(1),i_k(2))+transition
+
+				!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
+				blood(f,u_z(1),u_z(2))=blood(f,u_z(1),u_z(2))-transition
+			
+				!otherwise, drain neuron dry (further neuron death algorithm to come)
+			else if (transition>=blood(f,u_z(1),u_z(2))) then
+				!all of the data from the z neuron is taken
+				blood(j,i_k(1),i_k(2))=blood(j,i_k(1),i_k(2))+blood(f,u_z(1),u_z(2))
+			
+				!this takes away all the data, transferred to the current neuron, from the z neuron
+				blood(f,u_z(1),u_z(2))=0.0
+			end if
+
+			!invert the blood value (sigmoid), add the transition, then return the value to it's sigmoided state. This is for changing weights
+			hold_unsig=transition-log((1./blood(f,i_k(1),i_k(2)))-1.)
+			blood(f,i_k(1),i_k(2))=1./(1.+exp(-hold_unsig))
+
+		end if
+		
+	end if
+
+
+end subroutine neuron_fire
+
 
 
 
