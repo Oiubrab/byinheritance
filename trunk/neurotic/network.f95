@@ -89,7 +89,7 @@ read(1,*) grave
 close(1)	
 
 ! boundaries variable records weights off of (bottom, left, right, top)
-boundaries=[0,0,0,0]
+boundaries=[0,10,10,10]
 
 
 !let the extinction begin

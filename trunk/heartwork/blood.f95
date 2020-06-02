@@ -30,8 +30,7 @@ integer :: x
 integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold
 integer,allocatable :: matrix_pos(:)
 
-real :: fate, transition, distil,multiplier_scaling
-real,allocatable :: transition_list(:)
+real :: hope, fear, fate, transition, distil,multiplier_scaling
 
 !printing objects
 integer :: print_length=7
@@ -40,6 +39,16 @@ character(len=:),allocatable :: print_row
 
 !file checking
 logical :: file_exists
+
+!gpu translation variables
+type(dim3) :: thread_per_block,block_per_grid
+real,allocatable,device :: blood_device(:,:,:)
+integer,allocatable,device :: brain_device(:,:,:)
+integer,allocatable,device :: matrix_pos_device(:)
+
+
+
+
 
 !make this a new run
 call random_seed()
@@ -68,6 +77,12 @@ if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	stop
 end if
 
+thread_per_block%x=1024
+thread_per_block%y=1
+thread_per_block%z=1
+block_per_grid=dim3(ceiling(float(maxim_row*maxim_column)/thread_per_block%x),&
+	ceiling(float(maxim_column)/thread_per_block%y),ceiling(float(maxim_row)/thread_per_block%z))
+
 
 
 
@@ -84,13 +99,13 @@ call CPU_Time(start)
 !the second dimension is the number of possible neurons in each level (column)
 !the third dimension holds the data, (j,i,((j-1)*maxim_column+i)), and the weights, (j,i,z) for ((j-1)*maxim_column+i)/=z, as they relate to each of the other neurons
 allocate(blood(maxim_row*maxim_column,maxim_column,maxim_row))
+allocate(blood_device(maxim_row*maxim_column,maxim_column,maxim_row))
 allocate(brain(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
-
-!initialize the transition list that keeps track of transitions for weight altering
-allocate(transition_list(1:size(blood(:,1,1)-1)))
+allocate(brain_device(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
 
 !initialise the randomised position marker arrays
 allocate(matrix_pos(1:size(blood(:,1,1))))
+allocate(matrix_pos_device(1:size(blood(:,1,1))))
 
 !initialise printer
 allocate(character(maxim_column*print_length+7) :: print_row)
@@ -170,7 +185,10 @@ else
 	close(1)	
 
 	!affect the blood with the brain multipliers
-	call electroviolence(brain,blood,multiplier_scaling)
+	brain_device=brain
+	blood_device=blood
+	call electroviolence<<<block_per_grid, thread_per_block>>>(brain_device,blood_device,multiplier_scaling)
+	blood=blood_device
 
 	!simple tester
 	do x=1,6
@@ -186,46 +204,22 @@ else
 	!record the start time of the epoch
 	call CPU_Time(start_interval)
 
-
-
-
-	!this is the brain neuron action loop (main loop)
-
 	!the randomised loop initialiser - ensures data transition is not positionally dependant
 	call randomised_list(matrix_pos)
+
 	
-	do s=1,size(blood(:,1,1))
-		!take the randomised array of matrix positions and select a neuron
-		k=point_pos_matrix(matrix_pos(s),maxim_column,"row")
-		i=point_pos_matrix(matrix_pos(s),maxim_column,"column")
-		j=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i	
-
-		do f=1,size(blood(:,1,1))
-		
-			z=point_pos_matrix(f,maxim_column,"row")	!f is the j position of the current matrix element represented by z
-			u=point_pos_matrix(f,maxim_column,"column")	!u is the i position of the current matrix element represented by z
-
-			!the first condition stops the neuron from acting on itself
-			!the second condition skips dead neurons
-			if ((j/=f) .and. (blood(j,i,k)/=0.)) then
-
-				call neuron_fire(blood,f,u,k,j,i,z,transition_list)
-
-			else
-				!ensure non active neuron references and data entries record 0
-				transition_list(f)=0.0
-			end if
-		end do
-
-		!update the weights for this neuron based on the activity into the neuron
-		call weight_change(blood,j,i,k,transition_list)
-
-	end do
+	blood_device=blood
+	matrix_pos_device=matrix_pos
 	
-
-
-
-
+	!this is the brain neuron action loop (main loop)
+	!set the prospective transitionn value random multipliers
+	call RANDOM_NUMBER(hope)
+	call RANDOM_NUMBER(fear)
+	call RANDOM_NUMBER(fate)
+	call neuron_fire<<<block_per_grid, thread_per_block>>>(blood_device,matrix_pos_device,hope,fear,fate)
+	
+	blood=blood_device
+	matrix_pos=matrix_pos_device
 
 
 	!print the brain
