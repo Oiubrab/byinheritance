@@ -99,6 +99,7 @@ call infusion(brain,blood,multiplier_scaling)
 
 !test:inject ones into matrix
 !here this is done in a sweeping pattern, from left to right, then back to left
+!then, you explode in a visceral shock of sanity as you realise this is the last riposte of willful ignorance
 
 !if ((-1)**((thrash/size(brain(1,:,1)))+1)==-1) then
 !	!add data to column

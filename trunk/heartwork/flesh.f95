@@ -1,5 +1,6 @@
 module flesh
 use cudafor
+use curand
 implicit none
 contains
 
@@ -64,7 +65,7 @@ end subroutine randomised_list
 
 
 
-!cannot use this with CUDA as it is a function. Here, equation is put directly into CUDA kernels
+!Here, equation is put directly into CUDA kernels
 !this function takes in row/column coordinates and returns the data position of the coordinates
 attributes(device,host) function self_pos(j,i,maximum) result(z)
 	integer,intent(in),value :: j,i,maximum
@@ -80,16 +81,39 @@ end function self_pos
 
 
 !takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in (column,row) format
-attributes(device,host) subroutine point_pos_matrix(z_point,high,poster)
-	integer,intent(in) :: z_point, high
+attributes(device,host) function point_pos_matrix(z_point,high) result(poster)
+	integer,value,intent(in) :: z_point, high
 	integer :: i
-	integer,dimension(2),intent(inout) :: poster
+	integer,dimension(2) :: poster
 
 	!give options for the row or column
 	poster(2)=ceiling(float(z_point)/float(high))
 	poster(1)=z_point-(poster(2)-1)*high
 
-end subroutine point_pos_matrix
+end function point_pos_matrix
+
+
+
+
+
+
+!checks wether any entries in two arrays are equivalent
+attributes(global) subroutine perform(master_blaster,wisdom)
+	integer,dimension(*) :: master_blaster(:,:)
+	logical :: wisdom
+	integer :: check
+
+	check = blockDim%x * (blockIdx%x - 1) + threadIdx%x
+	
+	if (check<=size(master_blaster(:,1))) then
+		!if the values are equivalent, the condition is violated
+		if (master_blaster(check,1)==master_blaster(check,2)) then
+			wisdom=.false.
+		end if
+		
+	end if
+	
+end subroutine perform
 
 
 
@@ -105,156 +129,256 @@ end subroutine point_pos_matrix
 
 
 
-attributes(global) subroutine electroviolence(brain,blood,scaling)
-
-	integer,dimension(*),intent(in),device :: brain(:,:,:)
-	real,dimension(*),intent(inout),device :: blood(:,:,:)
-	integer :: i,j,k,k_adj,addup,l,m
-	integer,dimension(2),shared :: m_l
-	real :: distance,distort,addup_sig,shock,activation=2.
-	real,intent(in),value :: scaling
-
-	i = blockDim%x * (blockIdx%x - 1) + threadIdx%x
-	j = blockDim%y * (blockIdx%y - 1) + threadIdx%y
+!sets up two arrays with no matching row partners for any column
+subroutine randomised_sex(master_of_puppets)
+	integer,dimension(*),intent(inout) :: master_of_puppets(:,:)
+	integer,allocatable,device :: master_of_device(:,:)
+	logical :: lies
+	logical,device :: lies_device
+	type(dim3) :: thread_per_block,block_per_grid
 	
-	if ((size(blood(1,1,:))>=i) .and. (size(blood(1,:,1))>=j)) then
-
-		!set k for brain
-		k_adj=self_pos(i,j,size(blood(1,:,1)))+1+size(brain(1,:,1))+i*2
+	!get ready
+	lies=.false.
+	allocate(master_of_device(size(master_of_puppets(:,1)),2))
+	thread_per_block=dim3(16,1,1)
+	block_per_grid=dim3(ceiling(float(size(master_of_puppets(:,1)))/thread_per_block%x),1,1)	
+	
+	do while (lies==.false.)
+		lies=.true.
+		call randomised_list(master_of_puppets(:,1))
+		call randomised_list(master_of_puppets(:,2))
 		
-		if (brain(k_adj,j,i)==1) then
+		master_of_device=master_of_puppets
+		lies_device=lies
+		call perform<<<block_per_grid,thread_per_block>>>(master_of_device,lies_device)
+		master_of_puppets=master_of_device
+		lies=lies_device
+		
+	end do
+	
+end subroutine randomised_sex
+
+
+
+
+
+
+!for an individual neuron, takes the weights, data and peripherals for a particular neuron pair and stores a calculated transition
+attributes(global) subroutine neuron_pre_fire_individual(bloodhound,blood,hope,local_column,local_row,violence)
+	real,dimension(*),intent(in) :: hope(:,:,:)
+	real,dimension(*),intent(in) :: blood(:,:,:)
+	real,dimension(*),intent(inout) :: bloodhound(:,:,:,:)
+	integer,value :: local_column,local_row
+	real,value :: violence
+	integer :: istat
+	integer :: remote_weight !comes from thread establishment
+	integer,dimension(2) :: bridge
+	integer :: remote_column,remote_row,local_weight !derived from above integers
+	real :: distil,dist,transition_sigmoid,sigmoid_content_pos,sigmoid_content_neg,sum_it_up,hold_unsig,electro,trans
+	print*,"whyme"
+	!get the remote_weight variable from the thread id
+	remote_weight = blockDim%x * (blockIdx%x - 1) + threadIdx%x
+	
+	if (remote_weight<=size(blood(:,1,1))) then
+		
+		!now the fun begins
+		!with the remotes first
+		bridge=point_pos_matrix(remote_weight,size(blood(1,:,1)))
+		remote_row=bridge(2)
+		remote_column=bridge(1)
+		
+		!and now the locals come back into town
+		local_weight=self_pos(local_row,local_column,size(blood(1,:,1)))
+		
+		!only run if there is data in the neuron
+		if ((blood(local_weight,local_column,local_row)>0.) .and. blood(remote_weight,remote_column,remote_row)>0.) then
+		
+			!distance between local and remote
+			dist=sqrt((float(local_column-remote_column)**2)+(float(local_row-remote_row)**2))
+			!slap a gaussian on that
+			distil=exp(-(dist**2))
+			
+			!sum up the neuron values
+			sum_it_up=blood(local_weight,local_column,local_row)+blood(remote_weight,remote_column,remote_row)
+			
+			!this brings data in to the local neuron
+			sigmoid_content_pos=hope(remote_weight,local_column,local_row)*blood(remote_weight,local_column,local_row)
+			!this brings data out of the local neuron
+			sigmoid_content_neg=hope(local_weight,remote_column,remote_row)*blood(local_weight,remote_column,remote_row)
+			!this decides the weight and direction
+			transition_sigmoid=2*(1/(1+exp(-(sigmoid_content_pos-sigmoid_content_neg))))-1
+			!scaling brain with sigmoid touch
+			electro=1/(1+exp(-(violence)))
+			!finally, the transition value for this neuron, at this weight
+			trans=transition_sigmoid*distil*sum_it_up*electro
+			
+			!Oh, wait. If transition is too big, one neuron gobbles out another
+			if (trans>blood(remote_weight,remote_column,remote_row)) then
+				
+				trans=blood(remote_weight,remote_column,remote_row)
+			
+			else if (trans>blood(local_weight,local_column,local_row)) then
+			
+				trans=blood(local_weight,local_column,local_row)
+			
+			end if
+		
+			!without further ado, the transitions (1 is in and 2 is out)
+			bloodhound(1,remote_weight,local_column,local_row)=trans
+			bloodhound(2,local_weight,remote_column,remote_row)=-1.*trans	
+		
+		else
+		
+			bloodhound(1,remote_weight,local_column,local_row)=0.
+			bloodhound(2,local_weight,remote_column,remote_row)=0.
+		
+		end if
+		
+	end if
+	print*,"why"
+	istat=cudaDeviceSynchronize()
+
+end subroutine neuron_pre_fire_individual
+
+
+
+
+
+
+!this subroutine takes the precalculated transitions between each neuron and enacts them, complete with weight change
+subroutine random_neuron_fire(blood,blood_tranny,master_and_commander)
+	real,dimension(*),intent(in) :: blood_tranny(:,:,:,:)
+	real,dimension(*),intent(inout) :: blood(:,:,:)
+	integer,dimension(*),intent(in) :: master_and_commander(:,:)
+	integer,dimension(2) :: texas_ranger
+	real :: in_out_here,in_out_there,hold_unsig
+	integer :: here_weight,here_column,here_row,there_weight,there_column,there_row,walker
+	
+	do walker=1,size(blood(:,1,1))
+	
+		!get the here position
+		here_weight=master_and_commander(walker,1)
+		texas_ranger=point_pos_matrix(here_weight,size(blood(1,:,1)))
+		here_row=texas_ranger(2)
+		here_column=texas_ranger(1)
+		
+		!get the there position
+		there_weight=master_and_commander(walker,2)
+		texas_ranger=point_pos_matrix(there_weight,size(blood(1,:,1)))
+		there_row=texas_ranger(2)
+		there_column=texas_ranger(1)
+		
+		!calculate transition
+		in_out_here=blood_tranny(1,here_weight,here_column,here_row)+blood_tranny(2,here_weight,here_column,here_row)
+		in_out_there=blood_tranny(1,there_weight,there_column,there_row)+blood_tranny(2,there_weight,there_column,there_row)		
+		
+		!make sure neuron isn't drained past 0
+		if (in_out_there+blood(there_weight,there_column,there_row)<0.) then
+			in_out_there=blood(there_weight,there_column,there_row)
+			in_out_here=-1.*in_out_there
+		else if (in_out_here+blood(here_weight,here_column,here_row)<0.) then
+			in_out_here=blood(here_weight,here_column,here_row)
+			in_out_there=-1.*in_out_here
+		end if
+		
+		!okay, make the transition
+		blood(here_weight,here_column,here_row)=blood(here_weight,here_column,here_row)+in_out_here
+		blood(there_weight,there_column,there_row)=blood(there_weight,there_column,there_row)+in_out_there
+		
+		!shift the weight that points from the local to the remote neuron
+		hold_unsig=in_out_here-log((1./blood(there_weight,here_column,here_row))-1.)
+		blood(there_weight,here_column,here_row)=1/(1+exp(-hold_unsig))
+		
+		!shift the weight that points from the remote to the local neuron
+		hold_unsig=in_out_there-log((1./blood(here_weight,there_column,there_row))-1.)
+		blood(here_weight,there_column,there_row)=1/(1+exp(-hold_unsig))		
+		
+	end do
+end subroutine random_neuron_fire
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        rung three        !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+!for each thread, the value of neuron at each thread id is altered based on the aggregate affects of itself and the system
+attributes(global) subroutine neuron_pre_fire(hope,blood,blood_transition,brain,multi_scaling)
+	real,dimension(*),intent(in) :: hope(:,:,:)
+	real,dimension(*),intent(inout) :: blood(:,:,:),blood_transition(:,:,:,:)
+	integer,dimension(*),intent(in) :: brain(:,:,:)
+	integer :: row,column,brain_weight,addup
+	real :: dist,distil_down,distil_up,distil,electroviolence
+	real,value :: multi_scaling
+	integer :: istat
+	type(dim3) :: thread_per_block,block_per_grid
+	
+	!establish which neurons the kernel is using
+	column = blockDim%x * (blockIdx%x - 1) + threadIdx%x
+	row = blockDim%y * (blockIdx%y - 1) + threadIdx%y
+	
+	if ((column<=size(blood(1,:,1))) .and. (row<=size(blood(1,1,:)))) then
+	
+		!set k for brain
+		brain_weight=self_pos(row,column,size(blood(1,:,1)))+1+size(brain(1,:,1))+row*2
+		
+		!if brain has data, calculate weight multiplier derived from brain weights
+		if (brain(brain_weight,column,row)==1) then
 			
 			!initialise the summing variable
 			addup=0
 			
-			if ((j/=1) .and. (i/=1)) then
-				addup=addup+brain(k_adj,j-1,i-1)
+			if ((column/=1) .and. (row/=1)) then
+				addup=addup+brain(brain_weight,column-1,row-1)
 			end if
-			if (i/=1) then
-				addup=addup+brain(k_adj,j,i-1)
+			if (row/=1) then
+				addup=addup+brain(brain_weight,column,row-1)
 			end if
-			if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
-				addup=addup+brain(k_adj,j+1,i-1)
+			if ((column/=size(brain(1,:,1))) .and. (row/=1)) then
+				addup=addup+brain(brain_weight,column+1,row-1)
 			end if
-			if (j/=1) then
-				addup=addup+brain(k_adj,j-1,i)
+			if (column/=1) then
+				addup=addup+brain(brain_weight,column-1,row)
 			end if
-			if (j/=size(brain(1,:,1))) then
-				addup=addup+brain(k_adj,j+1,i)
+			if (column/=size(brain(1,:,1))) then
+				addup=addup+brain(brain_weight,column+1,row)
 			end if
-			if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
-				addup=addup+brain(k_adj,j-1,i+1)
+			if ((column/=1) .and. (row/=size(brain(1,1,:)))) then
+				addup=addup+brain(brain_weight,column-1,row+1)
 			end if
-			if (i/=size(brain(1,1,:))) then
-				addup=addup+brain(k_adj,j,i+1)
+			if (row/=size(brain(1,1,:))) then
+				addup=addup+brain(brain_weight,column,row+1)
 			end if
-			if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
-				addup=addup+brain(k_adj,j+1,i+1)
+			if ((column/=size(brain(1,:,1))) .and. (row/=size(brain(1,1,:)))) then
+				addup=addup+brain(brain_weight,column+1,row+1)
 			end if
 			
-			!take data from other vessels and place it in this one
-			do k=1,size(blood(:,1,1))
-				if (k/=self_pos(i,j,size(blood(1,:,1)))) then
-				
-					call point_pos_matrix(k,size(blood(1,:,1)),m_l)
-					distance=sqrt((float(m_l(2)-i)**2)+(float(m_l(1)-j)**2))
-					distort=exp(-(distance)**2)
-					addup_sig=1./(1.+exp(-(1./activation)*float(addup)))
-					shock=distort*addup_sig*blood(k,m_l(1),m_l(2))*scaling
-				
-					if (shock<blood(k,m_l(1),m_l(2))) then
-						!print*,"fu"
-						blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+shock
-						blood(k,m_l(1),m_l(2))=blood(k,m_l(1),m_l(2))-shock
-					else
-						blood(self_pos(i,j,size(blood(1,:,1))),j,i)=blood(self_pos(i,j,size(blood(1,:,1))),j,i)+blood(k,m_l(1),m_l(2))
-						blood(k,m_l(1),m_l(2))=0.
-					end if
-				end if
-				
-			end do
-
-		end if
-			
-	end if
-
-end subroutine electroviolence
-
-
-
-
-
-
-!this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
-attributes(global) subroutine neuron_fire(blood,matrix_pos,hope,fear,fate)
-
-	real :: transition,distil,dist,hold_unsig
-	real,value :: fate,fear,hope
-	real,dimension(*),intent(inout) :: blood(:,:,:)
-	integer,dimension(*),intent(in) :: matrix_pos(:)
-	integer,dimension(2) :: i_k,u_z
-	integer :: f,u,k,j,i,z,s,s_max,f_max
-	
-	!setup the gpu variables
-	s_max=size(blood(:,1,1)); f_max=size(blood(:,1,1))
-	
-	s = blockDim%x * (blockIdx%x - 1) + threadIdx%x
-	f = blockDim%y * (blockIdx%y - 1) + threadIdx%y
-	
-	if ((s_max>=s) .and. (f_max>=f)) then
-
-		!take the randomised array of matrix positions and select a neuron
-		call point_pos_matrix(matrix_pos(s),size(blood(1,:,1)),i_k)
-		j=matrix_pos(s)	!j is the z position of the current matrix element represented by i and k	
+			!make addup real then multiply by scaling
+			electroviolence=float(addup)*multi_scaling
 		
-		!f is the j position of the current matrix element represented by z
-		call point_pos_matrix(f,size(blood(1,:,1)),u_z)	!u is the i position of the current matrix element represented by z
-
-		!the first condition stops the neuron from acting on itself
-		!the second condition skips dead neurons
-		if ((j/=f) .and. (blood(j,i,k)/=0.)) then	
-
-			!here the neuron data transition is operated
-						
-			!use the distance between the neurons and weight accordingly
-			dist=sqrt((real(i_k(2)-u_z(2))**2)+(real(u_z(1)-i_k(1))**2))
-			!sigmoid wrapped in a gaussian
-			distil=exp(-(dist*((1./(1.+exp(-blood(j,i_k(1),i_k(2)))))**(-1.)))**2)
-			!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-			transition=blood(f,u_z(1),u_z(2))*distil*(1./(1.+exp(-((hope*blood(f,i_k(1),i_k(2))-fear*blood(j,u_z(1),u_z(2)))))))
-
-			!check if the operation will drain more than the origin neuron has
-			if (transition<blood(f,u_z(1),u_z(2))) then
-						
-				!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
-				blood(j,i_k(1),i_k(2))=blood(j,i_k(1),i_k(2))+transition
-
-				!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-				blood(f,u_z(1),u_z(2))=blood(f,u_z(1),u_z(2))-transition
+		else
+		
+			electroviolence=0.
 			
-				!otherwise, drain neuron dry (further neuron death algorithm to come)
-			else if (transition>=blood(f,u_z(1),u_z(2))) then
-				!all of the data from the z neuron is taken
-				blood(j,i_k(1),i_k(2))=blood(j,i_k(1),i_k(2))+blood(f,u_z(1),u_z(2))
-			
-				!this takes away all the data, transferred to the current neuron, from the z neuron
-				blood(f,u_z(1),u_z(2))=0.0
-			end if
-
-			!invert the blood value (sigmoid), add the transition, then return the value to it's sigmoided state. This is for changing weights
-			hold_unsig=transition-log((1./blood(f,i_k(1),i_k(2)))-1.)
-			blood(f,i_k(1),i_k(2))=1./(1.+exp(-hold_unsig))
-
 		end if
+	
+		!get the neuron weight kernels ready
+		thread_per_block=dim3(16,1,1)
+		block_per_grid=dim3(ceiling(float(size(blood(:,1,1)))/thread_per_block%x),1,1)	
+		print*,"die"
+		call neuron_pre_fire_individual<<<block_per_grid, thread_per_block>>>(blood_transition,blood,hope,column,row,electroviolence)
+		print*,"whynot"
 		
 	end if
 
-
-end subroutine neuron_fire
-
-
-
-
-
-
+end subroutine neuron_pre_fire
+ 
 end module flesh

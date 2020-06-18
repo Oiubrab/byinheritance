@@ -5,6 +5,9 @@ if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 
 reset
 
+#network scaling is the fractional effect that the brain has in maximising the blood transitions
+#blood scaling is the fractional effect that the blood has in maximising the brain transitions
+
 if [ "$#" -ne 8 ]
 then
     echo "Execute program by format:"
