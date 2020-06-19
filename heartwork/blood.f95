@@ -30,7 +30,7 @@ integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold
 real :: fate, transition, distil,multiplier_scaling
 
 !printing objects
-integer :: print_length=7
+integer :: print_length=8
 character(len=print_length) :: data_cha
 character(len=:),allocatable :: print_row
 
@@ -77,7 +77,8 @@ end if
 thread_per_block%x=1024
 thread_per_block%y=1
 thread_per_block%z=1
-block_per_grid=dim3(ceiling(float(maxim_column)/thread_per_block%x),ceiling(float(maxim_row)/thread_per_block%y),1)
+block_per_grid=dim3(ceiling(float(maxim_column*maxim_row)/thread_per_block%x),ceiling(float(maxim_column)/thread_per_block%y),&
+	ceiling(float(maxim_row)/thread_per_block%z))
 
 
 
@@ -107,7 +108,7 @@ allocate(brain(maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,maxim_column,
 allocate(brain_device(maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,maxim_column,maxim_row))
 
 !initialise printer
-allocate(character(maxim_column*print_length+7) :: print_row)
+allocate(character(maxim_column*print_length) :: print_row)
 
 !heartwork is the first network to run
 !so we mst first test if this is the first epoch and initialize both brain and blood
@@ -140,8 +141,8 @@ if (file_exists .eqv. .false.) then
 		do s=1,size(blood(1,1,:))
 			do a=1,size(blood(1,:,1))
 
-				write(data_cha,"(F7.3)")blood(self_pos(s,a,maxim_column),a,s)
-				print_row(a*print_length:a*print_length+7)=data_cha
+				write(data_cha,"(F8.3)")blood(self_pos(s,a,maxim_column),a,s)
+				print_row((a-1)*print_length:(a-1)*print_length+print_length)=data_cha
 				
 			end do
 			print *,print_row
@@ -189,15 +190,21 @@ else
 	blood_device=blood
 	brain_device=brain
 	blood_transition_device=blood_transition
-	print*,"awaken"
-	call neuron_pre_fire<<<block_per_grid,thread_per_block>>>(hope_device,blood_device,blood_transition_device,brain_device,multiplier_scaling)
-	hope_device=hope
+	
 	print*,"asleep"
 	
-	blood_transition=blood_transition_device
+	call neuron_pre_fire<<<block_per_grid,thread_per_block>>>(hope_device,blood_device,blood_transition_device,brain_device,multiplier_scaling)
 
+	print*,"awaken"
+
+	blood_transition=blood_transition_device
+	
+	!print*,blood_transition
+	
+	!setup the transitions decider
 	call randomised_sex(master)
 
+	!make the transitions
 	call random_neuron_fire(blood,blood_transition,master)
 
 	!print the brain
@@ -207,7 +214,7 @@ else
 			do a=1,size(blood(1,:,1))
 
 				write(data_cha,"(F8.3)")blood(self_pos(s,a,maxim_column),a,s)
-				print_row(a*print_length:a*print_length+7)=data_cha
+				print_row((a-1)*print_length:(a-1)*print_length+print_length)=data_cha
 				
 			end do
 			print *,print_row
@@ -219,6 +226,17 @@ else
 	
 end if
 
+
+!simple tester
+do x=1,6
+	if (epoch>(10*x)) then
+		blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
+		blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
+			blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
+		blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
+			blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
+	end if
+end do
 
 
 
