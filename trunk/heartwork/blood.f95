@@ -8,7 +8,7 @@ implicit none
 !time_interval to be used to time epoch to compute information degradation, total_time just to store total time of program execution
 
 !input variables
-character(len=10000) :: maxim_column_cha,maxim_row_cha,printed,multiplier_scaling_cha
+character(len=10000) :: maxim_column_cha,maxim_row_cha,printed,multiplier_scaling_cha,filename
 
 !timing objects
 real ::  time_interval, start, finish, start_interval, finish_interval
@@ -24,6 +24,7 @@ real,allocatable :: hope(:,:,:)
 
 !debugging objects
 integer :: x
+integer,allocatable :: gpu_debug_tits(:,:,:,:)
 
 !incrementation objects
 integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold
@@ -41,7 +42,7 @@ logical :: file_exists
 type(dim3) :: thread_per_block,block_per_grid
 real,allocatable,device :: hope_device(:,:,:)
 real,allocatable,device :: blood_device(:,:,:),blood_transition_device(:,:,:,:)
-integer,allocatable,device :: brain_device(:,:,:)
+integer,allocatable,device :: brain_device(:,:,:),gpu_debug_tits_device(:,:,:,:)
 integer,allocatable :: master(:,:)
 
 
@@ -74,14 +75,14 @@ if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	stop
 end if
 
-thread_per_block%x=1024
+thread_per_block%x=1
 thread_per_block%y=1
 thread_per_block%z=1
 block_per_grid=dim3(ceiling(float(maxim_column*maxim_row)/thread_per_block%x),ceiling(float(maxim_column)/thread_per_block%y),&
 	ceiling(float(maxim_row)/thread_per_block%z))
 
 
-
+!print*,thread_per_block,block_per_grid
 
 
 !----------------------------------
@@ -98,6 +99,9 @@ allocate(blood_device(maxim_row*maxim_column,maxim_column,maxim_row))
 
 allocate(blood_transition(2,maxim_row*maxim_column,maxim_column,maxim_row))
 allocate(blood_transition_device(2,maxim_row*maxim_column,maxim_column,maxim_row))
+
+allocate(gpu_debug_tits(3,maxim_row*maxim_column,maxim_column,maxim_row))
+allocate(gpu_debug_tits_device(3,maxim_row*maxim_column,maxim_column,maxim_row))
 
 allocate(master(maxim_row*maxim_column,2))
 
@@ -184,25 +188,41 @@ else
 	epoch=epoch+1
 	close(1)	
 
+	!clear the blood transition, just in case
+	do k=1,size(blood_transition(1,1,1,:))
+		do c=1,size(blood_transition(1,1,:,1))
+			do u=1,size(blood_transition(1,:,1,1))
+				do f=1,size(blood_transition(:,1,1,1))
+					blood_transition(f,u,c,k)=0.
+				end do
+			end do
+		end do
+	end do
+
+	!print*,blood_transition
+
 	!do all the neuron stuff
 	call random_number(hope)
 	hope_device=hope
 	blood_device=blood
 	brain_device=brain
 	blood_transition_device=blood_transition
-	
-	print*,"asleep"
-	
-	call neuron_pre_fire<<<block_per_grid,thread_per_block>>>(hope_device,blood_device,blood_transition_device,brain_device,multiplier_scaling)
 
-	print*,"awaken"
+	!print*,blood_transition
+	call neuron_pre_fire<<<block_per_grid,thread_per_block>>>(hope_device,blood_device,blood_transition_device,brain_device,multiplier_scaling,gpu_debug_tits_device)
 
 	blood_transition=blood_transition_device
 	
 	!print*,blood_transition
 	
+	gpu_debug_tits=gpu_debug_tits_device
+	
+	!print*,gpu_debug_tits
+	
 	!setup the transitions decider
 	call randomised_sex(master)
+
+	!print*,master
 
 	!make the transitions
 	call random_neuron_fire(blood,blood_transition,master)

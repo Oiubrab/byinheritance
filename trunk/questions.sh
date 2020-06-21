@@ -18,7 +18,7 @@ then
 else
 
 	cd heartwork
-	pgfortran -traceback -Mcuda -Minfo=all flesh.f95 blood.f95 -o megalomaniac_blood
+	pgfortran -traceback -Mcuda=charstring -Minfo=all flesh.f95 blood.f95 -o megalomaniac_blood
 	cd ../neurotic
 	pgfortran -traceback -Mcuda discrete_flesh.f95 network.f95 -o megalomaniac_network
 	cd ..
