@@ -5,6 +5,9 @@ if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 
 reset
 
+#network scaling is the fractional effect that the brain has in maximising the blood transitions
+#blood scaling is the fractional effect that the blood has in maximising the brain transitions
+
 if [ "$#" -ne 8 ]
 then
     echo "Execute program by format:"
@@ -15,7 +18,7 @@ then
 else
 
 	cd heartwork
-	pgfortran -traceback -Mcuda flesh.f95 blood.f95 -o megalomaniac_blood
+	pgfortran -traceback -Mcuda=charstring -Minfo=all flesh.f95 blood.f95 -o megalomaniac_blood
 	cd ../neurotic
 	pgfortran -traceback -Mcuda discrete_flesh.f95 network.f95 -o megalomaniac_network
 	cd ..
@@ -36,8 +39,5 @@ else
 		cd ..
 
 	done
-
-	#if [ -f 'heartwork/neurotic.txt' ]; then rm heartwork/neurotic.txt; fi
-	#if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 	
 fi
