@@ -322,7 +322,6 @@ subroutine infusion(brain,blood,scaling)
 		do j=1,size(brain(1,:,1))
 			!setup the position
 			k=self_pos(i,j,size(brain(1,:,1)))
-			!position value needs to be adjusted for blood matrix
 			k_adj=k-1-size(blood(1,:,1))-i*2
 			!add the blood data to the weights into each neuron
 			if ((j/=1) .and. (i/=1)) then
@@ -345,7 +344,7 @@ subroutine infusion(brain,blood,scaling)
 			end if
 			if (i/=size(brain(1,1,:))) then
 				brain(k,j,i+1)=brain(k,j,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
-			!test case - to see data able to escape. take the weight, at the current position, for the next row, and add to it 
+			!test case - to see data able to escape
 			else
 				brain(k+2+size(brain(1,:,1)),j,i)=brain(k+2+size(brain(1,:,1)),j,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
 			end if
