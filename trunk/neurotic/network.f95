@@ -6,7 +6,7 @@ implicit none
 !printing objects
 integer :: cycles,maximum_columns,maximum_rows,lag,active_data,grave=0
 character(len=2) :: data_cha
-character(len=10000) :: valves,cycled,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha,multiplier_scaling_cha
+character(len=10000) :: valves,size_rows,size_columns,lag_cha,printed,neuron_column_cha,neuron_row_cha,multiplier_scaling_cha,error_num
 character(len=:),allocatable :: print_row
 
 !incrementation and limiting objects
@@ -18,6 +18,9 @@ integer,dimension(2) :: j_i
 !network objects
 integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 real,allocatable :: blood(:,:,:)
+
+!debugging
+integer :: counter
 
 !time and chance
 real :: fuck,start,finish
@@ -89,25 +92,13 @@ read(1,*) grave
 close(1)	
 
 ! boundaries variable records weights off of (bottom, left, right, top)
-boundaries=[0,0,0,0]
+boundaries=[0,4,4,4]
 
 
 !let the extinction begin
 !affect the brain with the blood multipliers
 call infusion(brain,blood,multiplier_scaling)
 
-
-!test:inject ones into matrix
-!here this is done in a sweeping pattern, from left to right, then back to left
-
-!if ((-1)**((thrash/size(brain(1,:,1)))+1)==-1) then
-!	!add data to column
-!	brain(mod(thrash,maximum_columns)+4+maximum_columns,mod(thrash,size(brain(1,:,1)))+1,1)=1 !move from left to right
-!else
-!	!add data to column
-!	brain((maximum_columns*2+3)-mod(thrash,maximum_columns),&
-!		size(brain(1,:,1))-mod(thrash,size(brain(1,:,1))),1)=1 !move from right to left
-!end if	
 
 if (brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)==0) then
 	brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)=1
@@ -182,6 +173,7 @@ end do
 test_overlap_conflict=1
 test_outside_conflict=1
 test_condition_conflict=1
+counter=0
 do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1)  .or. (test_condition_conflict==1))
 
 	test_condition_conflict=0
@@ -221,7 +213,8 @@ do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1)  .or. (test
 				end if
 			end if
 
-			!ensure each neuron that is coming in has space (being built)
+			!ensure each neuron that is coming in has space
+			!this is for the test injector
 			if (brain_freeze(j,i)==self_pos(1,maximum_columns/2,maximum_columns)) then
 				test_condition_conflict=1
 				j_i=[j,i]
@@ -230,44 +223,104 @@ do while ((test_overlap_conflict==1) .or. (test_outside_conflict==1)  .or. (test
 
 			!only check non-zero entries
 			if (brain_freeze(j,i)/=0) then
+				
+				!before 300 tries, the system is considered to work fine
+				if (counter<=300) then
+				
+					do l=1,size(brain_freeze(1,:))
+						do m=1,size(brain_freeze(:,1))
 
-				do l=1,size(brain_freeze(1,:))
-					do m=1,size(brain_freeze(:,1))
-
-						!store all the target values in the multi_target array
-						if ((j/=m) .or. (i/=l)) then
-							if (brain_freeze(j,i)==brain_freeze(m,l)) then
-								
-								!The neuron with the biggest weight gets first dibs
-								if (brain(brain_freeze(j,i),m,l)<brain(brain_freeze(m,l),j,i)) then
-									j_i=[m,l]
-								else if (brain(brain_freeze(j,i),m,l)>brain(brain_freeze(m,l),j,i)) then
-									j_i=[j,i]
-								else
-									!if weights are equal, randomise selection
-									call random_number(fuck)
-									if (fuck>0.5) then
+							!store all the target values in the multi_target array
+							if ((j/=m) .or. (i/=l)) then
+								if (brain_freeze(j,i)==brain_freeze(m,l)) then
+									
+									!The neuron with the biggest weight gets first dibs
+									if (brain(brain_freeze(j,i),m,l)<brain(brain_freeze(m,l),j,i)) then
 										j_i=[m,l]
-									else
+									else if (brain(brain_freeze(j,i),m,l)>brain(brain_freeze(m,l),j,i)) then
 										j_i=[j,i]
+									else
+										!if weights are equal, randomise selection
+										call random_number(fuck)
+										if (fuck>0.5) then
+											j_i=[m,l]
+										else
+											j_i=[j,i]
+										end if
+										
 									end if
 									
-								end if
+									call neuron_pre_fire(brain,brain_freeze,j_i,brain_freeze(j,i))
+									test_overlap_conflict=1
 									
-								call neuron_pre_fire(brain,brain_freeze,j_i)
-								test_overlap_conflict=1
-								
+								end if
+
 							end if
 
-						end if
-
+						end do
 					end do
-				end do
 
+				!after 300 tries, clearly something is stuck, so just skip problem neurons
+				else
+					
+					do l=1,size(brain_freeze(1,:))
+						do m=1,size(brain_freeze(:,1))
+						
+							if ((j/=m) .or. (i/=l)) then
+							
+								!stop neurons moving data if they are both going to the same destination
+								if (brain_freeze(j,i)==brain_freeze(m,l)) then											
+									
+									brain_freeze(j,i)=0
+									brain_freeze(m,l)=0
+									test_overlap_conflict=1
+								
+								!stop neuron j,i moving data if it's destination is both full and not moving 
+								else if ((brain_freeze(j,i)==self_pos(l,m,maximum_columns)) .and. (brain_freeze(m,l)==0) .and. &
+									brain(brain_freeze(j,i),m,l)==1) then
+									
+									brain_freeze(j,i)=0
+									test_overlap_conflict=1
+									
+								end if
+								
+							end if
+								
+						end do
+					end do
+				
+				end if
 			end if
 			
 		end do
 	end do
+
+	!debuggling: save and print tool
+	if ((counter>300) .and. (test_overlap_conflict==0)) then
+		write(error_num,"(I0)")thrash
+		open(unit=2,file="error_folder/neurotic_error_"//trim(error_num)//".txt")
+		do i=1,size(blood(1,1,:))
+			do j=1,size(blood(1,:,1))
+				write(2,*) blood(:,j,i)
+			end do
+		end do
+		do i=1,size(brain(1,1,:))
+			do j=1,size(brain(1,:,1))
+				write(2,*) brain(:,j,i)
+			end do
+		end do
+		write(2,*) thrash
+		write(2,*) active_data
+		write(2,*) grave
+		close(2)
+		
+		!test_condition_conflict=0
+		!test_overlap_conflict=0
+		!stop
+		
+	end if
+
+	counter=counter+1
 	
 end do
 
@@ -323,6 +376,14 @@ if ((printed=='yes') .or. (printed=='debug')) then
 	print*," "
 end if
 
+!debuggling: check if any neurons are greater than 1
+do i=1,size(brain(1,1,:)
+	do j=1,size(brain(1,:,1)
+		if ((brain(self_pos(i,j,maximum_columns),j,i)>1) .or. (brain(self_pos(i,j,maximum_columns),j,i)<0)) then
+			stop
+		end if
+	end do
+end do
 
 !write the networks to file
 open(unit=2,file="neurotic.txt")

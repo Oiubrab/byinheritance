@@ -27,11 +27,10 @@ integer :: active_data,grave
 integer :: x
 
 !incrementation objects
-integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold
+integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold, here_weight,here_column,here_row, there_weight,there_column,there_row
 integer,allocatable :: matrix_pos(:)
 
 real :: fate, transition, distil,multiplier_scaling
-real,allocatable :: transition_list(:)
 
 !printing objects
 integer :: print_length=7
@@ -80,14 +79,9 @@ end if
 call CPU_Time(start)
 
 
-!the first dimension is the number of levels (rows)
-!the second dimension is the number of possible neurons in each level (column)
-!the third dimension holds the data, (j,i,((j-1)*maxim_column+i)), and the weights, (j,i,z) for ((j-1)*maxim_column+i)/=z, as they relate to each of the other neurons
+!initialise the two networks
 allocate(blood(maxim_row*maxim_column,maxim_column,maxim_row))
 allocate(brain(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
-
-!initialize the transition list that keeps track of transitions for weight altering
-allocate(transition_list(1:size(blood(:,1,1)-1)))
 
 !initialise the randomised position marker arrays
 allocate(matrix_pos(1:size(blood(:,1,1))))
@@ -175,11 +169,20 @@ else
 	!simple tester
 	do x=1,6
 		if (epoch>(10*x)) then
-			blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
-			blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
-				blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
-			blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
-				blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
+			!bottom left
+			if (brain(self_pos(maxim_row,1,size(blood(1,:,1)))+1+size(brain(1,:,1))+maxim_row*2,1,maxim_row)==1) then
+				blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
+			end if
+			!bottom middle
+			if (brain(self_pos(maxim_row,maxim_column/2,size(blood(1,:,1)))+1+size(brain(1,:,1))+maxim_row*2,maxim_column/2,maxim_row)==1) then
+				blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
+					blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
+			end if
+			!bottom right
+			if (brain(self_pos(maxim_row,maxim_column,size(blood(1,:,1)))+1+size(brain(1,:,1))+maxim_row*2,maxim_column,maxim_row)==1) then
+				blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
+					blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
+			end if
 		end if
 	end do
 
@@ -196,29 +199,23 @@ else
 	
 	do s=1,size(blood(:,1,1))
 		!take the randomised array of matrix positions and select a neuron
-		k=point_pos_matrix(matrix_pos(s),maxim_column,"row")
-		i=point_pos_matrix(matrix_pos(s),maxim_column,"column")
-		j=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i	
+		here_row=point_pos_matrix(matrix_pos(s),maxim_column,"row")
+		here_column=point_pos_matrix(matrix_pos(s),maxim_column,"column")
+		here_weight=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i	
 
-		do f=1,size(blood(:,1,1))
+		do there_weight=1,size(blood(:,1,1))
 		
-			z=point_pos_matrix(f,maxim_column,"row")	!f is the j position of the current matrix element represented by z
-			u=point_pos_matrix(f,maxim_column,"column")	!u is the i position of the current matrix element represented by z
+			there_row=point_pos_matrix(there_weight,maxim_column,"row")	!f is the j position of the current matrix element represented by z
+			there_column=point_pos_matrix(there_weight,maxim_column,"column")	!u is the i position of the current matrix element represented by z
 
 			!the first condition stops the neuron from acting on itself
 			!the second condition skips dead neurons
-			if ((j/=f) .and. (blood(j,i,k)/=0.)) then
+			if ((here_weight/=there_weight) .and. (blood(here_weight,here_column,here_row)/=0.)) then
 
-				call neuron_fire(blood,f,u,k,j,i,z,transition_list)
+				call neuron_fire(blood,there_weight,there_column,here_row,here_weight,here_column,there_row)
 
-			else
-				!ensure non active neuron references and data entries record 0
-				transition_list(f)=0.0
 			end if
 		end do
-
-		!update the weights for this neuron based on the activity into the neuron
-		call weight_change(blood,j,i,k,transition_list)
 
 	end do
 	

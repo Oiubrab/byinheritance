@@ -180,12 +180,11 @@ end function sigmoid
 
 
 !this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
-subroutine neuron_fire(blood,f,u,k,j,i,z,transition_list)
+subroutine neuron_fire(blood,there_weight,there_column,here_row,here_weight,here_column,there_row)
 
-	real :: fate,fear,hope,transition,distil,dist
+	real :: fear,hope,transition,distil,dist,hold_unsig
 	real,dimension(*),intent(inout) :: blood(:,:,:)
-	real,dimension(*),intent(inout) :: transition_list(:)
-	integer :: f,u,k,j,i,z
+	integer :: there_weight,there_column,here_row,here_weight,here_column,there_row
 	
 
 	!here the neuron data transition is operated
@@ -193,33 +192,33 @@ subroutine neuron_fire(blood,f,u,k,j,i,z,transition_list)
 	!set the prospective transitionn value random multipliers
 	call RANDOM_NUMBER(hope)
 	call RANDOM_NUMBER(fear)
-	call RANDOM_NUMBER(fate)
 	!use the distance between the neurons and weight accordingly
-	dist=sqrt((real(k-z)**2)+(real(u-i)**2))
-	distil=exp(-(dist*(sigmoid(blood(j,i,k),"forward")**(-1.)))**2)
+	dist=sqrt((real(here_row-there_row)**2)+(real(here_column-there_column)**2))
+	distil=exp(-(dist*(sigmoid(blood(here_weight,here_column,here_row),"forward")**(-1.)))**2)
 	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-	transition=blood(f,u,z)*distil*sigmoid((hope*blood(f,i,k)-fear*blood(j,u,z)),"forward")			
+	transition=blood(there_weight,there_column,there_row)*distil*sigmoid((hope*blood(there_weight,here_column,here_row)&
+		-fear*blood(here_weight,there_column,there_row)),"forward")			
 
 	!check if the operation will drain more than the origin neuron has
-	if (transition<blood(f,u,z)) then
+	if (transition<blood(there_weight,there_column,there_row)) then
 				
 		!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
-		blood(j,i,k)=blood(j,i,k)+transition
+		blood(here_weight,here_column,here_row)=blood(here_weight,here_column,here_row)+transition
 
 		!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-		blood(f,u,z)=blood(f,u,z)-transition
+		blood(there_weight,there_column,there_row)=blood(there_weight,there_column,there_row)-transition
 	
 		!otherwise, drain neuron dry (further neuron death algorithm to come)
-	else if (transition>=blood(f,u,z)) then
+	else if (transition>=blood(there_weight,there_column,there_row)) then
 		!all of the data from the z neuron is taken
-		blood(j,i,k)=blood(j,i,k)+blood(f,u,z)
+		blood(here_weight,here_column,here_row)=blood(here_weight,here_column,here_row)+blood(there_weight,there_column,there_row)
 	
 		!this takes away all the data, transferred to the current neuron, from the z neuron
-		blood(f,u,z)=0.0
+		blood(there_weight,there_column,there_row)=0.0
 	end if
 				
-	!add the transition to the list for weight altering
-	transition_list(f)=transition
+	hold_unsig=transition+sigmoid(blood(there_weight,here_column,here_row),"reverse")
+	blood(there_weight,here_column,here_row)=sigmoid(hold_unsig,"forward")
 
 end subroutine neuron_fire
 
@@ -302,29 +301,6 @@ subroutine electroviolence(brain,blood,scaling)
 	end do
 
 end subroutine electroviolence
-
-
-
-
-
-
-!this subroutine updates the weights for a neuron after it has pulled itself off
-subroutine weight_change(blood,j,i,k,transition_list)
-
-	real,dimension(*),intent(inout) :: blood(:,:,:)
-	real,dimension(*),intent(inout) :: transition_list(:)
-	real :: hold_unsig
-	integer,intent(in) :: j,i,k
-	integer :: z
-
-	do z=1,size(blood(:,1,1))
-				if (j/=z) then
-					hold_unsig=transition_list(z)+sigmoid(blood(z,i,k),"reverse")
-					blood(z,i,k)=sigmoid(hold_unsig,"forward")
-				end if
-	end do
-
-end subroutine weight_change
 
 
 
