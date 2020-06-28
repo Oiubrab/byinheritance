@@ -183,7 +183,9 @@ subroutine selector(brain_select,brain_freeze,brain,j,i)
 
 	!number of rungs must equal the number of possible neuron selections
 	allocate(rungs(1:size(brain_select)))
-	rungs=[0,0,0,0,0,0,0,0]
+	do n=1,size(rungs)
+		rungs(n)=0.
+	end do
 	
 	!base incrementation of the rungs must be monotonic
 	increment=1/float(size(brain_select))
@@ -191,6 +193,7 @@ subroutine selector(brain_select,brain_freeze,brain,j,i)
 	call random_number(fuck)
 
 	!set the rungs - ranges for each selection
+	!rungs = increment + weight stored in neuron for brain_select position
 	rungs(1)=increment+float(brain(brain_select(1),j,i))
 	do n=2,size(brain_select)
 		rungs(n)=rungs(n-1)+increment+float(brain(brain_select(n),j,i))
@@ -279,14 +282,15 @@ end subroutine reflect
 
 
 !this subroutine tranfers data between neurons, with transfer depending on the relative weights between neurons and random factors
-subroutine neuron_pre_fire(brain,brain_freeze,j_i)
+subroutine neuron_pre_fire(brain,brain_freeze,j_i,brain_freeze_nullify)
 
 	real :: fuck
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)
 	integer,dimension(2),intent(in) :: j_i
 	integer :: maximum_columns,maximum_rows,j,i
-	integer,dimension(8) :: brain_select
+	integer,optional :: brain_freeze_nullify
+	integer,allocatable :: brain_select(:)
 
 	!set maximums and position
 	maximum_columns=size(brain(1,:,1))
@@ -296,10 +300,44 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i)
 
 	call random_number(fuck)
 
-	brain_select=[self_pos(i-1,j-1,maximum_columns),self_pos(i-1,j,maximum_columns),&
-		self_pos(i-1,j+1,maximum_columns),self_pos(i,j-1,maximum_columns),&
-		self_pos(i,j+1,maximum_columns),self_pos(i+1,j-1,maximum_columns),&
-		self_pos(i+1,j,maximum_columns),self_pos(i+1,j+1,maximum_columns)]
+	!if this call is from the overlap detector that has detected a conflict, eliminate the option for that conflicting transition
+	if (present(brain_freeze_nullify)) then
+		allocate(brain_select(7))
+		
+		if (self_pos(i-1,j-1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(1)=self_pos(i-1,j-1,maximum_columns)
+		end if
+		
+		if (self_pos(i-1,j,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(2)=self_pos(i-1,j,maximum_columns)
+		end if	
+		
+		if (self_pos(i-1,j+1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(3)=self_pos(i-1,j+1,maximum_columns)
+		end if	
+		
+		if (self_pos(i,j-1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(4)=self_pos(i,j-1,maximum_columns)
+		end if	
+		
+		if (self_pos(i,j+1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(5)=self_pos(i,j+1,maximum_columns)
+		end if	
+		
+		if (self_pos(i+1,j-1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(6)=self_pos(i+1,j-1,maximum_columns)
+		end if	
+		
+		if (self_pos(i+1,j+1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(7)=self_pos(i+1,j+1,maximum_columns)
+		end if			
+	else
+		allocate(brain_select(8))
+		brain_select=[self_pos(i-1,j-1,maximum_columns),self_pos(i-1,j,maximum_columns),&
+			self_pos(i-1,j+1,maximum_columns),self_pos(i,j-1,maximum_columns),&
+			self_pos(i,j+1,maximum_columns),self_pos(i+1,j-1,maximum_columns),&
+			self_pos(i+1,j,maximum_columns),self_pos(i+1,j+1,maximum_columns)]
+	end if
 
 	call selector(brain_select,brain_freeze,brain,j,i)
 
