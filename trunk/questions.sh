@@ -11,7 +11,7 @@ then
     echo "Execute program by format:"
 	echo ". questions.sh valves valve_value cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed"
 	echo "valves: left right up down custom"
-	echo "printed: yes no debug"
+	echo "printed: yes no debug network_only"
 
 else
 

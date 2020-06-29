@@ -98,6 +98,7 @@ read(1,*) grave
 close(1)	
 
 ! boundaries variable records weights off of (bottom, left, right, top)
+! boundaries variable records weights off of (bottom, left, right, top)
 if (valves=="up") then
 	boundaries=[valve_value,valve_value,valve_value,0]
 else if (valves=="down") then
@@ -325,7 +326,7 @@ if (printed=='debug') then
 end if
 
 !finally, transact the recorded transitions in brain_freeze
-call reflect(brain,brain_freeze,grave)
+call reflect(brain,brain_freeze,valves,grave)
 
 !steadily detract brain probability weights
 do l=1,size(brain(1,1,:))
