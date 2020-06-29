@@ -6,11 +6,11 @@ rm -r neurotic/error_folder/neurotic_error*
 
 reset
 
-if [ "$#" -ne 8 ]
+if [ "$#" -ne 9 ]
 then
     echo "Execute program by format:"
-	echo ". questions.sh valves cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed"
-	echo "valves: closed open bottom_open"
+	echo ". questions.sh valves valve_value cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed"
+	echo "valves: left right up down custom"
 	echo "printed: yes no debug"
 
 else
@@ -21,13 +21,19 @@ else
 	pgfortran -traceback -Mcuda discrete_flesh.f95 network.f95 -o megalomaniac_network
 	cd ..
 
-	for i in $(seq 1 $2)
+	for i in $(seq 1 $3)
 	do
 		
 		
 		#operate the heartwork step
 		cd heartwork
-		./megalomaniac_blood $3 $4 $6 $8
+		#if printer is network only, then dont print the blood
+		if [ $9=="network_only" ]
+		then
+			./megalomaniac_blood $4 $5 $7 no
+		else
+			./megalomaniac_blood $4 $5 $7 $9
+		fi
 		#if something goes wrong, stop the process
 		if [ -f 'heartwork.txt' ] 
 		then
@@ -44,7 +50,13 @@ else
 
 		#operate the neurotic step
 		cd neurotic
-		./megalomaniac_network $1 $3 $4 9 9 $5 $7 $8
+		#if printer is network only, then just print the brain
+		if [ $9=="network_only" ]
+		then
+			./megalomaniac_network $1 $2 $4 $5 9 9 $6 $8 yes
+		else
+			./megalomaniac_network $1 $2 $4 $5 9 9 $6 $8 $9
+		fi
 		#if something goes wrong, stop the process
 		if [ -f 'neurotic.txt' ] 
 		then
