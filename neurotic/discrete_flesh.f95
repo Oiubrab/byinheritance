@@ -84,7 +84,7 @@ end function self_pos
 
 
 
-!takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in (column,row) format
+!takes in a neuron position along the matrix (column,row,z) with a single number and gives it's position in (column,row) format
 function point_pos_matrix(z_point,high) result(poster)
 	integer,intent(in) :: z_point, high
 	integer :: z
@@ -171,14 +171,14 @@ end function sigmoid
 
 
 !this function selects the neuron to be targeted and places its position in brain_freeze
-subroutine selector(brain_select,brain_freeze,brain,j,i)
+subroutine selector(brain_select,brain_freeze,brain,column,row)
 
 	integer,dimension(*),intent(in) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)
 	integer,dimension(*),intent(in) :: brain_select(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck
-	integer,intent(in) :: i,j
+	integer,intent(in) :: row,column
 	integer :: n
 
 	!number of rungs must equal the number of possible neuron selections
@@ -194,25 +194,25 @@ subroutine selector(brain_select,brain_freeze,brain,j,i)
 
 	!set the rungs - ranges for each selection
 	!rungs = increment + weight stored in neuron for brain_select position
-	rungs(1)=increment+float(brain(brain_select(1),j,i))
+	rungs(1)=increment+float(brain(brain_select(1),column,row))
 	do n=2,size(brain_select)
-		rungs(n)=rungs(n-1)+increment+float(brain(brain_select(n),j,i))
+		rungs(n)=rungs(n-1)+increment+float(brain(brain_select(n),column,row))
 	end do
 
 	!scale the fuck to be the same range as the rungs set
 	fuck=fuck*rungs(size(rungs))
 	
-	!place the chosen pointer in the brain_freeze j,i position
+	!place the chosen pointer in the brain_freeze column,row position
 	do n=1,size(brain_select)
 		if (fuck<rungs(n)) then
-			brain_freeze(j,i)=brain_select(n)
+			brain_freeze(column,row)=brain_select(n)
 			exit
 		end if
 	end do
 
 	!just in case the highest number is generated
 	if (fuck==rungs(size(rungs))) then
-		brain_freeze(j,i)=brain_select(size(brain_select))
+		brain_freeze(column,row)=brain_select(size(brain_select))
 	end if
 
 end subroutine selector
@@ -229,35 +229,36 @@ end subroutine selector
 
 
 !this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
-subroutine reflect(brain,brain_freeze,dead)
+subroutine reflect(brain,brain_freeze,valve_selector,dead)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)	
 	integer,intent(inout) :: dead
-	integer :: i,j,maximum_columns,maximum_rows
+	integer :: row,column,maximum_columns,maximum_rows
 	integer,dimension(2) :: j_i
+	character(len=*) :: valve_selector
 
 	!set maximums
 	maximum_columns=size(brain(1,:,1))
 	maximum_rows=size(brain(1,1,:))
 
 
-		do i=1,size(brain(1,1,:))
-			do j=1,size(brain(1,:,1))
+		do row=1,size(brain(1,1,:))
+			do column=1,size(brain(1,:,1))
 				!if there is a transition in brain_freeze:
-				if (brain_freeze(j,i)/=0) then
+				if (brain_freeze(column,row)/=0) then
 
 					!remove the data from the entry it is currently inhabiting
-					brain(self_pos(i,j,maximum_columns),j,i)=brain(self_pos(i,j,maximum_columns),j,i)-1
+					brain(self_pos(row,column,maximum_columns),column,row)=brain(self_pos(row,column,maximum_columns),column,row)-1
 
 					!for now, only transition data if it is not heading off the board
-					if ((brain_freeze(j,i)>maximum_columns+3) .and. (brain_freeze(j,i)<(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))&
-						.and. (mod(brain_freeze(j,i),(maximum_columns+2))/=1) .and. &
-						(mod(brain_freeze(j,i),(maximum_columns+2))/=0)) then
+					if ((brain_freeze(column,row)>maximum_columns+3) .and. (brain_freeze(column,row)<(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))&
+						.and. (mod(brain_freeze(column,row),(maximum_columns+2))/=1) .and. &
+						(mod(brain_freeze(column,row),(maximum_columns+2))/=0)) then
 						
 						!add the data to the target entry
-						j_i=point_pos_matrix(brain_freeze(j,i),maximum_columns)
-						brain(brain_freeze(j,i),j_i(1),j_i(2))=brain(brain_freeze(j,i),j_i(1),j_i(2))+1
+						j_i=point_pos_matrix(brain_freeze(column,row),maximum_columns)
+						brain(brain_freeze(column,row),j_i(1),j_i(2))=brain(brain_freeze(column,row),j_i(1),j_i(2))+1
 
 					else
 						
@@ -267,7 +268,7 @@ subroutine reflect(brain,brain_freeze,dead)
 					end if
 
 					!add to the corresponding probability variable
-					brain(brain_freeze(j,i),j,i)=brain(brain_freeze(j,i),j,i)+2
+					brain(brain_freeze(column,row),column,row)=brain(brain_freeze(column,row),column,row)+2
 
 				end if
 			end do
@@ -287,58 +288,72 @@ subroutine neuron_pre_fire(brain,brain_freeze,j_i,brain_freeze_nullify)
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)
 	integer,dimension(2),intent(in) :: j_i
-	integer :: maximum_columns,maximum_rows,j,i
+	integer :: maximum_columns,maximum_rows,column,row,position_counter
 	integer,optional :: brain_freeze_nullify
 	integer,allocatable :: brain_select(:)
 
 	!set maximums and position
 	maximum_columns=size(brain(1,:,1))
 	maximum_rows=size(brain(1,1,:))
-	j=j_i(1)
-	i=j_i(2)
+	column=j_i(1)
+	row=j_i(2)
 
 	call random_number(fuck)
 
 	!if this call is from the overlap detector that has detected a conflict, eliminate the option for that conflicting transition
 	if (present(brain_freeze_nullify)) then
 		allocate(brain_select(7))
-		
-		if (self_pos(i-1,j-1,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(1)=self_pos(i-1,j-1,maximum_columns)
+	
+		position_counter=1
+	
+		if (self_pos(row-1,column-1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row-1,column-1,maximum_columns)
+			position_counter=position_counter+1
 		end if
 		
-		if (self_pos(i-1,j,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(2)=self_pos(i-1,j,maximum_columns)
+		if (self_pos(row-1,column,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row-1,column,maximum_columns)
+			position_counter=position_counter+1
 		end if	
 		
-		if (self_pos(i-1,j+1,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(3)=self_pos(i-1,j+1,maximum_columns)
+		if (self_pos(row-1,column+1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row-1,column+1,maximum_columns)
+			position_counter=position_counter+1
 		end if	
 		
-		if (self_pos(i,j-1,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(4)=self_pos(i,j-1,maximum_columns)
+		if (self_pos(row,column-1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row,column-1,maximum_columns)
+			position_counter=position_counter+1
 		end if	
 		
-		if (self_pos(i,j+1,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(5)=self_pos(i,j+1,maximum_columns)
+		if (self_pos(row,column+1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row,column+1,maximum_columns)
+			position_counter=position_counter+1
 		end if	
 		
-		if (self_pos(i+1,j-1,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(6)=self_pos(i+1,j-1,maximum_columns)
+		if (self_pos(row+1,column-1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row+1,column-1,maximum_columns)
+			position_counter=position_counter+1
 		end if	
 		
-		if (self_pos(i+1,j+1,maximum_columns)/=brain_freeze_nullify) then
-			brain_select(7)=self_pos(i+1,j+1,maximum_columns)
-		end if			
+		if (self_pos(row+1,column,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row+1,column-1,maximum_columns)
+			position_counter=position_counter+1
+		end if	
+		
+		if (self_pos(row+1,column+1,maximum_columns)/=brain_freeze_nullify) then
+			brain_select(position_counter)=self_pos(row+1,column+1,maximum_columns)
+			position_counter=position_counter+1
+		end if		
 	else
 		allocate(brain_select(8))
-		brain_select=[self_pos(i-1,j-1,maximum_columns),self_pos(i-1,j,maximum_columns),&
-			self_pos(i-1,j+1,maximum_columns),self_pos(i,j-1,maximum_columns),&
-			self_pos(i,j+1,maximum_columns),self_pos(i+1,j-1,maximum_columns),&
-			self_pos(i+1,j,maximum_columns),self_pos(i+1,j+1,maximum_columns)]
+		brain_select=[self_pos(row-1,column-1,maximum_columns),self_pos(row-1,column,maximum_columns),&
+			self_pos(row-1,column+1,maximum_columns),self_pos(row,column-1,maximum_columns),&
+			self_pos(row,column+1,maximum_columns),self_pos(row+1,column-1,maximum_columns),&
+			self_pos(row+1,column,maximum_columns),self_pos(row+1,column+1,maximum_columns)]
 	end if
 
-	call selector(brain_select,brain_freeze,brain,j,i)
+	call selector(brain_select,brain_freeze,brain,column,row)
 
 end subroutine neuron_pre_fire
 
@@ -352,41 +367,41 @@ subroutine infusion(brain,blood,scaling)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	real,dimension(*),intent(in) :: blood(:,:,:)
-	integer :: i,j,k,k_adj
+	integer :: row,column,k,k_adj
 	real,intent(in) :: scaling
 	
-	do i=1,size(brain(1,1,:))
-		do j=1,size(brain(1,:,1))
+	do row=1,size(brain(1,1,:))
+		do column=1,size(brain(1,:,1))
 			!setup the position
-			k=self_pos(i,j,size(brain(1,:,1)))
-			k_adj=k-1-size(blood(1,:,1))-i*2
+			k=self_pos(row,column,size(brain(1,:,1)))
+			k_adj=k-1-size(blood(1,:,1))-row*2
 			!add the blood data to the weights into each neuron
-			if ((j/=1) .and. (i/=1)) then
-				brain(k,j-1,i-1)=brain(k,j-1,i-1)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if ((column/=1) .and. (row/=1)) then
+				brain(k,column-1,row-1)=brain(k,column-1,row-1)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if (i/=1) then
-				brain(k,j,i-1)=brain(k,j,i-1)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if (row/=1) then
+				brain(k,column,row-1)=brain(k,column,row-1)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
-				brain(k,j+1,i-1)=brain(k,j+1,i-1)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if ((column/=size(brain(1,:,1))) .and. (row/=1)) then
+				brain(k,column+1,row-1)=brain(k,column+1,row-1)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if (j/=1) then
-				brain(k,j-1,i)=brain(k,j-1,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if (column/=1) then
+				brain(k,column-1,row)=brain(k,column-1,row)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if (j/=size(brain(1,:,1))) then
-				brain(k,j+1,i)=brain(k,j+1,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if (column/=size(brain(1,:,1))) then
+				brain(k,column+1,row)=brain(k,column+1,row)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
-				brain(k,j-1,i+1)=brain(k,j-1,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if ((column/=1) .and. (row/=size(brain(1,1,:)))) then
+				brain(k,column-1,row+1)=brain(k,column-1,row+1)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if (i/=size(brain(1,1,:))) then
-				brain(k,j,i+1)=brain(k,j,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if (row/=size(brain(1,1,:))) then
+				brain(k,column,row+1)=brain(k,column,row+1)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			!test case - to see data able to escape
 			else
-				brain(k+2+size(brain(1,:,1)),j,i)=brain(k+2+size(brain(1,:,1)),j,i)+int(blood(k_adj,j,i)*(10**3)*scaling)
+				brain(k+2+size(brain(1,:,1)),column,row)=brain(k+2+size(brain(1,:,1)),column,row)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
-			if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
-				brain(k,j+1,i+1)=brain(k,j+1,i+1)+int(blood(k_adj,j,i)*(10**3)*scaling)
+			if ((column/=size(brain(1,:,1))) .and. (row/=size(brain(1,1,:)))) then
+				brain(k,column+1,row+1)=brain(k,column+1,row+1)+int(blood(k_adj,column,row)*(10**3)*scaling)
 			end if
 			
 		end do
@@ -404,99 +419,99 @@ subroutine bondage(brain,boundaries)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(4),intent(in) :: boundaries
-	integer :: maximum_columns,maximum_rows,j,i
+	integer :: maximum_columns,maximum_rows,column,row
 	
 	!set maximum columns, rows
 	maximum_columns=size(brain(1,:,1))
 	maximum_rows=size(brain(1,1,:))
 	
 	!adjust top side probabilities
-	do j=1,size(brain(1,:,1))
+	do column=1,size(brain(1,:,1))
 		!in the corners
-		if ((j==1) .or. (j==size(brain(1,:,1)))) then
-			if (brain(self_pos(2,j,maximum_columns),j,1)<boundaries(4)) then
-				brain(self_pos(2,j,maximum_columns),j,1)=boundaries(4)
+		if ((column==1) .or. (column==size(brain(1,:,1)))) then
+			if (brain(self_pos(2,column,maximum_columns),column,1)<boundaries(4)) then
+				brain(self_pos(2,column,maximum_columns),column,1)=boundaries(4)
 			end if
 		else
 			!one row down
-			do i=1,3
-				if (brain(self_pos(2,j-2+i,maximum_columns),j,1)<boundaries(4)) then
-					brain(self_pos(2,j-2+i,maximum_columns),j,1)=boundaries(4)
+			do row=1,3
+				if (brain(self_pos(2,column-2+row,maximum_columns),column,1)<boundaries(4)) then
+					brain(self_pos(2,column-2+row,maximum_columns),column,1)=boundaries(4)
 				end if
 			end do
 			!left and right
-			do i=1,3
-				if ((brain(self_pos(1,j-2+i,maximum_columns),j,1)<boundaries(4)) .and. (j-2+i/=j)) then
-					brain(self_pos(1,j-2+i,maximum_columns),j,1)=boundaries(4)
+			do row=1,3
+				if ((brain(self_pos(1,column-2+row,maximum_columns),column,1)<boundaries(4)) .and. (column-2+row/=column)) then
+					brain(self_pos(1,column-2+row,maximum_columns),column,1)=boundaries(4)
 				end if
 			end do
 		end if
 	end do
 	
 	!adjust bottom side probabilities
-	do j=1,size(brain(1,:,1))
+	do column=1,size(brain(1,:,1))
 		!in the corners
-		if ((j==1) .or. (j==size(brain(1,:,1)))) then	
-			if (brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)<boundaries(1)) then
-				brain(self_pos(maximum_rows-1,j,maximum_columns),j,maximum_rows)=boundaries(1)
+		if ((column==1) .or. (column==size(brain(1,:,1)))) then	
+			if (brain(self_pos(maximum_rows-1,column,maximum_columns),column,maximum_rows)<boundaries(1)) then
+				brain(self_pos(maximum_rows-1,column,maximum_columns),column,maximum_rows)=boundaries(1)
 			end if
 		else
 			!one row up
-			do i=1,3
-				if (brain(self_pos(maximum_rows-1,j-2+i,maximum_columns),j,maximum_rows)<boundaries(1)) then
-					brain(self_pos(maximum_rows-1,j-2+i,maximum_columns),j,maximum_rows)=boundaries(1)
+			do row=1,3
+				if (brain(self_pos(maximum_rows-1,column-2+row,maximum_columns),column,maximum_rows)<boundaries(1)) then
+					brain(self_pos(maximum_rows-1,column-2+row,maximum_columns),column,maximum_rows)=boundaries(1)
 				end if
 			end do
 			!left and right
-			do i=1,3
-				if ((brain(self_pos(maximum_rows,j-2+i,maximum_columns),j,maximum_rows)<boundaries(1)) .and. (j-2+i/=j)) then
-					brain(self_pos(maximum_rows,j-2+i,maximum_columns),j,maximum_rows)=boundaries(1)
+			do row=1,3
+				if ((brain(self_pos(maximum_rows,column-2+row,maximum_columns),column,maximum_rows)<boundaries(1)) .and. (column-2+row/=column)) then
+					brain(self_pos(maximum_rows,column-2+row,maximum_columns),column,maximum_rows)=boundaries(1)
 				end if
 			end do
 		end if
 	end do
 	
 	!adjust left side probabilities
-	do i=1,size(brain(1,1,:))
+	do row=1,size(brain(1,1,:))
 		!in the corners
-		if ((i==1) .or. (i==size(brain(1,:,1)))) then	
-			if (brain(self_pos(i,2,maximum_columns),1,i)<boundaries(2)) then
-				brain(self_pos(i,2,maximum_columns),1,i)=boundaries(2)
+		if ((row==1) .or. (row==size(brain(1,:,1)))) then	
+			if (brain(self_pos(row,2,maximum_columns),1,row)<boundaries(2)) then
+				brain(self_pos(row,2,maximum_columns),1,row)=boundaries(2)
 			end if
 		else
 			!one column right
-			do j=1,3
-				if (brain(self_pos(i-2+j,2,maximum_columns),1,i)<boundaries(2)) then
-					brain(self_pos(i-2+j,2,maximum_columns),1,i)=boundaries(2)
+			do column=1,3
+				if (brain(self_pos(row-2+column,2,maximum_columns),1,row)<boundaries(2)) then
+					brain(self_pos(row-2+column,2,maximum_columns),1,row)=boundaries(2)
 				end if
 			end do
 			!up and down
-			do j=1,3
-				if ((brain(self_pos(i-2+j,1,maximum_columns),1,i)<boundaries(2)) .and. (i-2+j/=i)) then
-					brain(self_pos(i-2+j,1,maximum_columns),1,i)=boundaries(2)
+			do column=1,3
+				if ((brain(self_pos(row-2+column,1,maximum_columns),1,row)<boundaries(2)) .and. (row-2+column/=row)) then
+					brain(self_pos(row-2+column,1,maximum_columns),1,row)=boundaries(2)
 				end if
 			end do
 		end if
 	end do
 	
 	!adjust right side probabilities	
-	do i=1,size(brain(1,1,:))
+	do row=1,size(brain(1,1,:))
 		!in the corners
-		if ((i==1) .or. (i==size(brain(1,:,1)))) then	
-			if (brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)<boundaries(3)) then
-				brain(self_pos(i,maximum_columns-1,maximum_columns),maximum_columns,i)=boundaries(3)
+		if ((row==1) .or. (row==size(brain(1,:,1)))) then	
+			if (brain(self_pos(row,maximum_columns-1,maximum_columns),maximum_columns,row)<boundaries(3)) then
+				brain(self_pos(row,maximum_columns-1,maximum_columns),maximum_columns,row)=boundaries(3)
 			end if
 		else
 			!one column left
-			do j=1,3
-				if (brain(self_pos(i-2+j,maximum_columns-1,maximum_columns),maximum_columns,i)<boundaries(3)) then
-					brain(self_pos(i-2+j,maximum_columns-1,maximum_columns),maximum_columns,i)=boundaries(3)
+			do column=1,3
+				if (brain(self_pos(row-2+column,maximum_columns-1,maximum_columns),maximum_columns,row)<boundaries(3)) then
+					brain(self_pos(row-2+column,maximum_columns-1,maximum_columns),maximum_columns,row)=boundaries(3)
 				end if
 			end do
 			!up and down
-			do j=1,3
-				if ((brain(self_pos(i-2+j,maximum_columns,maximum_columns),maximum_columns,i)<boundaries(3)) .and. (i-2+j/=i)) then
-					brain(self_pos(i-2+j,maximum_columns,maximum_columns),maximum_columns,i)=boundaries(3)
+			do column=1,3
+				if ((brain(self_pos(row-2+column,maximum_columns,maximum_columns),maximum_columns,row)<boundaries(3)) .and. (row-2+column/=row)) then
+					brain(self_pos(row-2+column,maximum_columns,maximum_columns),maximum_columns,row)=boundaries(3)
 				end if
 			end do
 		end if
