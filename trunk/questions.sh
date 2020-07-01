@@ -12,6 +12,8 @@ then
 	echo ". questions.sh valves valve_value cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed"
 	echo "valves: left right up down custom"
 	echo "printed: yes no debug network_only"
+	echo "network_scaling: scales the amount blood neurons will increase the weights that lead to brain neurons"
+	echo "blood_scaling: scale how much the brain neuron will cause the blood neuron to attract more blood"
 
 else
 

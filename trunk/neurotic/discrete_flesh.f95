@@ -229,14 +229,13 @@ end subroutine selector
 
 
 !this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
-subroutine reflect(brain,brain_freeze,valve_selector,dead)
+subroutine reflect(brain,brain_freeze,dead)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)	
 	integer,intent(inout) :: dead
 	integer :: row,column,maximum_columns,maximum_rows
 	integer,dimension(2) :: j_i
-	character(len=*) :: valve_selector
 
 	!set maximums
 	maximum_columns=size(brain(1,:,1))
