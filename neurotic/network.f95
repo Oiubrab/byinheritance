@@ -116,11 +116,6 @@ end if
 !affect the brain with the blood multipliers
 call infusion(brain,blood,multiplier_scaling)
 
-
-if (brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)==0) then
-	brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)=1
-end if
-
 !enact boundary conditions
 call bondage(brain,boundaries)
 
@@ -308,8 +303,6 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 	counter=counter+1
 	
 end do
-
-brain(self_pos(1,maximum_columns/2,maximum_columns),maximum_columns/2,1)=1
 
 !debuggling: print brain_freeze 
 if (printed=='debug') then

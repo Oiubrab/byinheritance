@@ -1,7 +1,8 @@
 #!bin/bash
 
-if [ -f 'heartwork/neurotic.txt' ]; then rm heartwork/neurotic.txt; fi
+if [ -f 'heartwork/will.txt' ]; then rm heartwork/will.txt; fi
 if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
+if [ -f 'will/neurotic.txt' ]; then rm will/neurotic.txt; fi
 rm -r neurotic/error_folder/neurotic_error*
 
 reset
@@ -21,6 +22,8 @@ else
 	pgfortran -traceback -Mcuda flesh.f95 blood.f95 -o megalomaniac_blood
 	cd ../neurotic
 	pgfortran -traceback -Mcuda discrete_flesh.f95 network.f95 -o megalomaniac_network
+	cd ../will
+	pgfortran -traceback -Mcuda flesh_out.f95 power.f95 -o megalomaniac_power
 	cd ..
 
 	for i in $(seq 1 $3)
@@ -30,7 +33,7 @@ else
 		#operate the heartwork step
 		cd heartwork
 		#if printer is network only, then dont print the blood
-		if [ $9=="network_only" ]
+		if [ $9 == "network_only" ]
 		then
 			./megalomaniac_blood $4 $5 $7 no
 		else
@@ -46,14 +49,14 @@ else
 			break
 		fi
 		#delete recieved networks once finished with
-		if [ -f 'neurotic.txt' ]; then rm neurotic.txt; fi
+		if [ -f 'will.txt' ]; then rm will.txt; fi
 		cd ..
 
 
 		#operate the neurotic step
 		cd neurotic
 		#if printer is network only, then just print the brain
-		if [ $9=="network_only" ]
+		if [ $9 == "network_only" ]
 		then
 			./megalomaniac_network $1 $2 $4 $5 9 9 $6 $8 yes
 		else
@@ -62,7 +65,7 @@ else
 		#if something goes wrong, stop the process
 		if [ -f 'neurotic.txt' ] 
 		then
-			mv neurotic.txt ../heartwork
+			mv neurotic.txt ../will
 		else
 			cd ..
 			echo neurotic copy error
@@ -70,6 +73,22 @@ else
 		fi
 		#delete recieved networks once finished with
 		if [ -f 'heartwork.txt' ]; then rm heartwork.txt; fi
+		cd ..
+
+		#operate the will step
+		cd will
+		./megalomaniac_power $4 $5
+		#if something goes wrong, stop the process
+		if [ -f 'will.txt' ] 
+		then
+			mv will.txt ../heartwork
+		else
+			cd ..
+			echo will copy error
+			break
+		fi
+		#delete recieved networks once finished with
+		if [ -f 'neurotic.txt' ]; then rm neurotic.txt; fi
 		cd ..
 
 	done
