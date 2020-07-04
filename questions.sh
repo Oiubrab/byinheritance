@@ -3,7 +3,8 @@
 if [ -f 'heartwork/will.txt' ]; then rm heartwork/will.txt; fi
 if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 if [ -f 'will/neurotic.txt' ]; then rm will/neurotic.txt; fi
-rm -r neurotic/error_folder/neurotic_error*
+rm -r neurotic/error_folder
+mkdir neurotic/error_folder
 
 reset
 

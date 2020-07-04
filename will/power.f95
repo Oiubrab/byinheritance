@@ -9,7 +9,7 @@ integer :: thrash,active_data,grave
 character(len=1000) :: maxim_column_cha,maxim_row_cha
 
 !network dimension
-integer :: maxim_row,maxim_column,here_row,here_column,x
+integer :: maxim_row,maxim_column,here_row,here_column,ages,special
 
 !condition options
 logical :: only_neuron
@@ -57,33 +57,77 @@ if (brain(self_pos_brain(1,maxim_column/2,maxim_column),maxim_column/2,1)==0) th
 end if
 
 !simple tester
+!if brain activates neuron in a corner or in the middle, blood will flow
+!only selects one path (no multipe blood sources activated simultaneously)
+!several neuron leeway in selection
 !first, make sure no other neurons have data
 only_neuron=.true.
-do x=1,maxim_column
+do ages=1,maxim_column
 	!skip neurons to be counted
-	if ((x/=1) .and. (x/=maxim_column/2) .and. (x/=maxim_column)) then
+	if ((ages/=1) .and. (ages/=maxim_column/2) .and. (ages/=maxim_column)) then
 		!if there is a brain neuron other than the ones designated that has a 1, set to false
-		if (brain(self_pos_brain(maxim_row,x,maxim_column),x,maxim_row)==1) then
+		if (brain(self_pos_brain(maxim_row,ages,maxim_column),ages,maxim_row)==1) then
 			only_neuron=.false.
 		end if
 	end if
 end do
 !now enact the blood boost if conditions are met
-do x=1,6
-	if ((thrash>(10*x)) .and. (only_neuron==.true.)) then
+do ages=1,6
+	if (thrash>(10*ages)) then
+	
 		!bottom left
 		if (brain(self_pos_brain(maxim_row,1,size(blood(1,:,1))),1,maxim_row)==1) then
-			blood(self_pos_blood(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos_blood(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
+			!ignore first three neurons
+			do special=4,maxim_column
+				!if there is a brain neuron other than the ones designated that has a 1, set to false
+				if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
+					only_neuron=.false.
+				end if
+			end do
+			!if condition satisfied, let 'er rip
+			if (only_neuron==.true.) then
+				blood(self_pos_blood(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos_blood(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**ages)
+			end if
+			!reset neuron tester
+			only_neuron=.true.
 		end if
+		
 		!bottom middle
 		if (brain(self_pos_brain(maxim_row,maxim_column/2,size(blood(1,:,1))),maxim_column/2,maxim_row)==1) then
-			blood(self_pos_blood(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
-				blood(self_pos_blood(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
+			do special=1,maxim_column
+				!ignore middle three neurons
+				if (abs((maxim_column/2)-special)<=1) then
+					cycle
+				end if
+				!if there is a brain neuron other than the ones designated that has a 1, set to false
+				if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
+					only_neuron=.false.
+				end if
+			end do
+			!if condition satisfied, let 'er rip
+			if (only_neuron==.true.) then
+				blood(self_pos_blood(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
+					blood(self_pos_blood(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**ages)
+			end if
+			!reset neuron tester
+			only_neuron=.true.
 		end if
+		
 		!bottom right
 		if (brain(self_pos_brain(maxim_row,maxim_column,size(blood(1,:,1))),maxim_column,maxim_row)==1) then
-			blood(self_pos_blood(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
-				blood(self_pos_blood(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
+			!ignore last three neurons
+			do special=1,maxim_column-3
+				!if there is a brain neuron other than the ones designated that has a 1, set to false
+				if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
+					only_neuron=.false.
+				end if
+			end do
+			!if condition satisfied, let 'er rip
+			if (only_neuron==.true.) then
+				blood(self_pos_blood(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
+					blood(self_pos_blood(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**ages)
+			end if
+
 		end if
 	end if
 end do
