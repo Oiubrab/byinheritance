@@ -46,7 +46,7 @@ call random_seed()
 !prepare command line options
 IF(COMMAND_ARGUMENT_COUNT().NE.4)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program epoch_number maximum_columns maximum_rows scaling printed'
+	WRITE(*,*)'./program maximum_columns maximum_rows scaling printed'
 	WRITE(*,*)'printed: yes no'
 	STOP
 ENDIF
@@ -62,7 +62,7 @@ READ(maxim_row_cha,*)maxim_row
 
 if ((printed/='no') .and. (printed/='yes') .and. (printed/='debug')) then
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program epoch_number maximum_columns, maximum_rows scaling printed'
+	WRITE(*,*)'./program maximum_columns, maximum_rows scaling printed'
 	WRITE(*,*)'printed: yes no'
 	stop
 end if
@@ -91,7 +91,7 @@ allocate(character(maxim_column*print_length+7) :: print_row)
 
 !heartwork is the first network to run
 !so we mst first test if this is the first epoch and initialize both brain and blood
-INQUIRE(FILE="neurotic.txt", EXIST=file_exists)
+INQUIRE(FILE="will.txt", EXIST=file_exists)
 if (file_exists .eqv. .false.) then
 
 	epoch=1
@@ -146,7 +146,7 @@ if (file_exists .eqv. .false.) then
 else
 
 	!retrieve previous network and move ahead epoch counter
-	open(unit=1,file="neurotic.txt")
+	open(unit=1,file="will.txt")
 	do s=1,size(blood(1,1,:))
 		do a=1,size(blood(1,:,1))
 			read(1,*) blood(:,a,s)
@@ -165,26 +165,6 @@ else
 
 	!affect the blood with the brain multipliers
 	call electroviolence(brain,blood,multiplier_scaling)
-
-	!simple tester
-	do x=1,6
-		if (epoch>(10*x)) then
-			!bottom left
-			if (brain(self_pos(maxim_row,1,size(blood(1,:,1)))+1+size(brain(1,:,1))+maxim_row*2,1,maxim_row)==1) then
-				blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**x)
-			end if
-			!bottom middle
-			if (brain(self_pos(maxim_row,maxim_column/2,size(blood(1,:,1)))+1+size(brain(1,:,1))+maxim_row*2,maxim_column/2,maxim_row)==1) then
-				blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
-					blood(self_pos(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**x)
-			end if
-			!bottom right
-			if (brain(self_pos(maxim_row,maxim_column,size(blood(1,:,1)))+1+size(brain(1,:,1))+maxim_row*2,maxim_column,maxim_row)==1) then
-				blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
-					blood(self_pos(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**x)
-			end if
-		end if
-	end do
 
 	!record the start time of the epoch
 	call CPU_Time(start_interval)
