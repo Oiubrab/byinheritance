@@ -351,7 +351,7 @@ if ((printed=='yes') .or. (printed=='debug')) then
 		end do
 		print *,print_row
 	end do
-	print*," "
+	!print*," "
 end if
 
 !debuggling: check if any neurons are greater than 1
@@ -383,6 +383,7 @@ close(2)
 call CPU_Time(finish)
 if ((printed=="yes") .or. (printed=='debug')) then
 	call print_interval(start,finish)
+	print*," "
 end if
 
 !lag it if necessary

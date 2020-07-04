@@ -1,5 +1,9 @@
 #!bin/bash
 
+#start the timer
+start=$(date +%s.%N)
+
+#delete all the old text files and error printouts
 if [ -f 'heartwork/will.txt' ]; then rm heartwork/will.txt; fi
 if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 if [ -f 'will/neurotic.txt' ]; then rm will/neurotic.txt; fi
@@ -93,8 +97,17 @@ else
 		cd ..
 
 	done
-
-	#if [ -f 'heartwork/neurotic.txt' ]; then rm heartwork/neurotic.txt; fi
-	#if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 	
 fi
+
+#stop the timer
+finish=$(date +%s.%N)
+
+#print the total run time
+echo " "
+echo "total run time is:"
+runtime=`echo "var=sqrt(($finish-$start)^2);var" | bc`
+runtime_hour=`echo "var=$runtime/3600;var" | bc`
+runtime_minute=`echo "var=($runtime-$runtime_hour*3600)/60;var" | bc`
+runtime_second=`echo "var=$runtime-$runtime_hour*3600-$runtime_minute*60;var" | bc`
+echo $runtime_hour "hrs, " $runtime_minute "mins, " $runtime_second "sec"
