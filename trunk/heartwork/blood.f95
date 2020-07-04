@@ -6,9 +6,6 @@ implicit none
 !eyes, ears and nose are data inputs to be determined (RANDOM_NUMBER for now)
 !time_interval to be used to time epoch to compute information degradation, total_time just to store total time of program execution
 
-!fundamental parameters
-real,parameter :: pi=4*asin(1./sqrt(2.))
-
 !input variables
 character(len=10000) :: maxim_column_cha,maxim_row_cha,printed,multiplier_scaling_cha
 
@@ -100,7 +97,7 @@ if (file_exists .eqv. .false.) then
 	do s=1,size(blood(1,1,:))
 		do a=1,size(blood(1,:,1))
 			do c=1,size(blood(:,1,1))
-				blood(c,a,s)=0.001
+				blood(c,a,s)=0.01
 			end do
 		end do
 	end do
@@ -199,6 +196,9 @@ else
 
 	end do
 	
+	call CPU_Time(finish_interval)
+	time_interval=finish_interval-start_interval
+
 
 
 
@@ -218,7 +218,7 @@ else
 			print *,print_row
 
 		end do
-		print*," "
+		!print*," "
 	
 	end if
 
@@ -265,5 +265,6 @@ close(2)
 call CPU_Time(finish)
 if ((printed=="yes") .or. (printed=='debug')) then
 	call print_interval(start,finish)
+	print*," "
 end if
 end program

@@ -31,7 +31,7 @@ READ(maxim_row_cha,*)maxim_row
 allocate(blood(maxim_row*maxim_column,maxim_column,maxim_row))
 allocate(brain(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
 
-!retrieve previous network and move ahead thrash counter
+!retrieve previous network
 open(unit=1,file="neurotic.txt")
 do here_row=1,size(blood(1,1,:))
 	do here_column=1,size(blood(1,:,1))
@@ -60,75 +60,39 @@ end if
 !if brain activates neuron in a corner or in the middle, blood will flow
 !only selects one path (no multipe blood sources activated simultaneously)
 !several neuron leeway in selection
-!first, make sure no other neurons have data
-only_neuron=.true.
-do ages=1,maxim_column
-	!skip neurons to be counted
-	if ((ages/=1) .and. (ages/=maxim_column/2) .and. (ages/=maxim_column)) then
-		!if there is a brain neuron other than the ones designated that has a 1, set to false
-		if (brain(self_pos_brain(maxim_row,ages,maxim_column),ages,maxim_row)==1) then
-			only_neuron=.false.
-		end if
-	end if
-end do
+!first, set the default neuron status to true
+
 !now enact the blood boost if conditions are met
-do ages=1,6
+do ages=1,5
 	if (thrash>(10*ages)) then
 	
 		!bottom left
-		if (brain(self_pos_brain(maxim_row,1,size(blood(1,:,1))),1,maxim_row)==1) then
-			!ignore first three neurons
-			do special=4,maxim_column
-				!if there is a brain neuron other than the ones designated that has a 1, set to false
-				if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
-					only_neuron=.false.
-				end if
-			end do
-			!if condition satisfied, let 'er rip
-			if (only_neuron==.true.) then
-				blood(self_pos_blood(maxim_row,1,maxim_column),1,maxim_row)=blood(self_pos_blood(maxim_row,1,maxim_column),1,maxim_row)+0.00001*(10**ages)
+		do special=1,3
+			!if there is a brain neuron other than the ones designated that has a 1, set to false
+			if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
+				blood(self_pos_blood(maxim_row,special,maxim_column),special,maxim_row)=&
+					blood(self_pos_blood(maxim_row,special,maxim_column),special,maxim_row)*0.1 !0.00001*(10**ages)
 			end if
-			!reset neuron tester
-			only_neuron=.true.
-		end if
+		end do
 		
 		!bottom middle
-		if (brain(self_pos_brain(maxim_row,maxim_column/2,size(blood(1,:,1))),maxim_column/2,maxim_row)==1) then
-			do special=1,maxim_column
-				!ignore middle three neurons
-				if (abs((maxim_column/2)-special)<=1) then
-					cycle
-				end if
-				!if there is a brain neuron other than the ones designated that has a 1, set to false
-				if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
-					only_neuron=.false.
-				end if
-			end do
-			!if condition satisfied, let 'er rip
-			if (only_neuron==.true.) then
-				blood(self_pos_blood(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)=&
-					blood(self_pos_blood(maxim_row,maxim_column/2,maxim_column),maxim_column/2,maxim_row)+0.00001*(10**ages)
+		do special=(maxim_column/2)-1,(maxim_column/2)+1
+			!if there is a brain neuron other than the ones designated that has a 1, set to false
+			if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
+				blood(self_pos_blood(maxim_row,special,maxim_column),special,maxim_row)=&
+					blood(self_pos_blood(maxim_row,special,maxim_column),special,maxim_row)+0.00001*(10**ages)
 			end if
-			!reset neuron tester
-			only_neuron=.true.
-		end if
+		end do
 		
 		!bottom right
-		if (brain(self_pos_brain(maxim_row,maxim_column,size(blood(1,:,1))),maxim_column,maxim_row)==1) then
-			!ignore last three neurons
-			do special=1,maxim_column-3
-				!if there is a brain neuron other than the ones designated that has a 1, set to false
-				if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
-					only_neuron=.false.
-				end if
-			end do
-			!if condition satisfied, let 'er rip
-			if (only_neuron==.true.) then
-				blood(self_pos_blood(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)=&
-					blood(self_pos_blood(maxim_row,maxim_column,maxim_column),maxim_column,maxim_row)+0.00001*(10**ages)
+		do special=maxim_column-3,maxim_column
+			!if there is a brain neuron other than the ones designated that has a 1, set to false
+			if (brain(self_pos_brain(maxim_row,special,maxim_column),special,maxim_row)==1) then
+				blood(self_pos_blood(maxim_row,special,maxim_column),special,maxim_row)=&
+					blood(self_pos_blood(maxim_row,special,maxim_column),special,maxim_row)*0.1 !+0.00001*(10**ages)
 			end if
-
-		end if
+		end do
+		
 	end if
 end do
 	
