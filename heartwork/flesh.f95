@@ -231,7 +231,7 @@ subroutine electroviolence(brain,blood,scaling)
 
 	integer,dimension(*),intent(in) :: brain(:,:,:)
 	real,dimension(*),intent(inout) :: blood(:,:,:)
-	integer :: i,j,k,k_adj,addup,l,m
+	integer :: i,j,k,k_brain,addup,l,m
 	real :: distance,distort,addup_sig,shock
 	real,intent(in) :: scaling
 	
@@ -239,36 +239,36 @@ subroutine electroviolence(brain,blood,scaling)
 		do j=1,size(blood(1,:,1))
 
 			!set k for brain
-			k_adj=self_pos(i,j,size(blood(1,:,1)))+1+size(brain(1,:,1))+i*2
+			k_brain=self_pos(i,j,size(blood(1,:,1)))+1+size(brain(1,:,1))+i*2
 			
-			if (brain(k_adj,j,i)==1) then
+			if (brain(k_brain,j,i)==1) then
 				
 				!initialise the summing variable
 				addup=0
 				
 				if ((j/=1) .and. (i/=1)) then
-					addup=addup+brain(k_adj,j-1,i-1)
+					addup=addup+brain(k_brain,j-1,i-1)
 				end if
 				if (i/=1) then
-					addup=addup+brain(k_adj,j,i-1)
+					addup=addup+brain(k_brain,j,i-1)
 				end if
 				if ((j/=size(brain(1,:,1))) .and. (i/=1)) then
-					addup=addup+brain(k_adj,j+1,i-1)
+					addup=addup+brain(k_brain,j+1,i-1)
 				end if
 				if (j/=1) then
-					addup=addup+brain(k_adj,j-1,i)
+					addup=addup+brain(k_brain,j-1,i)
 				end if
 				if (j/=size(brain(1,:,1))) then
-					addup=addup+brain(k_adj,j+1,i)
+					addup=addup+brain(k_brain,j+1,i)
 				end if
 				if ((j/=1) .and. (i/=size(brain(1,1,:)))) then
-					addup=addup+brain(k_adj,j-1,i+1)
+					addup=addup+brain(k_brain,j-1,i+1)
 				end if
 				if (i/=size(brain(1,1,:))) then
-					addup=addup+brain(k_adj,j,i+1)
+					addup=addup+brain(k_brain,j,i+1)
 				end if
 				if ((j/=size(brain(1,:,1))) .and. (i/=size(brain(1,1,:)))) then
-					addup=addup+brain(k_adj,j+1,i+1)
+					addup=addup+brain(k_brain,j+1,i+1)
 				end if
 				
 				!take data from other vessels and place it in this one
