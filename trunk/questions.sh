@@ -63,9 +63,9 @@ else
 		#if printer is network only, then just print the brain
 		if [ $9 == "network_only" ]
 		then
-			./megalomaniac_network $1 $2 $4 $5 9 9 $6 $8 yes
+			./megalomaniac_network $1 $2 $4 $5 8 10 $8 yes
 		else
-			./megalomaniac_network $1 $2 $4 $5 9 9 $6 $8 $9
+			./megalomaniac_network $1 $2 $4 $5 8 10 $8 $9
 		fi
 		#if something goes wrong, stop the process
 		if [ -f 'neurotic.txt' ] 
@@ -82,7 +82,12 @@ else
 
 		#operate the will step
 		cd will
-		./megalomaniac_power $4 $5
+		if [ $9 == "network_only" ]
+		then
+			./megalomaniac_power $4 $5 $6 $8 no
+		else
+			./megalomaniac_power $4 $5 $6 $8 $9
+		fi
 		#if something goes wrong, stop the process
 		if [ -f 'will.txt' ] 
 		then
@@ -109,5 +114,8 @@ echo "total run time is:"
 runtime=`echo "var=sqrt(($finish-$start)^2);var" | bc`
 runtime_hour=`echo "var=$runtime/3600;var" | bc`
 runtime_minute=`echo "var=($runtime-$runtime_hour*3600)/60;var" | bc`
-runtime_second=`echo "var=$runtime-$runtime_hour*3600-$runtime_minute*60;var" | bc`
+runtime_second_long=`echo "var=$runtime-$runtime_hour*3600-$runtime_minute*60;var" | bc`
+runtime_second_length=${#runtime_second_long}
+runtime_second_cut=`echo "var=$runtime_second_length-7;var" | bc`
+runtime_second=$(echo $runtime_second_long | cut -c1-$runtime_second_cut)
 echo $runtime_hour "hrs, " $runtime_minute "mins, " $runtime_second "sec"

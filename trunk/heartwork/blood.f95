@@ -20,6 +20,10 @@ real,allocatable :: blood(:,:,:)
 integer,allocatable :: brain(:,:,:)
 integer :: active_data,grave
 
+!action objects
+integer, allocatable :: impulse(:)
+real, allocatable :: vein(:)
+
 !debugging objects
 integer :: x
 
@@ -78,7 +82,11 @@ call CPU_Time(start)
 
 !initialise the two networks
 allocate(blood(maxim_row*maxim_column,maxim_column,maxim_row))
-allocate(brain(1:maxim_column*maxim_row+2*(maxim_column+maxim_row)-4,1:maxim_column,1:maxim_row))
+allocate(brain((maxim_column+2)*(maxim_row+2),maxim_column,maxim_row))
+
+!initialise the action arrays
+allocate(vein(maxim_column+2))
+allocate(impulse(maxim_column+2))
 
 !initialise the randomised position marker arrays
 allocate(matrix_pos(1:size(blood(:,1,1))))
@@ -100,6 +108,14 @@ if (file_exists .eqv. .false.) then
 				blood(c,a,s)=0.01
 			end do
 		end do
+	end do
+	
+	!initialise the action
+	do c=1,size(impulse)
+		impulse(c)=0
+	end do
+	do c=1,size(vein)
+		vein(c)=0.01
 	end do
 	
 	!initialize the brain weights
@@ -154,6 +170,8 @@ else
 			read(1,*) brain(:,a,s)
 		end do
 	end do
+	read(1,*) vein
+	read(1,*) impulse
 	read(1,*) epoch
 	read(1,*) active_data
 	read(1,*) grave
@@ -207,7 +225,7 @@ else
 
 	!print the brain
 	if ((printed=="yes") .or. (printed=='debug')) then
-		print'(A6,I0)',"Brain ",epoch
+		print'(A6,I0)',"Blood ",epoch
 		do s=1,size(blood(1,1,:))
 			do a=1,size(blood(1,:,1))
 
@@ -250,6 +268,8 @@ do s=1,size(brain(1,1,:))
 		write(2,*) brain(:,a,s)
 	end do
 end do
+write(2,*) vein
+write(2,*) impulse
 write(2,*) epoch
 write(2,*) active_data
 write(2,*) grave

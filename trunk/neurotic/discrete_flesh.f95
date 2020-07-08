@@ -67,15 +67,15 @@ end subroutine randomised_list
 
 
 !this function takes in row/column coordinates and returns the data position of the coordinates
-function self_pos(row,column,maximum_row_size) result(z)
-	integer,intent(in) :: row,column,maximum_row_size
+function self_pos(row,column,maximum_column_number) result(z)
+	integer,intent(in) :: row,column,maximum_column_number
 	integer :: z
 
 	!finds the position in the local matrix
-	z=((row-1)*maximum_row_size+column)
+	z=((row-1)*maximum_column_number+column)
 
 	!adds the correction for the matrix buffer
-	z=z+(maximum_row_size+2)+row*2-1
+	z=z+(maximum_column_number+2)+row*2-1
 
 end function self_pos
 
@@ -229,12 +229,12 @@ end subroutine selector
 
 
 !this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
-subroutine reflect(brain,brain_freeze,dead)
+subroutine reflect(impulse,brain,brain_freeze,dead)
 
-	integer,dimension(*),intent(inout) :: brain(:,:,:)
+	integer,dimension(*),intent(inout) :: brain(:,:,:),impulse(:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)	
 	integer,intent(inout) :: dead
-	integer :: row,column,maximum_columns,maximum_rows
+	integer :: row,column,maximum_columns,maximum_rows,bottom_bitch
 	integer,dimension(2) :: j_i
 
 	!set maximums
@@ -258,6 +258,13 @@ subroutine reflect(brain,brain_freeze,dead)
 						!add the data to the target entry
 						j_i=point_pos_matrix(brain_freeze(column,row),maximum_columns)
 						brain(brain_freeze(column,row),j_i(1),j_i(2))=brain(brain_freeze(column,row),j_i(1),j_i(2))+1
+
+					!add data moving off the bottom to impulse
+					else if (brain_freeze(column,row)>(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2)) then
+					
+						bottom_bitch=brain_freeze(column,row)-((maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))
+						impulse(bottom_bitch)=impulse(bottom_bitch)+1
+						dead=dead+1
 
 					else
 						
@@ -366,41 +373,38 @@ subroutine infusion(brain,blood,scaling)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	real,dimension(*),intent(in) :: blood(:,:,:)
-	integer :: row,column,k,k_adj
+	integer :: row,column,k,k_blood
 	real,intent(in) :: scaling
 	
 	do row=1,size(brain(1,1,:))
 		do column=1,size(brain(1,:,1))
 			!setup the position
 			k=self_pos(row,column,size(brain(1,:,1)))
-			k_adj=k-1-size(blood(1,:,1))-row*2
+			k_blood=k-1-size(blood(1,:,1))-row*2
 			!add the blood data to the weights into each neuron
 			if ((column/=1) .and. (row/=1)) then
-				brain(k,column-1,row-1)=brain(k,column-1,row-1)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column-1,row-1)=brain(k,column-1,row-1)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if (row/=1) then
-				brain(k,column,row-1)=brain(k,column,row-1)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column,row-1)=brain(k,column,row-1)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if ((column/=size(brain(1,:,1))) .and. (row/=1)) then
-				brain(k,column+1,row-1)=brain(k,column+1,row-1)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column+1,row-1)=brain(k,column+1,row-1)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if (column/=1) then
-				brain(k,column-1,row)=brain(k,column-1,row)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column-1,row)=brain(k,column-1,row)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if (column/=size(brain(1,:,1))) then
-				brain(k,column+1,row)=brain(k,column+1,row)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column+1,row)=brain(k,column+1,row)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if ((column/=1) .and. (row/=size(brain(1,1,:)))) then
-				brain(k,column-1,row+1)=brain(k,column-1,row+1)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column-1,row+1)=brain(k,column-1,row+1)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if (row/=size(brain(1,1,:))) then
-				brain(k,column,row+1)=brain(k,column,row+1)+int(blood(k_adj,column,row)*(10**3)*scaling)
-			!test case - to see data able to escape
-			else
-				brain(k+2+size(brain(1,:,1)),column,row)=brain(k+2+size(brain(1,:,1)),column,row)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column,row+1)=brain(k,column,row+1)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			if ((column/=size(brain(1,:,1))) .and. (row/=size(brain(1,1,:)))) then
-				brain(k,column+1,row+1)=brain(k,column+1,row+1)+int(blood(k_adj,column,row)*(10**3)*scaling)
+				brain(k,column+1,row+1)=brain(k,column+1,row+1)+int(blood(k_blood,column,row)*(10**3)*scaling)
 			end if
 			
 		end do
