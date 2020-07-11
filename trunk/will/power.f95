@@ -118,8 +118,7 @@ else
 		end if
 	end do
 	!set how much the datum will shift by
-	shift=-1*int((float(shift_total)/float(shift_max))*float(size(impulse_input)-1))
-	print*,shift
+	shift=int((float(shift_total)/float(shift_max))*float(size(impulse_input)-1))
 	do here_column=1,size(impulse_input)
 		!shift the datum
 		if (impulse_input(here_column)==1) then	
@@ -213,6 +212,9 @@ if ((printed=='yes') .or. (printed=='debug')) then
 		print_row_vein_action(there_column*print_length_vein_action:there_column*print_length_vein_action+7)=data_cha_vein_action
 	end do
 	print *,print_row_vein_action
+	print*," "
+
+	print*,"Shift Value:",shift
 	print*," "
 	
 end if
