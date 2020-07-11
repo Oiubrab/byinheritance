@@ -24,4 +24,18 @@ function self_pos_brain(row,column,maximum_row_size) result(z)
 
 end function self_pos_brain
 
+!feed in a start and finish time for a time interval printout in hrs, mins, sec
+subroutine print_interval(start,finish)
+	real,intent(in) :: start, finish
+	real :: t_sec, total_time
+	integer :: t_hr, t_min
+	
+	total_time=finish-start
+	t_hr = floor(total_time/3600)
+	t_min = (total_time-t_hr*3600)/60
+	t_sec = total_time-t_hr*3600-t_min*60
+	print'(A14,I2,A5,I2,A7,F5.2,A4)',"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
+
+end subroutine print_interval
+
 end module flesh_out

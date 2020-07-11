@@ -21,7 +21,7 @@ integer,allocatable :: brain(:,:,:)
 integer :: active_data,grave
 
 !action objects
-integer, allocatable :: impulse(:)
+integer, allocatable :: impulse(:),impulse_input(:)
 real, allocatable :: vein(:)
 
 !debugging objects
@@ -87,6 +87,7 @@ allocate(brain((maxim_column+2)*(maxim_row+2),maxim_column,maxim_row))
 !initialise the action arrays
 allocate(vein(maxim_column+2))
 allocate(impulse(maxim_column+2))
+allocate(impulse_input(maxim_column))
 
 !initialise the randomised position marker arrays
 allocate(matrix_pos(1:size(blood(:,1,1))))
@@ -110,7 +111,10 @@ if (file_exists .eqv. .false.) then
 		end do
 	end do
 	
-	!initialise the action
+	!initialise the action and input
+	do c=1,size(impulse_input)
+		impulse_input(c)=0
+	end do
 	do c=1,size(impulse)
 		impulse(c)=0
 	end do
@@ -172,6 +176,7 @@ else
 	end do
 	read(1,*) vein
 	read(1,*) impulse
+	read(1,*) impulse_input
 	read(1,*) epoch
 	read(1,*) active_data
 	read(1,*) grave
@@ -270,6 +275,7 @@ do s=1,size(brain(1,1,:))
 end do
 write(2,*) vein
 write(2,*) impulse
+write(2,*) impulse_input
 write(2,*) epoch
 write(2,*) active_data
 write(2,*) grave
