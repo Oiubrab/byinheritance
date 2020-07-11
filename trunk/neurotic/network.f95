@@ -23,7 +23,7 @@ integer, allocatable :: brain(:,:,:),brain_freeze(:,:) !brain_freeze stores a se
 real,allocatable :: blood(:,:,:)
 
 !action objects
-integer, allocatable :: impulse(:)
+integer, allocatable :: impulse(:),impulse_input(:)
 real, allocatable :: vein(:)
 
 !debugging
@@ -84,6 +84,7 @@ allocate(brain((maximum_columns+2)*(maximum_rows+2),maximum_columns,maximum_rows
 allocate(brain_freeze(maximum_columns,maximum_rows))
 allocate(vein(maximum_columns+2))
 allocate(impulse(maximum_columns+2))
+allocate(impulse_input(maximum_columns))
 allocate(character(maximum_columns*2+1) :: print_row)
 allocate(character(maximum_columns*3+2) :: print_row_freeze)
 allocate(row_random(maximum_rows))
@@ -103,6 +104,7 @@ do here_row=1,size(brain(1,1,:))
 end do
 read(1,*) vein
 read(1,*) impulse
+read(1,*) impulse_input
 read(1,*) thrash
 read(1,*) active_data
 read(1,*) grave
@@ -192,12 +194,14 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 		do here_column=1,size(brain_freeze(:,1))
 
 			!ensure each neuron that is coming in has space
-			!this is for the test injector
-			if (brain_freeze(here_column,here_row)==self_pos(1,maximum_columns/2,maximum_columns)) then
-				test_condition_conflict=.true.
-				j_i=[here_column,here_row]
-				call neuron_pre_fire(brain,brain_freeze,j_i)
-			end if
+			!this is for test1 of the power script
+			do there_column=1,size(brain(1,:,1))
+				if (brain_freeze(here_column,here_row)==self_pos(1,there_column,maximum_columns)) then
+					test_condition_conflict=.true.
+					j_i=[here_column,here_row]
+					call neuron_pre_fire(brain,brain_freeze,j_i)
+				end if
+			end do
 
 			!only check non-zero entries
 			if (brain_freeze(here_column,here_row)/=0) then
@@ -289,6 +293,7 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 		end do
 		write(2,*) vein
 		write(2,*) impulse
+		write(2,*) impulse_input
 		write(2,*) thrash
 		write(2,*) active_data
 		write(2,*) grave
@@ -373,6 +378,7 @@ do here_row=1,size(brain(1,1,:))
 end do
 write(2,*) vein
 write(2,*) impulse
+write(2,*) impulse_input
 write(2,*) thrash
 write(2,*) active_data
 write(2,*) grave
