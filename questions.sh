@@ -17,7 +17,7 @@ then
     echo "Execute program by format:"
 	echo ". questions.sh valves valve_value cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed"
 	echo "valves: left right up down custom"
-	echo "printed: yes no debug network_only"
+	echo "printed: yes no debug network_only power_only"
 	echo "network_scaling: scales the amount blood neurons will increase the weights that lead to brain neurons"
 	echo "blood_scaling: scale how much the brain neuron will cause the blood neuron to attract more blood"
 
@@ -39,6 +39,9 @@ else
 		cd heartwork
 		#if printer is network only, then dont print the blood
 		if [ $9 == "network_only" ]
+		then
+			./megalomaniac_blood $4 $5 $7 no
+		elif [ $9 == "power_only" ]
 		then
 			./megalomaniac_blood $4 $5 $7 no
 		else
@@ -64,6 +67,9 @@ else
 		if [ $9 == "network_only" ]
 		then
 			./megalomaniac_network $1 $2 $4 $5 8 10 $8 yes
+		elif [ $9 == "power_only" ]
+		then
+			./megalomaniac_network $1 $2 $4 $5 8 10 $8 no			
 		else
 			./megalomaniac_network $1 $2 $4 $5 8 10 $8 $9
 		fi
@@ -85,6 +91,9 @@ else
 		if [ $9 == "network_only" ]
 		then
 			./megalomaniac_power $4 $5 $6 $8 no
+		elif [ $9 == "power_only" ]
+		then
+			./megalomaniac_power $4 $5 $6 $8 yes			
 		else
 			./megalomaniac_power $4 $5 $6 $8 $9
 		fi

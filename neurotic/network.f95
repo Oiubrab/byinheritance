@@ -206,8 +206,8 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 			!only check non-zero entries
 			if (brain_freeze(here_column,here_row)/=0) then
 				
-				!before 100 tries, the system is considered to work fine
-				if (counter<=100) then
+				!before 20 tries, the system is considered to work fine
+				if (counter<=20) then
 				
 					do there_row=1,size(brain_freeze(1,:))
 						do there_column=1,size(brain_freeze(:,1))
@@ -278,7 +278,7 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 	end do
 
 	!debuggling: save and print tool
-	if ((counter>100) .and. (test_overlap_conflict==.false.)) then
+	if ((counter>20) .and. (test_overlap_conflict==.false.)) then
 		write(error_num,"(I0)")thrash
 		open(unit=2,file="error_folder/neurotic_error_"//trim(error_num)//".txt")
 		do here_row=1,size(blood(1,1,:))
