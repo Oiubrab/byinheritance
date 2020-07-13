@@ -129,7 +129,7 @@ end if
 call infusion(brain,blood,multiplier_scaling)
 
 !enact boundary conditions
-!call bondage(brain,boundaries)
+call bondage(brain,boundaries)
 
 !print probabilities for an individual neuron (debug)
 if (printed=="debug") then

@@ -18,7 +18,7 @@ character(len=:),allocatable :: print_row_vein_action
 !action objects
 integer, allocatable :: impulse_action(:),impulse_input(:)
 real, allocatable :: vein_action(:)
-real :: transition
+real :: transition,vein_change
 integer :: shift,shift_total,shift_max
 
 !timing control
@@ -27,7 +27,7 @@ integer :: lag
 real :: start,finish
 
 !network dimension
-integer :: maxim_row,maxim_column,here_row,here_column,ages,special,there_column
+integer :: maxim_row,maxim_column,here_row,here_column,ages,special,there_column,input_here_column
 
 !activation options
 real :: scaling
@@ -102,9 +102,14 @@ if (thrash==1) then
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
-	!impulse_input((size(impulse_input)/2)+1)=1
-	impulse_input(size(impulse_input))=1
+	impulse_input((size(impulse_input)/2)+1)=1
+	input_here_column=(size(impulse_input)/2)+1
+	!impulse_input(size(impulse_input))=1
+	!input_here_column=size(impulse_input)
 else
+	!set the input position
+	input_here_column=findloc(impulse_input,1,dim=1)
+	!initialise shifters
 	shift_total=0
 	shift_max=0
 	!sum up distance and direction away from sentre impulse
@@ -119,63 +124,62 @@ else
 	end do
 	!set how much the datum will shift by
 	shift=int((float(shift_total)/float(shift_max))*float(size(impulse_input)-1))
-	do here_column=1,size(impulse_input)
-		!shift the datum
-		if (impulse_input(here_column)==1) then	
-			impulse_input(here_column)=0
-			!don't let the datum leave the array
-			if (here_column+shift<1) then
-				impulse_input(1)=1
-			else if (here_column+shift>size(impulse_input)) then
-				impulse_input(size(impulse_input))=1
-			else
-				impulse_input(here_column+shift)=1
-			end if
-			exit
-		end if
-	end do
+	!try limit shifting
+	if (shift>1) then
+		shift=1
+	else if (shift<-1) then
+		shift=-1
+	end if
+	!shift the datum
+	impulse_input(input_here_column)=0
+	!don't let the datum leave the array
+	if (input_here_column+shift<1) then
+		impulse_input(1)=1
+	else if (input_here_column+shift>size(impulse_input)) then
+		impulse_input(size(impulse_input))=1
+	else
+		impulse_input(input_here_column+shift)=1
+	end if
+	!reset input position
+	input_here_column=findloc(impulse_input,1,dim=1)
 end if
-
 
 !test brain injection
-do here_column=1,size(impulse_input)
-	if (impulse_input(here_column)==1) then
-		brain(self_pos_brain(1,here_column,maxim_column),here_column,1)=1
+brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
+
+!dispense reward
+call reward(impulse_action,impulse_input,vein_action)
+!reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
+!print*,input_here_column,2*((size(impulse_input)/2)+1)-input_here_column
+!vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)+5.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+	
+
+!increase vein weights accordingly
+do here_column=1,size(impulse_action)
+	!set vein change
+	vein_change=vein_action(here_column)*0.1
+	!add vein data to adjacent entries
+	if (here_column>1) then
+		vein_action(here_column)=vein_action(here_column)-vein_change
+		vein_action(here_column-1)=vein_action(here_column-1)+vein_change
 	end if
+	if (here_column<size(impulse_action)) then
+		vein_action(here_column)=vein_action(here_column)-vein_change
+		vein_action(here_column+1)=vein_action(here_column+1)+vein_change
+	end if	
+	!move blood from the vein_action into the blood network	
+	do there_column=(here_column-1)-1,(here_column-1)+1
+		if ((there_column>=1) .and. (there_column<=maxim_column)) then
+			blood(self_pos_blood(maxim_row,there_column,maxim_column),there_column,maxim_row)=&
+				blood(self_pos_blood(maxim_row,there_column,maxim_column),there_column,maxim_row)+vein_change
+			vein_action(here_column)=vein_action(here_column)-vein_change
+		end if
+	end do
 end do
 
-if (switch1==.true.) then
-
-	!add blood to the vein_action neuron if there is data in the impulse_action neuron
-	do here_column=1,size(impulse_action)
-		if (impulse_action(here_column)==1) then
-			vein_action(here_column)=vein_action(here_column)+5.0
-			!add the blood, depending on the desired reward
-			do there_column=1,size(impulse_input)
-				if (impulse_input(there_column)==1) then
-					vein_action(here_column)=vein_action(here_column)+5.0*(float(abs(((size(impulse_input)/2)+1)-there_column))/float((size(impulse_input)/2)+1))
-					exit
-				end if
-			end do
-		else
-			vein_action(here_column)=vein_action(here_column)+1.0
-		end if
-		!increase brain and blood weights accordingly
-		do there_column=(here_column-1)-1,(here_column-1)+1
-			if ((there_column>=1) .and. (there_column<=maxim_column)) then
-				!move blood from the vein_action into the blood network
-				blood(self_pos_blood(maxim_row,there_column,maxim_column),there_column,maxim_row)=&
-					blood(self_pos_blood(maxim_row,there_column,maxim_column),there_column,maxim_row)+vein_action(here_column)*0.01
-				vein_action(here_column)=vein_action(here_column)-vein_action(here_column)*0.01
-			end if
-		end do
-	end do
-
-end if
 
 
-
-!change the brain weights for the connected brain neurons accordingly
+!use the vein data to change the brain weights for the connected brain neurons accordingly
 do here_column=1,size(brain(1,:,1))
 	do there_column=(here_column+1)-1,(here_column+1)+1
 		brain(self_pos_brain(maxim_row+1,there_column-1,maxim_column),here_column,maxim_row)=&
@@ -220,11 +224,10 @@ if ((printed=='yes') .or. (printed=='debug')) then
 end if
 
 !remove impulse_action data
-if (switch2==.true.) then
-	do here_column=1,size(impulse_action)
-		impulse_action(here_column)=0
-	end do	
-end if
+do here_column=1,size(impulse_action)
+	impulse_action(here_column)=0
+end do	
+
 	
 
 !write the networks to file
