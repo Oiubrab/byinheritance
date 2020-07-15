@@ -3,6 +3,13 @@
 #start the timer
 start=$(date +%s.%N)
 
+#delete all the old text files and error printouts
+if [ -f 'heartwork/will.txt' ]; then rm heartwork/will.txt; fi
+if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
+if [ -f 'will/neurotic.txt' ]; then rm will/neurotic.txt; fi
+rm -r neurotic/error_folder
+mkdir neurotic/error_folder
+
 reset
 
 if [ "$#" -ne 9 ]
@@ -15,28 +22,6 @@ then
 	echo "blood_scaling: scale how much the brain neuron will cause the blood neuron to attract more blood"
 
 else
-
-	#delete all the old text files and error printouts
-	#special rule for will if want to reuse network
-	if [ -f 'heartwork/will.txt' ]
-	then
-		until [[ $yesno == "no" ]] || [[ $yesno == "yes" ]]
-		do
-			read -p "do you want to use previous network? (yes/no): " yesno
-			if [[ $yesno == "no" ]]
-			then
-				echo "removing old network"
-				rm heartwork/will.txt
-			elif [[ $yesno == "yes" ]]
-			then
-				echo "using previous network"
-			fi
-		done
-	fi
-	if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
-	if [ -f 'will/neurotic.txt' ]; then rm will/neurotic.txt; fi
-	rm -r neurotic/error_folder
-	mkdir neurotic/error_folder
 
 	cd heartwork
 	pgfortran -traceback -Mcuda flesh.f95 blood.f95 -o megalomaniac_blood
