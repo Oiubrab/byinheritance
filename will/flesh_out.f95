@@ -56,18 +56,11 @@ subroutine reward(impulse_action,impulse_input,vein_action)
 	do here_column=1,size(impulse_action)
 		!base diffusion rate draws data into the action
 		!vein_action(here_column)=vein_action(here_column)+0.1
-		if (impulse_action(here_column)==1) then
-			!vein_action(here_column)=vein_action(here_column)+5.0
-			!add the blood, depending on the desired reward
-			do there_column=1,size(impulse_input)
-				if (impulse_input(there_column)==1) then
-					!the closer the impulse input signal is to the middle, the bigger the reward
-					print*,5.0*(float(abs(((size(impulse_input)/2)+1)-there_column))/float((size(impulse_input)/2)+1))
-					vein_action(here_column)=vein_action(here_column)+5.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-there_column))+1.0))
-					exit
-				end if
-			end do
-		end if
+		vein_action(here_column)=vein_action(here_column)+5.0
+		!add the blood, depending on the desired reward
+		there_column=findloc(impulse_input,1,dim=1)
+		vein_action(here_column)=vein_action(here_column)+5.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-there_column))+1.0))
+
 	end do
 	
 end subroutine reward

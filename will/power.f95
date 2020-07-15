@@ -6,7 +6,7 @@ implicit none
 integer, allocatable :: brain(:,:,:)
 real,allocatable :: blood(:,:,:)
 integer :: thrash,active_data,grave
-character(len=1000) :: maxim_column_cha,maxim_row_cha,network_scaling_cha,printed
+character(len=1000) :: maxim_column_cha,maxim_row_cha,network_scaling_cha,printed,cyclical_cha
 
 !printing
 character(len=:),allocatable :: print_row_impulse_action,print_row_impulse_input
@@ -19,7 +19,7 @@ character(len=:),allocatable :: print_row_vein_action
 integer, allocatable :: impulse_action(:),impulse_input(:)
 real, allocatable :: vein_action(:)
 real :: transition,vein_change
-integer :: shift,shift_total,shift_max
+integer :: shift,shift_total,shift_max,cyclical
 
 !timing control
 character(len=1000) :: lag_cha
@@ -38,19 +38,21 @@ logical :: switch2=.true.
 call cpu_time(start)
 
 !prepare command line options
-IF(COMMAND_ARGUMENT_COUNT().NE.5)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.6)THEN
 	WRITE(*,*)'Execute program by format:'
-	WRITE(*,*)'./program maximum_columns maximum_rows lag network_scaling printed'
+	WRITE(*,*)'./program cycles maximum_columns maximum_rows lag network_scaling printed'
 	WRITE(*,*)'printed: yes no debug'
 	STOP
 ENDIF
 
 !set the column/row variables
-CALL GET_COMMAND_ARGUMENT(1,maxim_column_cha)
-CALL GET_COMMAND_ARGUMENT(2,maxim_row_cha)
-CALL GET_COMMAND_ARGUMENT(3,lag_cha)
-CALL GET_COMMAND_ARGUMENT(4,network_scaling_cha)
-CALL GET_COMMAND_ARGUMENT(5,printed)
+CALL GET_COMMAND_ARGUMENT(1,cyclical_cha)
+CALL GET_COMMAND_ARGUMENT(2,maxim_column_cha)
+CALL GET_COMMAND_ARGUMENT(3,maxim_row_cha)
+CALL GET_COMMAND_ARGUMENT(4,lag_cha)
+CALL GET_COMMAND_ARGUMENT(5,network_scaling_cha)
+CALL GET_COMMAND_ARGUMENT(6,printed)
+READ(cyclical_cha,*)cyclical
 READ(lag_cha,*)lag
 READ(network_scaling_cha,*)scaling
 READ(maxim_column_cha,*)maxim_column
@@ -98,14 +100,27 @@ close(1)
 
 !move the impulse_input based on the impulse_action
 !at the start, set input in the middle
-if (thrash==1) then
+if ((thrash==1) .or. (mod(thrash,250)==0) .and. (thrash<=2000)) then
+	print*,thrash,250,mod(thrash,250)
+	call sleep(1)
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
 	impulse_input((size(impulse_input)/2)+1)=1
 	input_here_column=(size(impulse_input)/2)+1
-	!impulse_input(size(impulse_input))=1
-	!input_here_column=size(impulse_input)
+else if (mod(thrash,(cyclical/10))==0) then
+	call sleep(1)
+	print*,thrash,(cyclical/10),mod(thrash,(cyclical/10))
+	do here_column=1,size(impulse_input)
+		impulse_input(here_column)=0
+	end do 
+	if (mod(thrash,2000)==0) then
+		impulse_input(size(impulse_input))=1
+		input_here_column=size(impulse_input)
+	else if (mod(thrash,1000)==0) then
+		impulse_input(1)=1
+		input_here_column=1
+	end if
 else
 	!set the input position
 	input_here_column=findloc(impulse_input,1,dim=1)
@@ -148,10 +163,10 @@ end if
 brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
 
 !dispense reward
-call reward(impulse_action,impulse_input,vein_action)
+!call reward(impulse_action,impulse_input,vein_action)
 !reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
-!print*,input_here_column,2*((size(impulse_input)/2)+1)-input_here_column
-!vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)+5.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+print*,10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
 	
 
 !increase vein weights accordingly
