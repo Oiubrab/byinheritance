@@ -29,9 +29,11 @@ else
 				rm heartwork/will.txt
 			elif [[ $yesno == "yes" ]]
 			then
+				cp heartwork/will.txt network_folder/will.txt
 				echo "using previous network"
 			fi
 		done
+		unset yesno
 	fi
 	if [ -f 'neurotic/heartwork.txt' ]; then rm neurotic/heartwork.txt; fi
 	if [ -f 'will/neurotic.txt' ]; then rm will/neurotic.txt; fi
@@ -39,11 +41,11 @@ else
 	mkdir neurotic/error_folder
 
 	cd heartwork
-	pgfortran -traceback -Mcuda flesh.f95 blood.f95 -o megalomaniac_blood
+	gfortran flesh.f95 blood.f95 -o megalomaniac_blood
 	cd ../neurotic
-	pgfortran -traceback -Mcuda discrete_flesh.f95 network.f95 -o megalomaniac_network
+	gfortran discrete_flesh.f95 network.f95 -o megalomaniac_network
 	cd ../will
-	pgfortran -traceback -Mcuda flesh_out.f95 power.f95 -o megalomaniac_power
+	gfortran flesh_out.f95 power.f95 -o megalomaniac_power
 	cd ..
 
 	for i in $(seq 1 $3)

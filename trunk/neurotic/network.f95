@@ -1,13 +1,13 @@
 program network
 use discrete_flesh
-use cudafor
 implicit none
 
 !printing and variable input objects
 integer :: cycles,maximum_columns,maximum_rows,active_data,grave=0
 character(len=2) :: data_cha
 character(len=3) :: data_cha_freeze
-character(len=10000) :: valves,valve_value_cha,size_rows,size_columns,printed,neuron_column_cha,neuron_row_cha,multiplier_scaling_cha,error_num
+character(len=10000) :: valves,valve_value_cha,size_rows,size_columns,printed
+character(len=10000) :: neuron_column_cha,neuron_row_cha,multiplier_scaling_cha,error_num
 character(len=:),allocatable :: print_row,print_row_freeze
 
 !incrementation and limiting objects
@@ -171,9 +171,12 @@ do here_row=1,size(brain(1,1,:))
 	do here_column=1,size(brain(1,:,1))
 
 		!data is in the 3rd address, that corresponds to the position of the row/column, counting left to right, up to down, from the buffer
-		if (brain(self_pos(row_random(here_row),column_random(here_column),maximum_columns),column_random(here_column),row_random(here_row))==1) then
+		if (brain(self_pos(row_random(here_row),column_random(here_column),maximum_columns),&
+			column_random(here_column),row_random(here_row))==1) then
+			
 			j_i=[column_random(here_column),row_random(here_row)]
 			call neuron_pre_fire(brain,brain_freeze,j_i)
+			
 		end if
 
 	end do
@@ -184,7 +187,7 @@ end do
 test_overlap_conflict=.true.
 test_condition_conflict=.true.
 counter=0
-do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.))
+do while ((test_overlap_conflict .eqv. .true.) .or. (test_condition_conflict .eqv. .true.))
 
 	test_condition_conflict=.false.
 	test_overlap_conflict=.false.
@@ -217,10 +220,16 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 								if (brain_freeze(here_column,here_row)==brain_freeze(there_column,there_row)) then
 									
 									!The neuron with the biggest weight gets first dibs
-									if (brain(brain_freeze(here_column,here_row),there_column,there_row)<brain(brain_freeze(there_column,there_row),here_column,here_row)) then
+									if (brain(brain_freeze(here_column,here_row),there_column,there_row)<brain(brain_freeze(there_column,there_row),&
+										here_column,here_row)) then
+										
 										j_i=[there_column,there_row]
-									else if (brain(brain_freeze(here_column,here_row),there_column,there_row)>brain(brain_freeze(there_column,there_row),here_column,here_row)) then
+										
+									else if (brain(brain_freeze(here_column,here_row),there_column,there_row)>&
+										brain(brain_freeze(there_column,there_row),here_column,here_row)) then
+										
 										j_i=[here_column,here_row]
+										
 									else
 										!if weights are equal, randomise selection
 										call random_number(fuck)
@@ -258,7 +267,8 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 									test_overlap_conflict=.true.
 								
 								!stop neuron here_column,here_row moving data if it's destination is both full and not moving 
-								else if ((brain_freeze(here_column,here_row)==self_pos(there_row,there_column,maximum_columns)) .and. (brain_freeze(there_column,there_row)==0) .and. &
+								else if ((brain_freeze(here_column,here_row)==self_pos(there_row,there_column,maximum_columns)) .and. &
+									(brain_freeze(there_column,there_row)==0) .and. &
 									brain(brain_freeze(here_column,here_row),there_column,there_row)==1) then
 									
 									brain_freeze(here_column,here_row)=0
@@ -278,7 +288,7 @@ do while ((test_overlap_conflict==.true.) .or. (test_condition_conflict==.true.)
 	end do
 
 	!debuggling: save and print tool
-	if ((counter>20) .and. (test_overlap_conflict==.false.)) then
+	if ((counter>20) .and. (test_overlap_conflict .eqv. .false.)) then
 		write(error_num,"(I0)")thrash
 		open(unit=2,file="error_folder/neurotic_error_"//trim(error_num)//".txt")
 		do here_row=1,size(blood(1,1,:))
@@ -358,8 +368,11 @@ end if
 !debuggling: check if any neurons are greater than 1
 do here_row=1,size(brain(1,1,:))
 	do here_column=1,size(brain(1,:,1))
-		if ((brain(self_pos(here_row,here_column,maximum_columns),here_column,here_row)>1) .or. (brain(self_pos(here_row,here_column,maximum_columns),here_column,here_row)<0)) then
+		if ((brain(self_pos(here_row,here_column,maximum_columns),here_column,here_row)>1) .or. &
+			(brain(self_pos(here_row,here_column,maximum_columns),here_column,here_row)<0)) then
+			
 			stop
+			
 		end if
 	end do
 end do

@@ -1,6 +1,5 @@
 program bloody
 use flesh
-use cudafor
 implicit none
 
 !eyes, ears and nose are data inputs to be determined (RANDOM_NUMBER for now)
@@ -35,8 +34,7 @@ real :: fate, transition, distil,multiplier_scaling
 
 !printing objects
 integer :: print_length=7
-character(len=print_length) :: data_cha
-character(len=:),allocatable :: print_row
+character(len=:),allocatable :: print_row, data_cha
 
 !file checking
 logical :: file_exists
@@ -94,6 +92,7 @@ allocate(matrix_pos(1:size(blood(:,1,1))))
 
 !initialise printer
 allocate(character(maxim_column*print_length+7) :: print_row)
+allocate(character(print_length) :: data_cha)
 
 !heartwork is the first network to run
 !so we mst first test if this is the first epoch and initialize both brain and blood
