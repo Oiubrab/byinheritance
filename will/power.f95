@@ -12,8 +12,7 @@ character(len=1000) :: maxim_column_cha,maxim_row_cha,network_scaling_cha,printe
 character(len=:),allocatable :: print_row_impulse_action,print_row_impulse_input
 character(len=2) :: data_cha_impulse_action,data_cha_impulse_input
 integer :: print_length_vein_action=7
-character(len=print_length_vein_action) :: data_cha_vein_action
-character(len=:),allocatable :: print_row_vein_action
+character(len=:),allocatable :: print_row_vein_action,data_cha_vein_action
 
 !action objects
 integer, allocatable :: impulse_action(:),impulse_input(:)
@@ -75,6 +74,7 @@ allocate(impulse_input(maxim_column))
 allocate(character((maxim_column)*2+1) :: print_row_impulse_input)
 allocate(character((maxim_column+2)*2+1) :: print_row_impulse_action)
 allocate(character((maxim_column+2)*print_length_vein_action+7) :: print_row_vein_action)
+allocate(character(print_length_vein_action) :: data_cha_vein_action)
 
 !retrieve previous network
 open(unit=1,file="neurotic.txt")
@@ -100,27 +100,39 @@ close(1)
 
 !move the impulse_input based on the impulse_action
 !at the start, set input in the middle
-if ((thrash==1) .or. (mod(thrash,250)==0) .and. (thrash<=2000)) then
-	print*,thrash,250,mod(thrash,250)
-	call sleep(1)
+if (thrash<=1) then
+
+	do here_column=1,size(impulse_input)
+		impulse_input(here_column)=0
+	end do 
+	impulse_input((size(impulse_input)/2)+1)=1
+	input_here_column=(size(impulse_input)/2)+1	
+	
+else if ((thrash<2000) .and. (mod(thrash,250)==0)) then
+
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
 	impulse_input((size(impulse_input)/2)+1)=1
 	input_here_column=(size(impulse_input)/2)+1
-else if (mod(thrash,(cyclical/10))==0) then
-	call sleep(1)
-	print*,thrash,(cyclical/10),mod(thrash,(cyclical/10))
+
+else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,2000)==0)) then
+
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
-	if (mod(thrash,2000)==0) then
-		impulse_input(size(impulse_input))=1
-		input_here_column=size(impulse_input)
-	else if (mod(thrash,1000)==0) then
-		impulse_input(1)=1
-		input_here_column=1
-	end if
+	print*,thrash,(cyclical/10),mod(thrash,(cyclical/10))
+	impulse_input(size(impulse_input))=1
+	input_here_column=size(impulse_input)
+else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,1000)==0)) then
+
+	do here_column=1,size(impulse_input)
+		impulse_input(here_column)=0
+	end do 
+	print*,thrash,(cyclical/10),mod(thrash,(cyclical/10))
+	impulse_input(1)=1
+	input_here_column=1
+
 else
 	!set the input position
 	input_here_column=findloc(impulse_input,1,dim=1)
@@ -166,7 +178,8 @@ brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
 !call reward(impulse_action,impulse_input,vein_action)
 !reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
 print*,10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
-vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
+	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
 	
 
 !increase vein weights accordingly
@@ -198,7 +211,8 @@ end do
 do here_column=1,size(brain(1,:,1))
 	do there_column=(here_column+1)-1,(here_column+1)+1
 		brain(self_pos_brain(maxim_row+1,there_column-1,maxim_column),here_column,maxim_row)=&
-			brain(self_pos_brain(maxim_row+1,there_column-1,maxim_column),here_column,maxim_row)+int(vein_action(there_column)*(10**3)*scaling)
+			brain(self_pos_brain(maxim_row+1,there_column-1,maxim_column),here_column,maxim_row)+&
+				int(vein_action(there_column)*(10**3)*scaling)
 	end do
 end do
 
@@ -242,8 +256,6 @@ end if
 do here_column=1,size(impulse_action)
 	impulse_action(here_column)=0
 end do	
-
-	
 
 !write the networks to file
 open(unit=2,file="will.txt")

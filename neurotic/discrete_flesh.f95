@@ -251,8 +251,8 @@ subroutine reflect(impulse,brain,brain_freeze,dead)
 					brain(self_pos(row,column,maximum_columns),column,row)=brain(self_pos(row,column,maximum_columns),column,row)-1
 
 					!for now, only transition data if it is not heading off the board
-					if ((brain_freeze(column,row)>maximum_columns+3) .and. (brain_freeze(column,row)<(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))&
-						.and. (mod(brain_freeze(column,row),(maximum_columns+2))/=1) .and. &
+					if ((brain_freeze(column,row)>maximum_columns+3) .and. (brain_freeze(column,row)<(maximum_rows+2)*(maximum_columns+2)-&
+						(maximum_columns+2)) .and. (mod(brain_freeze(column,row),(maximum_columns+2))/=1) .and. &
 						(mod(brain_freeze(column,row),(maximum_columns+2))/=0)) then
 						
 						!add the data to the target entry
@@ -467,7 +467,8 @@ subroutine bondage(brain,boundaries)
 			end do
 			!left and right
 			do row=1,3
-				if ((brain(self_pos(maximum_rows,column-2+row,maximum_columns),column,maximum_rows)<boundaries(1)) .and. (column-2+row/=column)) then
+				if ((brain(self_pos(maximum_rows,column-2+row,maximum_columns),column,maximum_rows)<boundaries(1))&
+					.and. (column-2+row/=column)) then
 					brain(self_pos(maximum_rows,column-2+row,maximum_columns),column,maximum_rows)=boundaries(1)
 				end if
 			end do
@@ -513,8 +514,11 @@ subroutine bondage(brain,boundaries)
 			end do
 			!up and down
 			do column=1,3
-				if ((brain(self_pos(row-2+column,maximum_columns,maximum_columns),maximum_columns,row)<boundaries(3)) .and. (row-2+column/=row)) then
+				if ((brain(self_pos(row-2+column,maximum_columns,maximum_columns),maximum_columns,row)<boundaries(3))& 
+					.and. (row-2+column/=row)) then
+					
 					brain(self_pos(row-2+column,maximum_columns,maximum_columns),maximum_columns,row)=boundaries(3)
+					
 				end if
 			end do
 		end if
