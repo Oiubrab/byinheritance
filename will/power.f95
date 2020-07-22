@@ -107,6 +107,7 @@ if (thrash<=1) then
 	end do 
 	impulse_input((size(impulse_input)/2)+1)=1
 	input_here_column=(size(impulse_input)/2)+1	
+	shift=0
 	
 else if ((thrash<2000) .and. (mod(thrash,250)==0)) then
 
