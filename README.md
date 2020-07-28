@@ -21,3 +21,4 @@ This is the central brain of the network. This is currently in the form of a bin
 
 ### HOW TO RUN?
 
+It's quite simple, really. just run the 'questions.sh' bash script and a set of instruction will be printed out as to how to start the network

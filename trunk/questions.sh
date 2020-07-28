@@ -70,7 +70,7 @@ else
 			mv heartwork.txt ../neurotic
 		else
 			cd ..
-			echo heartwork copy error
+			echo "heartwork copy error"
 			break
 		fi
 		#delete recieved networks once finished with
@@ -97,7 +97,7 @@ else
 			mv neurotic.txt ../will
 		else
 			cd ..
-			echo neurotic copy error
+			echo "neurotic copy error"
 			break
 		fi
 		#delete recieved networks once finished with
@@ -123,12 +123,19 @@ else
 			mv will.txt ../heartwork
 		else
 			cd ..
-			echo will copy error
+			echo "will copy error"
 			break
 		fi
 		#delete recieved networks once finished with
 		if [ -f 'neurotic.txt' ]; then rm neurotic.txt; fi
 		cd ..
+
+		#this is the exit script
+		read -t 0 -n 1
+		if [ $? = 0 ] ; then
+			echo "enter key escape"
+			break
+		fi
 
 	done
 	
