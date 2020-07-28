@@ -116,23 +116,25 @@ else if ((thrash<2000) .and. (mod(thrash,250)==0)) then
 	end do 
 	impulse_input((size(impulse_input)/2)+1)=1
 	input_here_column=(size(impulse_input)/2)+1
+	shift=0
 
 else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,2000)==0)) then
 
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
-	print*,thrash,(cyclical/10),mod(thrash,(cyclical/10))
 	impulse_input(size(impulse_input))=1
 	input_here_column=size(impulse_input)
+	shift=0
+	
 else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,1000)==0)) then
 
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
-	print*,thrash,(cyclical/10),mod(thrash,(cyclical/10))
 	impulse_input(1)=1
 	input_here_column=1
+	shift=0
 
 else
 	!set the input position
@@ -172,16 +174,30 @@ else
 	input_here_column=findloc(impulse_input,1,dim=1)
 end if
 
+
+
+
 !test brain injection
 brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
 
 !dispense reward
 !call reward(impulse_action,impulse_input,vein_action)
+
 !reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
-print*,10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
-vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
-	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
-	
+!vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
+!	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+
+!reward function - approach 1:add to vein for those neurons that have data and the shift moves to centre
+		
+do here_column=1,size(impulse_action)
+	vein_action(here_column)=vein_action(here_column)+0.001
+	if (((size(impulse_input)/2)+1-input_here_column)*shift>0) then
+		if (impulse_action(here_column)==1) then
+			vein_action(here_column)=vein_action(here_column)+10.0			
+		end if
+	end if
+end do
+
 
 !increase vein weights accordingly
 do here_column=1,size(impulse_action)
@@ -216,10 +232,6 @@ do here_column=1,size(brain(1,:,1))
 				int(vein_action(there_column)*(10**3)*scaling)
 	end do
 end do
-
-!vein_action(1)=100.;vein_action(12)=100.0
-
-!do stuff with impulse_action activation
 
 !if requested a printout, print impulse_action and vein_action after the transitions are completed
 if ((printed=='yes') .or. (printed=='debug')) then
@@ -280,7 +292,10 @@ close(2)
 
 !stop timer and print
 call cpu_time(finish)
-call print_interval(start,finish)
+if ((printed=="yes") .or. (printed=='debug') .or. (printed=="network_only")) then
+	call print_interval(start,finish)
+	print*," "
+end if
 print*," "
 
 !lag it if necessary

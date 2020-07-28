@@ -198,19 +198,19 @@ do while ((test_overlap_conflict .eqv. .true.) .or. (test_condition_conflict .eq
 
 			!ensure each neuron that is coming in has space
 			!this is for test1 of the power script
-			do there_column=1,size(brain(1,:,1))
-				if (brain_freeze(here_column,here_row)==self_pos(1,there_column,maximum_columns)) then
-					test_condition_conflict=.true.
-					j_i=[here_column,here_row]
-					call neuron_pre_fire(brain,brain_freeze,j_i)
-				end if
-			end do
+			!do there_column=1,size(brain(1,:,1))
+			!	if (brain_freeze(here_column,here_row)==self_pos(1,there_column,maximum_columns)) then
+			!		test_condition_conflict=.true.
+			!		j_i=[here_column,here_row]
+			!		call neuron_pre_fire(brain,brain_freeze,j_i)
+			!	end if
+			!end do
 
 			!only check non-zero entries
 			if (brain_freeze(here_column,here_row)/=0) then
 				
-				!before 20 tries, the system is considered to work fine
-				if (counter<=20) then
+				!before 5 tries, the system is considered to work fine
+				if (counter<=5) then
 				
 					do there_row=1,size(brain_freeze(1,:))
 						do there_column=1,size(brain_freeze(:,1))
@@ -251,7 +251,7 @@ do while ((test_overlap_conflict .eqv. .true.) .or. (test_condition_conflict .eq
 						end do
 					end do
 
-				!after 100 tries, clearly something is stuck, so just skip problem neurons
+				!after 5 tries, clearly something is stuck, so just skip problem neurons
 				else
 					
 					do there_row=1,size(brain_freeze(1,:))
@@ -288,7 +288,7 @@ do while ((test_overlap_conflict .eqv. .true.) .or. (test_condition_conflict .eq
 	end do
 
 	!debuggling: save and print tool
-	if ((counter>20) .and. (test_overlap_conflict .eqv. .false.)) then
+	if ((counter>5) .and. (test_overlap_conflict .eqv. .false.)) then
 		write(error_num,"(I0)")thrash
 		open(unit=2,file="error_folder/neurotic_error_"//trim(error_num)//".txt")
 		do here_row=1,size(blood(1,1,:))
