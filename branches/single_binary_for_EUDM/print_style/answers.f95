@@ -658,7 +658,7 @@ end subroutine head
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 3: all the input and output of the network and special reward is enacted here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,cat_angle,printed_true)
+subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,cat_angle,ending,printed_true)
 
 implicit none
 
@@ -677,10 +677,11 @@ integer :: print_length_vein_action=7
 character(len=:),allocatable :: print_row_vein_action,data_cha_vein_action
 
 !action objects
+real,parameter :: pi=4.*asin(1./sqrt(2.))
 integer, dimension(*) :: impulse_action(:),impulse_input(:)
 real, dimension(*) :: vein_action(:)
-real :: transition,vein_change,cat_angle
-integer :: shift,shift_total,shift_max,cycles
+real :: transition,vein_change,cat_angle,select_range
+integer :: shift,shift_total,shift_max,cycles,ending
 
 !timing control
 character(len=1000) :: lag_cha
@@ -716,81 +717,44 @@ allocate(character((maxim_column+2)*2+1) :: print_row_impulse_action)
 allocate(character((maxim_column+2)*print_length_vein_action+7) :: print_row_vein_action)
 allocate(character(print_length_vein_action) :: data_cha_vein_action)
 
-!test1: keep data in impulse_input in the centre (odd columns only)
 
-!move the impulse_input based on the impulse_action
-!at the start, set input in the middle
-if (epoch<=1) then
 
-	do here_column=1,size(impulse_input)
-		impulse_input(here_column)=0
-	end do 
-	impulse_input((size(impulse_input)/2)+1)=1
-	input_here_column=(size(impulse_input)/2)+1	
-	shift=0
-	
-else if ((epoch<2000) .and. (mod(epoch,250)==0)) then
 
-	do here_column=1,size(impulse_input)
-		impulse_input(here_column)=0
-	end do 
-	impulse_input((size(impulse_input)/2)+1)=1
-	input_here_column=(size(impulse_input)/2)+1
 
-else if ((epoch>=2000) .and. (epoch<10000) .and. (mod(epoch,2000)==0)) then
-
-	do here_column=1,size(impulse_input)
-		impulse_input(here_column)=0
-	end do 
-
-	impulse_input(size(impulse_input))=1
-	input_here_column=size(impulse_input)
-else if ((epoch>=2000) .and. (epoch<10000) .and. (mod(epoch,1000)==0)) then
-
-	do here_column=1,size(impulse_input)
-		impulse_input(here_column)=0
-	end do 
-
-	impulse_input(1)=1
-	input_here_column=1
-
-else
-	!set the input position
-	input_here_column=findloc(impulse_input,1,dim=1)
-	!initialise shifters
-	shift_total=0
-	shift_max=0
-	!sum up distance and direction away from sentre impulse
-	do here_column=1,size(impulse_action)
-		if (impulse_action(here_column)==1) then
-			shift_total=shift_total-((size(impulse_action)/2)+1-here_column)
-		end if
-		!setup shift max
-		if (here_column<(size(impulse_action)/2)+1) then
-			shift_max=shift_max+here_column
-		end if
-	end do
-	!set how much the datum will shift by
-	shift=int((float(shift_total)/float(shift_max))*float(size(impulse_input)-1))
-	!try limit shifting
-	if (shift>1) then
-		shift=1
-	else if (shift<-1) then
-		shift=-1
-	end if
-	!shift the datum
-	impulse_input(input_here_column)=0
-	!don't let the datum leave the array
-	if (input_here_column+shift<1) then
-		impulse_input(1)=1
-	else if (input_here_column+shift>size(impulse_input)) then
-		impulse_input(size(impulse_input))=1
+!move the impulse_input based on the cat_angle variable received from the game
+select_range=(2.*pi)/float(size(impulse_input))
+do here_column=1,size(impulse_input)
+	if ((select_range*float(here_column)>=(cat_angle+pi)) .and. (select_range*float(here_column-1)<=(cat_angle+pi))) then
+		impulse_input(here_column)=1
 	else
-		impulse_input(input_here_column+shift)=1
+		impulse_input(here_column)=0
 	end if
-	!reset input position
-	input_here_column=findloc(impulse_input,1,dim=1)
+end do
+	
+!set the input position
+input_here_column=findloc(impulse_input,1,dim=1)
+!initialise shifters
+shift_total=0
+shift_max=0
+!sum up distance and direction away from sentre impulse
+do here_column=1,size(impulse_action)
+	if (impulse_action(here_column)==1) then
+		shift_total=shift_total-((size(impulse_action)/2)+1-here_column)
+	end if
+	!setup shift max
+	if (here_column<(size(impulse_action)/2)+1) then
+		shift_max=shift_max+here_column
+	end if
+end do
+!set how much the datum will shift by
+shift=int((float(shift_total)/float(shift_max))*float(size(impulse_input)-1))
+!try limit shifting
+if (shift>1) then
+	shift=1
+else if (shift<-1) then
+	shift=-1
 end if
+
 
 !test brain injection
 brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
@@ -836,13 +800,8 @@ do here_column=1,size(brain(1,:,1))
 	end do
 end do
 
-!remove impulse_action data
-do here_column=1,size(impulse_action)
-	impulse_action(here_column)=0
-end do	
-
 !save the shift
-if (epoch==cycles) then
+if (epoch==ending) then
 	print"(I0)",shift
 end if
 !open(unit=3, file="shift.txt")
@@ -885,12 +844,18 @@ if ((printed=='yes') .or. (printed=='debug')) then
 	print*,"Reward magnitude: ",10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
 	print*," "
 	
-	call print_interval(start,finish)
-	print*," "
-	
 end if
 
+!remove impulse_action data
+do here_column=1,size(impulse_action)
+	impulse_action(here_column)=0
+end do
 
+!print the strength interval
+if ((printed=='yes') .or. (printed=='debug')) then
+	call print_interval(start,finish)
+	print*," "
+end if
 
 end subroutine strength
 

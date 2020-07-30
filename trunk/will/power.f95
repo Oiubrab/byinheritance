@@ -118,7 +118,7 @@ else if ((thrash<2000) .and. (mod(thrash,250)==0)) then
 	input_here_column=(size(impulse_input)/2)+1
 	shift=0
 
-else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,2000)==0)) then
+else if ((thrash>=2000) .and. (thrash<4000) .and. (mod(thrash,2000)==0)) then
 
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
@@ -127,7 +127,7 @@ else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,2000)==0)) then
 	input_here_column=size(impulse_input)
 	shift=0
 	
-else if ((thrash>=2000) .and. (thrash<10000) .and. (mod(thrash,1000)==0)) then
+else if ((thrash>=2000) .and. (thrash<4000) .and. (mod(thrash,1000)==0)) then
 
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
