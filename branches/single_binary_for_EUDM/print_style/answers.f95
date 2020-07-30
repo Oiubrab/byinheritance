@@ -332,15 +332,15 @@ end subroutine heart
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 2: the discrete unitary network is processed here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine head(brain,blood,impulse,valves,valve_value,active_data,grave,multiplier_scaling,epoch,printed_true)
+subroutine head(brain,blood,impulse,valve_value,active_data,grave,multiplier_scaling,epoch,printed_true)
 
 implicit none
 
 !printing and variable input objects
 character(len=2) :: data_cha
 character(len=3) :: data_cha_freeze
-character(len=*),intent(in) :: valves,printed_true
-character(len=12) :: printed
+character(len=*),intent(in) :: printed_true
+character(len=12) :: printed,valves="down"
 character(len=10000) :: error_num
 character(len=:),allocatable :: print_row,print_row_freeze
 
@@ -540,7 +540,7 @@ do while ((test_overlap_conflict .eqv. .true.) .or. (test_condition_conflict .eq
 						end do
 					end do
 
-				!after 100 tries, clearly something is stuck, so just skip problem neurons
+				!after 20 tries, clearly something is stuck, so just skip problem neurons
 				else
 					
 					do there_row=1,size(brain_freeze(1,:))
@@ -658,7 +658,7 @@ end subroutine head
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 3: all the input and output of the network and special reward is enacted here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,printed_true)
+subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,cat_angle,printed_true)
 
 implicit none
 
@@ -679,7 +679,7 @@ character(len=:),allocatable :: print_row_vein_action,data_cha_vein_action
 !action objects
 integer, dimension(*) :: impulse_action(:),impulse_input(:)
 real, dimension(*) :: vein_action(:)
-real :: transition,vein_change
+real :: transition,vein_change,cat_angle
 integer :: shift,shift_total,shift_max,cycles
 
 !timing control
@@ -742,7 +742,7 @@ else if ((epoch>=2000) .and. (epoch<10000) .and. (mod(epoch,2000)==0)) then
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
-	print*,epoch,(cycles/10),mod(epoch,(cycles/10))
+
 	impulse_input(size(impulse_input))=1
 	input_here_column=size(impulse_input)
 else if ((epoch>=2000) .and. (epoch<10000) .and. (mod(epoch,1000)==0)) then
@@ -750,7 +750,7 @@ else if ((epoch>=2000) .and. (epoch<10000) .and. (mod(epoch,1000)==0)) then
 	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
 	end do 
-	print*,epoch,(cycles/10),mod(epoch,(cycles/10))
+
 	impulse_input(1)=1
 	input_here_column=1
 
@@ -798,7 +798,6 @@ brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
 !dispense reward
 !call reward(impulse_action,impulse_input,vein_action)
 !reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
-print*,10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
 vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
 	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
 	
@@ -837,6 +836,22 @@ do here_column=1,size(brain(1,:,1))
 	end do
 end do
 
+!remove impulse_action data
+do here_column=1,size(impulse_action)
+	impulse_action(here_column)=0
+end do	
+
+!save the shift
+if (epoch==cycles) then
+	print"(I0)",shift
+end if
+!open(unit=3, file="shift.txt")
+!write(3,*)shift
+close(3)
+
+!stop timer and print
+call cpu_time(finish)
+
 !if requested a printout, print impulse_action and vein_action after the transitions are completed
 if ((printed=='yes') .or. (printed=='debug')) then
 
@@ -867,17 +882,15 @@ if ((printed=='yes') .or. (printed=='debug')) then
 	print*,"Shift Value:",shift
 	print*," "
 	
+	print*,"Reward magnitude: ",10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+	print*," "
+	
+	call print_interval(start,finish)
+	print*," "
+	
 end if
 
-!remove impulse_action data
-do here_column=1,size(impulse_action)
-	impulse_action(here_column)=0
-end do	
 
-!stop timer and print
-call cpu_time(finish)
-call print_interval(start,finish)
-print*," "
 
 end subroutine strength
 

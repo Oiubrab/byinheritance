@@ -2,7 +2,7 @@ module emerge
 implicit none
 contains
 
-!functional
+!this is a module holding all the low level functions and subroutines
 
 !returns a list of sequential numbers up to a length defined by the array input, in a list where the order of the numbers has been randomised
 !master_killer is the allocatable array argument and world_eater is the array of known size
@@ -122,7 +122,7 @@ end function sigmoid
 
 
 
-!this function takes in row/column coordinates and returns the data position of the coordinates
+!this function takes in row/column coordinates and returns the data position of the coordinates for the blood network
 function self_pos_blood(j,i,maximum) result(z)
 	integer,intent(in) :: j,i,maximum
 	integer :: z
@@ -134,7 +134,7 @@ end function self_pos_blood
 
 
 
-!this function takes in row/column coordinates and returns the data position of the coordinates
+!this function takes in row/column coordinates and returns the data position of the coordinates for the brain network
 function self_pos_brain(row,column,maximum_row_size) result(z)
 	integer,intent(in) :: row,column,maximum_row_size
 	integer :: z
@@ -155,7 +155,7 @@ end function self_pos_brain
 
 
 
-!takes in a neuron position along the matrix (column,row,z) with a single number and gives it's position in (column,row) format
+!takes in a neuron position along the matrix (column,row,z) with a single number and gives it's position in (column,row) format for the brain network
 function point_pos_matrix_brain(z_point,high) result(poster)
 	integer,intent(in) :: z_point, high
 	integer :: z
@@ -168,7 +168,7 @@ function point_pos_matrix_brain(z_point,high) result(poster)
 end function point_pos_matrix_brain
 
 
-!takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in row/column format
+!takes in a neuron position along the matrix (j,i,z) with a single number and gives it's position in row/column format for the blood network
 !return either the row, column depending on the opt_pos argument, high=maximum columns
 function point_pos_matrix_blood(z_point,high,opt_pos) result(poster)
 	integer,intent(in) :: z_point, high
