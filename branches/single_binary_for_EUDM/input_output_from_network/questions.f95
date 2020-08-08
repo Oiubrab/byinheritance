@@ -32,6 +32,7 @@ integer :: ending
 integer, allocatable :: impulse(:),impulse_input(:)
 real, allocatable :: vein(:)
 real :: angle_from_cat
+logical :: starter
 
 !clock
 real :: start,finish
@@ -86,12 +87,14 @@ end if
 
 !run the network subroutines
 ending=epoch+cycles-1
+starter=.true.
 do epoch=epoch,ending
 	call heart(brain,blood,epoch,active_data,grave,blood_scaling,printed)
 	call head(brain,blood,impulse,valve_value,active_data,grave,network_scaling,epoch,printed)
-	call strength(brain,blood,vein,impulse,impulse_input,epoch,cycles,network_scaling,angle_from_cat,ending,printed)
+	call strength(brain,blood,vein,impulse,impulse_input,epoch,cycles,network_scaling,angle_from_cat,ending,starter,printed)
 	!lag it if necessary
 	call sleep(lag)
+	starter=.false.
 end do
 
 !write the network for next loop

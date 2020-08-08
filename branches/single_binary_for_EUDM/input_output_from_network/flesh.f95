@@ -57,7 +57,7 @@ subroutine neuron_fire(blood,there_weight,there_column,here_row,here_weight,here
 	call RANDOM_NUMBER(hope)
 	call RANDOM_NUMBER(fear)
 	!use the distance between the neurons and weight accordingly
-	dist=sqrt((real(here_row-there_row)**2)+(real(here_column-there_column)**2))
+	dist=sqrt((float(here_row-there_row)**2)+(float(here_column-there_column)**2))
 	distil=exp(-(dist*(sigmoid(blood(here_weight,here_column,here_row),"forward")**(-1.)))**2)
 	!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
 	transition=blood(there_weight,there_column,there_row)*distil*sigmoid((hope*blood(there_weight,here_column,here_row)&

@@ -188,6 +188,11 @@ end subroutine initial
 
 
 
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 1: the reward inducing continuous network is processed here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -213,8 +218,9 @@ integer :: maxim_column,maxim_row
 integer :: x
 
 !incrementation objects
-integer :: epoch, j,i,z, f,u,k, s,a,c, pos_hold, here_weight,here_column,here_row, there_weight,there_column,there_row
-integer,allocatable :: matrix_pos(:)
+integer :: epoch, j,i,z, here, there, s,a,c, pos_hold, here_weight,here_column,here_row, there_weight,there_column,there_row
+integer,allocatable :: matrix_pos(:),weight_pos(:)
+logical :: equivalent
 
 real :: fate, transition, distil,multiplier_scaling
 
@@ -243,6 +249,7 @@ maxim_column=size(brain(1,:,1));maxim_row=size(brain(1,1,:))
 
 !initialise the randomised position marker arrays
 allocate(matrix_pos(1:size(blood(:,1,1))))
+allocate(weight_pos(1:size(blood(:,1,1))))
 
 !initialise printer
 allocate(character(maxim_column*print_length+7) :: print_row)
@@ -258,18 +265,29 @@ call CPU_Time(start_interval)
 !this is the brain neuron action loop (main loop)
 
 !the randomised loop initialiser - ensures data transition is not positionally dependant
-call randomised_list(matrix_pos)
+equivalent=.true.
+do while (equivalent .eqv. .true.)
+	call randomised_list(matrix_pos)
+	call randomised_list(weight_pos)
+	equivalent=.false.
+	do s=1,size(matrix_pos)
+		if (matrix_pos(s)==weight_pos(s)) then
+			equivalent=.true.
+		end if
+	end do
+end do
 
-do s=1,size(blood(:,1,1))
+do here=1,size(blood(:,1,1))
 	!take the randomised array of matrix positions and select a neuron
-	here_row=point_pos_matrix_blood(matrix_pos(s),maxim_column,"row")
-	here_column=point_pos_matrix_blood(matrix_pos(s),maxim_column,"column")
-	here_weight=matrix_pos(s)	!k is the z position of the current matrix element represented by j and i	
+	here_row=point_pos_matrix_blood(matrix_pos(here),maxim_column,"row")
+	here_column=point_pos_matrix_blood(matrix_pos(here),maxim_column,"column")
+	here_weight=matrix_pos(here)
 
-	do there_weight=1,size(blood(:,1,1))
-	
-		there_row=point_pos_matrix_blood(there_weight,maxim_column,"row")	!f is the j position of the current matrix element represented by z
-		there_column=point_pos_matrix_blood(there_weight,maxim_column,"column")	!u is the i position of the current matrix element represented by z
+	do there=1,size(blood(:,1,1))
+		!match the selected neuron with another for data transition
+		there_row=point_pos_matrix_blood(matrix_pos(there),maxim_column,"row")
+		there_column=point_pos_matrix_blood(matrix_pos(there),maxim_column,"column")
+		there_weight=matrix_pos(there)	
 
 		!the first condition stops the neuron from acting on itself
 		!the second condition skips dead neurons
@@ -329,6 +347,10 @@ end subroutine heart
 
 
 
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 2: the discrete unitary network is processed here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -346,7 +368,7 @@ character(len=:),allocatable :: print_row,print_row_freeze
 
 !incrementation and limiting objects
 real :: multiplier_scaling
-integer,parameter :: data_limiter=100
+integer,parameter :: data_limiter=2
 integer :: epoch,here_row,here_weight,there_row,there_column,here_column,h,k,g !g=multi_pos, h=conflict numerator
 logical :: test_overlap_conflict, test_condition_conflict
 integer,allocatable :: row_random(:),column_random(:)
@@ -602,7 +624,12 @@ do there_row=1,size(brain(1,1,:))
 	do there_column=1,size(brain(1,:,1))
 		do h=1,size(brain(:,1,1))
 			if ((brain(h,there_column,there_row)>0) .and. (self_pos_brain(there_row,there_column,maximum_columns)/=h)) then
-				brain(h,there_column,there_row)=brain(h,there_column,there_row)-(1+((brain(h,there_column,there_row))/data_limiter))
+				!allow weights to grow linearly up to 100, then throttle the growth via y=a*ln(x)
+				if (brain(h,there_column,there_row)<100) then
+					brain(h,there_column,there_row)=brain(h,there_column,there_row)-(1+((brain(h,there_column,there_row))/data_limiter))
+				else
+					brain(h,there_column,there_row)=int((50.0/(log(100.0)))*log(float(brain(h,there_column,there_row))))
+				end if
 			end if
 		end do
 	end do
@@ -655,10 +682,20 @@ end subroutine head
 
 
 
+
+
+
+
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 3: all the input and output of the network and special reward is enacted here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,cat_angle,ending,printed_true)
+subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,cat_angle,ending,starter,printed_true)
 
 implicit none
 
@@ -682,6 +719,7 @@ integer, dimension(*) :: impulse_action(:),impulse_input(:)
 real, dimension(*) :: vein_action(:)
 real :: transition,vein_change,cat_angle,select_range
 integer :: shift,shift_total,shift_max,cycles,ending
+logical,intent(in) :: starter
 
 !timing control
 character(len=1000) :: lag_cha
@@ -722,21 +760,27 @@ allocate(character(print_length_vein_action) :: data_cha_vein_action)
 
 
 !move the impulse_input based on the cat_angle variable received from the game
-select_range=(2.*pi)/float(size(impulse_input))
-do here_column=1,size(impulse_input)
-	if ((select_range*float(here_column)>=(cat_angle+pi)) .and. (select_range*float(here_column-1)<=(cat_angle+pi))) then
-		impulse_input(here_column)=1
-	else
+if (starter .eqv. .true.) then
+	select_range=(2.*pi)/float(size(impulse_input))
+	do here_column=1,size(impulse_input)
+		if ((select_range*float(here_column)>=(cat_angle+pi)) .and. (select_range*float(here_column-1)<=(cat_angle+pi))) then
+			impulse_input(here_column)=1
+		else
+			impulse_input(here_column)=0
+		end if
+	end do
+else
+	do here_column=1,size(impulse_input)
 		impulse_input(here_column)=0
-	end if
-end do
+	end do
+end if
 	
 !set the input position
 input_here_column=findloc(impulse_input,1,dim=1)
 !initialise shifters
 shift_total=0
 shift_max=0
-!sum up distance and direction away from sentre impulse
+!sum up distance and direction away from centre impulse
 do here_column=1,size(impulse_action)
 	if (impulse_action(here_column)==1) then
 		shift_total=shift_total-((size(impulse_action)/2)+1-here_column)
@@ -762,8 +806,9 @@ brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
 !dispense reward
 !call reward(impulse_action,impulse_input,vein_action)
 !reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
-vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
-	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+!vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
+!	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+vein_action(7)=vein_action(7)+10.0
 	
 
 !increase vein weights accordingly
