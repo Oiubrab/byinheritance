@@ -98,9 +98,9 @@ end subroutine selector
 
 
 !this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
-subroutine reflect(impulse,brain,brain_freeze,dead)
+subroutine reflect(brain,brain_freeze,dead)
 
-	integer,dimension(*),intent(inout) :: brain(:,:,:),impulse(:)
+	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)	
 	integer,intent(inout) :: dead
 	integer :: row,column,maximum_columns,maximum_rows,bottom_bitch
@@ -127,18 +127,7 @@ subroutine reflect(impulse,brain,brain_freeze,dead)
 						!add the data to the target entry
 						j_i=point_pos_matrix_brain(brain_freeze(column,row),maximum_columns)
 						brain(brain_freeze(column,row),j_i(1),j_i(2))=brain(brain_freeze(column,row),j_i(1),j_i(2))+1
-
-					!add data moving off the bottom to impulse
-					else if (brain_freeze(column,row)>(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2)) then
-					
-						bottom_bitch=brain_freeze(column,row)-((maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))
-						impulse(bottom_bitch)=impulse(bottom_bitch)+1
-						dead=dead+1
-
-					else
-						
-						dead=dead+1
-						!the data must be transmitted to another address or discarded					
+				
 
 					end if
 

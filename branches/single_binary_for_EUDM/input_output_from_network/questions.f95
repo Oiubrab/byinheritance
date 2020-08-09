@@ -17,7 +17,7 @@ integer :: maximum_columns,maximum_rows
 
 !network variation
 real :: blood_scaling,network_scaling
-integer :: active_data,grave,epoch
+integer :: active_data,grave,epoch,gravebefore
 
 !printing
 character(len=12) :: printed
@@ -28,11 +28,12 @@ real,allocatable :: blood(:,:,:)
 integer,allocatable :: brain(:,:,:)
 
 !action objects
-integer :: ending
+logical :: ending
 integer, allocatable :: impulse(:),impulse_input(:)
 real, allocatable :: vein(:)
 real :: angle_from_cat
 logical :: starter
+integer :: shift
 
 !clock
 real :: start,finish
@@ -45,8 +46,8 @@ IF(COMMAND_ARGUMENT_COUNT().NE.9)THEN
 	WRITE(*,*)'Execute program by format:'
 	WRITE(*,*)'./program angle_from_cat valve_value cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed'
 	WRITE(*,*) "printed: yes no debug network_only power_only"
-	WRITE(*,*) "network_scaling: scales the amount blood neurons will increase the weights that lead to brain neurons"
 	WRITE(*,*) "blood_scaling: scale how much the brain neuron will cause the blood neuron to attract more blood"
+	WRITE(*,*) "network_scaling: scales the amount blood neurons will increase the weights that lead to brain neurons"
 	STOP
 ENDIF
 !set the input variables
@@ -86,15 +87,24 @@ else
 end if
 
 !run the network subroutines
-ending=epoch+cycles-1
 starter=.true.
-do epoch=epoch,ending
+ending=.false.
+do while (ending .eqv. .false.)
+	gravebefore=grave
 	call heart(brain,blood,epoch,active_data,grave,blood_scaling,printed)
-	call head(brain,blood,impulse,valve_value,active_data,grave,network_scaling,epoch,printed)
-	call strength(brain,blood,vein,impulse,impulse_input,epoch,cycles,network_scaling,angle_from_cat,ending,starter,printed)
+	call head(brain,blood,valve_value,active_data,grave,network_scaling,epoch,printed)
+	call strength(brain,blood,vein,impulse,impulse_input,epoch,&
+		grave,shift,network_scaling,angle_from_cat,ending,starter,printed)
+	!if data leaves the network, end
+	if (gravebefore/=grave) then
+		ending=.true.
+		print"(I0)",shift
+	end if
 	!lag it if necessary
 	call sleep(lag)
+	!if starter is true, sample from the outside world is taken
 	starter=.false.
+	epoch=epoch+1
 end do
 
 !write the network for next loop

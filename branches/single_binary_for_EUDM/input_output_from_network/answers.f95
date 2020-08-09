@@ -285,9 +285,9 @@ do here=1,size(blood(:,1,1))
 
 	do there=1,size(blood(:,1,1))
 		!match the selected neuron with another for data transition
-		there_row=point_pos_matrix_blood(matrix_pos(there),maxim_column,"row")
-		there_column=point_pos_matrix_blood(matrix_pos(there),maxim_column,"column")
-		there_weight=matrix_pos(there)	
+		there_row=point_pos_matrix_blood(weight_pos(there),maxim_column,"row")
+		there_column=point_pos_matrix_blood(weight_pos(there),maxim_column,"column")
+		there_weight=weight_pos(there)
 
 		!the first condition stops the neuron from acting on itself
 		!the second condition skips dead neurons
@@ -354,7 +354,7 @@ end subroutine heart
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 2: the discrete unitary network is processed here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine head(brain,blood,impulse,valve_value,active_data,grave,multiplier_scaling,epoch,printed_true)
+subroutine head(brain,blood,valve_value,active_data,grave,multiplier_scaling,epoch,printed_true)
 
 implicit none
 
@@ -379,12 +379,10 @@ integer, dimension(*) :: brain(:,:,:)
 integer,allocatable :: brain_freeze(:,:) !brain_freeze stores a self pos value that gives the address that the data at position in the matrix corresponding to brain should go
 real,dimension(*) :: blood(:,:,:)
 
-!action objects
-integer, dimension(*) :: impulse(:)
-
 !debugging
 integer :: counter
 integer :: neuron_row=10,neuron_column=8
+integer :: counting_grave_after,counting_grave_before
 
 !time and chance
 real :: fuck,start,finish
@@ -431,7 +429,7 @@ else if (valves=="left") then
 else if (valves=="right") then
 	boundaries=[valve_value,valve_value,0,valve_value]
 else
-	boundaries=[0,4,4,4]
+	boundaries=[0,5,5,5]
 end if
 
 
@@ -616,8 +614,35 @@ if (printed=='debug') then
 	print*," "
 end if
 
+!first, count what's in there
+counting_grave_before=0
+do here_row=1,size(brain(1,1,:))
+	do here_column=1,size(brain(1,:,1))
+		if (brain(self_pos_brain(here_row,here_column,maximum_columns),here_column,here_row)>0) then
+			counting_grave_before=counting_grave_before+1
+		end if
+	end do
+end do
+
 !finally, transact the recorded transitions in brain_freeze
-call reflect(impulse,brain,brain_freeze,grave)
+call reflect(brain,brain_freeze,grave)
+
+!then, count what's left
+counting_grave_after=0
+do here_row=1,size(brain(1,1,:))
+	do here_column=1,size(brain(1,:,1))
+		if (brain(self_pos_brain(here_row,here_column,maximum_columns),here_column,here_row)>0) then
+			counting_grave_after=counting_grave_after+1
+		end if
+	end do
+end do	
+
+!print*,counting_grave_after,counting_grave_before
+
+!if data has left, advance grave			
+if (counting_grave_after<counting_grave_before) then
+	grave=grave+abs(counting_grave_after-counting_grave_before)
+end if
 
 !steadily detract brain probability weights
 do there_row=1,size(brain(1,1,:))
@@ -695,7 +720,8 @@ end subroutine head
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!Subprogram 3: all the input and output of the network and special reward is enacted here!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,cycles,scaling,cat_angle,ending,starter,printed_true)
+subroutine strength(brain,blood,vein_action,impulse_action,impulse_input,epoch,&
+	grave,shift,scaling,cat_angle,ending,starter,printed_true)
 
 implicit none
 
@@ -717,8 +743,10 @@ character(len=:),allocatable :: print_row_vein_action,data_cha_vein_action
 real,parameter :: pi=4.*asin(1./sqrt(2.))
 integer, dimension(*) :: impulse_action(:),impulse_input(:)
 real, dimension(*) :: vein_action(:)
+
 real :: transition,vein_change,cat_angle,select_range
-integer :: shift,shift_total,shift_max,cycles,ending
+integer :: shift,shift_total,shift_max
+logical :: ending
 logical,intent(in) :: starter
 
 !timing control
@@ -756,7 +784,22 @@ allocate(character((maxim_column+2)*print_length_vein_action+7) :: print_row_vei
 allocate(character(print_length_vein_action) :: data_cha_vein_action)
 
 
-
+!remove the last line of data from the brain and place it in the impulse_action, then zero out the last line of the brain
+!do here_row=1,size(brain(1,1,:))
+!	do here_column=1,size(brain(1,:,1))
+!		print*,"why",brain(self_pos_brain(here_row,here_column,maxim_column),here_column,here_row)
+!	end do
+!end do
+do here_column=1,size(brain(1,:,1))
+	!compensate for unequal addresses
+	impulse_action(here_column+1)=brain(self_pos_brain(maxim_row,here_column,maxim_column),here_column,maxim_row)
+	!update the grave variable as data is taken out
+	if (brain(self_pos_brain(maxim_row,here_column,maxim_column),here_column,maxim_row)>0) then
+		grave=grave+1
+	end if
+	brain(self_pos_brain(maxim_row,here_column,maxim_column),here_column,maxim_row)=0
+end do
+	
 
 
 !move the impulse_input based on the cat_angle variable received from the game
@@ -844,14 +887,6 @@ do here_column=1,size(brain(1,:,1))
 				int(vein_action(there_column)*(10**3)*scaling)
 	end do
 end do
-
-!save the shift
-if (epoch==ending) then
-	print"(I0)",shift
-end if
-!open(unit=3, file="shift.txt")
-!write(3,*)shift
-close(3)
 
 !stop timer and print
 call cpu_time(finish)
