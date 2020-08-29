@@ -5,7 +5,7 @@ contains
 !this is a module holding all the low level functions and subroutines
 
 !returns a list of sequential numbers up to a length defined by the array input, in a list where the order of the numbers has been randomised
-!master_killer is the allocatable array argument
+!master_killer is the allocatable array argument and world_eater is the array of known size
 subroutine randomised_list(master_killer)
 
 	integer,dimension(*),intent(inout) :: master_killer(:)
