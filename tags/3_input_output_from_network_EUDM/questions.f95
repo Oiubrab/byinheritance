@@ -9,6 +9,10 @@ implicit none
 character(len=1000) :: valve_value_cha, cycles_cha, maximum_columns_cha,angle_from_cat_cha
 character(len=1000) :: maximum_rows_cha, lag_cha, blood_scaling_cha, network_scaling_cha
 
+!constants
+real,parameter :: pi=4.*asin(1./sqrt(2.))
+real :: slice
+
 !valve values
 integer :: valve_value, cycles, lag
 
@@ -107,8 +111,14 @@ do while (ending .eqv. .false.)
 	epoch=epoch+1
 end do
 
-!write the network for next loop
-call read_write(brain,blood,vein,impulse,impulse_input,epoch,active_data,grave,"write")
+!write the network for next loop if the correct answer is given
+slice=(2.*pi)/float(size(impulse_input))
+if (((shift<0) .and. (angle_from_cat>slice)) .or. ((shift>0) .and. (angle_from_cat<(-1.0*slice)))&
+	.or. ((shift==0) .and. (abs(angle_from_cat)<slice))) then
+	call read_write(brain,blood,vein,impulse,impulse_input,epoch,active_data,grave,"write")
+else
+	print*,"nope"
+end if
 
 if (printed/="no") then
 	!stop timer and print

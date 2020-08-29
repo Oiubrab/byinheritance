@@ -98,9 +98,9 @@ end subroutine selector
 
 
 !this subroutine takes the mapping of the data transitions (brain_freeze) and enacts those transitions
-subroutine reflect(impulse,brain,brain_freeze,dead)
+subroutine reflect(brain,brain_freeze,dead)
 
-	integer,dimension(*),intent(inout) :: brain(:,:,:),impulse(:)
+	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	integer,dimension(*),intent(inout) :: brain_freeze(:,:)	
 	integer,intent(inout) :: dead
 	integer :: row,column,maximum_columns,maximum_rows,bottom_bitch
@@ -127,18 +127,7 @@ subroutine reflect(impulse,brain,brain_freeze,dead)
 						!add the data to the target entry
 						j_i=point_pos_matrix_brain(brain_freeze(column,row),maximum_columns)
 						brain(brain_freeze(column,row),j_i(1),j_i(2))=brain(brain_freeze(column,row),j_i(1),j_i(2))+1
-
-					!add data moving off the bottom to impulse
-					else if (brain_freeze(column,row)>(maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2)) then
-					
-						bottom_bitch=brain_freeze(column,row)-((maximum_rows+2)*(maximum_columns+2)-(maximum_columns+2))
-						impulse(bottom_bitch)=impulse(bottom_bitch)+1
-						dead=dead+1
-
-					else
-						
-						dead=dead+1
-						!the data must be transmitted to another address or discarded					
+				
 
 					end if
 
@@ -242,38 +231,43 @@ subroutine infusion(brain,blood,scaling)
 
 	integer,dimension(*),intent(inout) :: brain(:,:,:)
 	real,dimension(*),intent(in) :: blood(:,:,:)
-	integer :: row,column,k,k_blood
+	integer :: row,column,here_weight,here_weight_blood
 	real,intent(in) :: scaling
 	
 	do row=1,size(brain(1,1,:))
 		do column=1,size(brain(1,:,1))
+		
 			!setup the position
-			k=self_pos_brain(row,column,size(brain(1,:,1)))
-			k_blood=self_pos_blood(row,column,size(brain(1,:,1)))
-			!add the blood data to the weights into each neuron
-			if ((column/=1) .and. (row/=1)) then
-				brain(k,column-1,row-1)=brain(k,column-1,row-1)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if (row/=1) then
-				brain(k,column,row-1)=brain(k,column,row-1)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if ((column/=size(brain(1,:,1))) .and. (row/=1)) then
-				brain(k,column+1,row-1)=brain(k,column+1,row-1)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if (column/=1) then
-				brain(k,column-1,row)=brain(k,column-1,row)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if (column/=size(brain(1,:,1))) then
-				brain(k,column+1,row)=brain(k,column+1,row)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if ((column/=1) .and. (row/=size(brain(1,1,:)))) then
-				brain(k,column-1,row+1)=brain(k,column-1,row+1)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if (row/=size(brain(1,1,:))) then
-				brain(k,column,row+1)=brain(k,column,row+1)+int(blood(k_blood,column,row)*(10**3)*scaling)
-			end if
-			if ((column/=size(brain(1,:,1))) .and. (row/=size(brain(1,1,:)))) then
-				brain(k,column+1,row+1)=brain(k,column+1,row+1)+int(blood(k_blood,column,row)*(10**3)*scaling)
+			here_weight=self_pos_brain(row,column,size(brain(1,:,1)))
+			here_weight_blood=self_pos_blood(row,column,size(brain(1,:,1)))
+			
+			if (brain(here_weight,column,row)>0) then
+				!add the blood data to the weights into each neuron
+				if ((column/=1) .and. (row/=1)) then
+					brain(here_weight,column-1,row-1)=brain(here_weight,column-1,row-1)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if (row/=1) then
+					brain(here_weight,column,row-1)=brain(here_weight,column,row-1)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if ((column/=size(brain(1,:,1))) .and. (row/=1)) then
+					brain(here_weight,column+1,row-1)=brain(here_weight,column+1,row-1)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if (column/=1) then
+					brain(here_weight,column-1,row)=brain(here_weight,column-1,row)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if (column/=size(brain(1,:,1))) then
+					brain(here_weight,column+1,row)=brain(here_weight,column+1,row)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if ((column/=1) .and. (row/=size(brain(1,1,:)))) then
+					brain(here_weight,column-1,row+1)=brain(here_weight,column-1,row+1)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if (row/=size(brain(1,1,:))) then
+					brain(here_weight,column,row+1)=brain(here_weight,column,row+1)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				if ((column/=size(brain(1,:,1))) .and. (row/=size(brain(1,1,:)))) then
+					brain(here_weight,column+1,row+1)=brain(here_weight,column+1,row+1)+int(blood(here_weight_blood,column,row)*(10**3)*scaling)
+				end if
+				
 			end if
 			
 		end do

@@ -9,6 +9,10 @@ implicit none
 character(len=1000) :: valve_value_cha, cycles_cha, maximum_columns_cha,angle_from_cat_cha
 character(len=1000) :: maximum_rows_cha, lag_cha, blood_scaling_cha, network_scaling_cha
 
+!constants
+real,parameter :: pi=4.*asin(1./sqrt(2.))
+real :: slice
+
 !valve values
 integer :: valve_value, cycles, lag
 
@@ -17,19 +21,23 @@ integer :: maximum_columns,maximum_rows
 
 !network variation
 real :: blood_scaling,network_scaling
-integer :: active_data,grave,epoch
+integer :: active_data,grave,epoch,gravebefore
 
 !printing
 character(len=12) :: printed
+logical :: file_exists
 
 !main brain objects
 real,allocatable :: blood(:,:,:)
 integer,allocatable :: brain(:,:,:)
 
 !action objects
+logical :: ending
 integer, allocatable :: impulse(:),impulse_input(:)
 real, allocatable :: vein(:)
 real :: angle_from_cat
+logical :: starter
+integer :: shift
 
 !clock
 real :: start,finish
@@ -42,8 +50,8 @@ IF(COMMAND_ARGUMENT_COUNT().NE.9)THEN
 	WRITE(*,*)'Execute program by format:'
 	WRITE(*,*)'./program angle_from_cat valve_value cycles maximum_columns maximum_rows lag blood_scaling network_scaling printed'
 	WRITE(*,*) "printed: yes no debug network_only power_only"
-	WRITE(*,*) "network_scaling: scales the amount blood neurons will increase the weights that lead to brain neurons"
 	WRITE(*,*) "blood_scaling: scale how much the brain neuron will cause the blood neuron to attract more blood"
+	WRITE(*,*) "network_scaling: scales the amount blood neurons will increase the weights that lead to brain neurons"
 	STOP
 ENDIF
 !set the input variables
@@ -75,17 +83,42 @@ allocate(impulse(maximum_columns+2))
 allocate(impulse_input(maximum_columns))
 
 !if this is the first time this network is activated, it has to be initialised
-call initial(brain,blood,vein,impulse,impulse_input,epoch,active_data,grave,printed)
+INQUIRE(FILE="will.txt", EXIST=file_exists)
+if (file_exists .eqv. .true.) then
+	call read_write(brain,blood,vein,impulse,impulse_input,epoch,active_data,grave,"read")
+else
+	call initial(brain,blood,vein,impulse,impulse_input,epoch,active_data,grave,printed)
+end if
 
 !run the network subroutines
-do epoch=epoch,epoch+cycles-1
+starter=.true.
+ending=.false.
+do while (ending .eqv. .false.)
+	gravebefore=grave
 	call heart(brain,blood,epoch,active_data,grave,blood_scaling,printed)
-	call head(brain,blood,impulse,valve_value,active_data,grave,network_scaling,epoch,printed)
-	call strength(brain,blood,vein,impulse,impulse_input,epoch,cycles,network_scaling,angle_from_cat,printed)
+	call head(brain,blood,valve_value,active_data,grave,network_scaling,epoch,printed)
+	call strength(brain,blood,vein,impulse,impulse_input,epoch,&
+		grave,shift,network_scaling,angle_from_cat,ending,starter,printed)
+	!if data leaves the network, end
+	if (gravebefore/=grave) then
+		ending=.true.
+		print"(I0)",shift
+	end if
 	!lag it if necessary
 	call sleep(lag)
+	!if starter is true, sample from the outside world is taken
+	starter=.false.
+	epoch=epoch+1
 end do
 
+!write the network for next loop if the correct answer is given
+slice=(2.*pi)/float(size(impulse_input))
+if (((shift<0) .and. (angle_from_cat>slice)) .or. ((shift>0) .and. (angle_from_cat<(-1.0*slice)))&
+	.or. ((shift==0) .and. (abs(angle_from_cat)<slice))) then
+	call read_write(brain,blood,vein,impulse,impulse_input,epoch,active_data,grave,"write")
+else
+	print*,"nope"
+end if
 
 if (printed/="no") then
 	!stop timer and print

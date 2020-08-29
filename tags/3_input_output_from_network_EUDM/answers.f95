@@ -849,24 +849,28 @@ brain(self_pos_brain(1,input_here_column,maxim_column),input_here_column,1)=1
 !dispense reward
 !call reward(impulse_action,impulse_input,vein_action)
 !reward function - approach 2:directly add to vein action on opposite side based on input - more hand holding
-!vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
-!	+10.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
-vein_action(7)=vein_action(7)+10.0
-	
+if (starter .eqv. .true.) then
+	!zero out the network
+	do here_column=1,size(vein_action)
+		vein_action(here_column)=0.0
+	end do
+	!place extra reward in the opposite action vein to the impulse input
+	vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)=vein_action(2*((size(impulse_input)/2)+1)-input_here_column+1)&
+		+500.0*(1.0/(float(abs(((size(impulse_input)/2)+1)-input_here_column))+1.0))
+	!vein_action(5)=vein_action(5)+10.0
+else
+	do here_column=1,size(vein_action)
+		vein_action(here_column)=vein_action(here_column)+0.1
+	end do
+end if
+
+
+
 
 !increase vein weights accordingly
 do here_column=1,size(impulse_action)
 	!set vein change
 	vein_change=vein_action(here_column)*0.1
-	!add vein data to adjacent entries
-	if (here_column>1) then
-		vein_action(here_column)=vein_action(here_column)-vein_change
-		vein_action(here_column-1)=vein_action(here_column-1)+vein_change
-	end if
-	if (here_column<size(impulse_action)) then
-		vein_action(here_column)=vein_action(here_column)-vein_change
-		vein_action(here_column+1)=vein_action(here_column+1)+vein_change
-	end if	
 	!move blood from the vein_action into the blood network	
 	do there_column=(here_column-1)-1,(here_column-1)+1
 		if ((there_column>=1) .and. (there_column<=maxim_column)) then
