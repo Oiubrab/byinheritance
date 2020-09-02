@@ -1,5 +1,13 @@
-module bobokittyfuck
+module welcome_to_dying
 contains
+
+!this is where the magic happens
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!housekeeping - time and metadata!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 !delays in microsecond precision
@@ -38,8 +46,6 @@ end subroutine print_interval
 
 
 
-
-
 !returns a list of sequential numbers up to a length defined by the array input, in a list where the order of the numbers has been randomised
 !master_killer is the allocatable array argument
 subroutine randomised_list(master_killer)
@@ -66,6 +72,13 @@ subroutine randomised_list(master_killer)
 end subroutine randomised_list
 
 
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!breaking the fourth wall - array address finding!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 !Data Direction Map
@@ -119,6 +132,7 @@ end function point_to_neuron
 
 
 !this function turns the destination label number of the data from it's old home into the origin of the data in it's new home, as per data direction map above
+!assumes 8 directions
 function point_origin(point) result(origin)
 
 	integer :: point, origin
@@ -146,16 +160,34 @@ end function point_origin
 
 
 
+!this function takes a weight address (uses 8 directions as assigned in the diagram above) and gives the direction corresponding to that weight
+function weight_direction(weighting) result(resultant)
 
+	integer :: weighting, resultant, modding=8
+
+	resultant=mod(weighting,modding)
+	if (resultant==0) then
+		resultant=modding
+	end if
+
+end function weight_direction
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!planting and payoff - initialisation and data moving!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
-subroutine selector(brain,column,row)
+!it also currently handles the increase in weights that correspond to data moving through a specific route 
+subroutine selector(brain,column,row,reward)
 
 	integer,dimension(*) :: brain(:,:,:)
 	integer,allocatable :: brain_select(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck
-	integer,intent(in) :: row,column
+	integer,intent(in) :: row,column,reward
 	integer :: point, connections, data_pos, origin
 	
 	!setup amount of data ports, data position and origin label
@@ -214,12 +246,14 @@ subroutine selector(brain,column,row)
 		!take the chosen neuron and move the data to it
 		do point=1,size(brain_select)
 			if (fuck<=rungs(point)) then
+				!add to weight selection. Weight add should overcome global reduction
+				brain(((origin-1)*connections)+point,column,row)=brain(((origin-1)*connections)+point,column,row)+reward
 				!remove data and position indicator from current neuron
 				brain(data_pos,column,row)=0
 				brain(data_pos-1,column,row)=0
 				!add data and position indicator to targeted neuron	
 				brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
-				brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)	
+				brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)
 				exit
 			end if
 		end do
@@ -233,9 +267,10 @@ end subroutine selector
 
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed 
-subroutine initialiser(brain)
+subroutine initialiser(brain,blood)
 
 	integer,dimension(*) :: brain(:,:,:)
+	real,dimension(*) :: blood(:,:,:)
 	integer :: row_number, column_number, info_number
 	integer :: rows, columns, info_ports
 	integer :: modding=8,resultant
@@ -246,27 +281,21 @@ subroutine initialiser(brain)
 		do column_number=1,columns
 			do info_number=1,info_ports
 			
-				!get pointing result from info_number
-				resultant=mod(info_number,modding)
-				if (resultant==0) then
-					resultant=modding
-				end if
-			
 				!set up the ones and zeroes
 				!zero for the last two entries containing data and origin
 				if (info_number>=info_ports-1) then
 					brain(info_number,column_number,row_number)=0
 				!zero for any weight directing data off the top
-				else if (point_to_neuron(column_number,row_number,resultant,"row")==0) then
+				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==0) then
 					brain(info_number,column_number,row_number)=0				
 				!or bottom
-				else if (point_to_neuron(column_number,row_number,resultant,"row")==rows+1) then
+				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==rows+1) then
 					brain(info_number,column_number,row_number)=0
 				!zero for any weight diracting data off the left
-				else if (point_to_neuron(column_number,row_number,resultant,"column")==0) then
+				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==0) then
 					brain(info_number,column_number,row_number)=0
 				!or right
-				else if (point_to_neuron(column_number,row_number,resultant,"column")==rows+1) then
+				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==columns+1) then
 					brain(info_number,column_number,row_number)=0
 				!otherwise, all weights start off at one
 				else if (info_number<info_ports-1) then
@@ -277,9 +306,19 @@ subroutine initialiser(brain)
 		end do
 	end do
 	
+	do row_number=1,rows
+		do column_number=1,columns
+			do info_number=1,info_ports
+			
+				blood(info_number,column_number,row_number)=0.1
+				
+			end do
+		end do
+	end do	
+	
 end subroutine initialiser
 	
 	
 	
 	
-end module bobokittyfuck
+end module welcome_to_dying
