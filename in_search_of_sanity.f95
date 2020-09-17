@@ -6,25 +6,29 @@ implicit none
 !network setup
 integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
 integer :: rows=10, columns=15
-integer, allocatable :: brain(:,:,:)
-real, allocatable :: blood(:,:,:)
+integer, allocatable :: brain(:,:,:), blood(:,:,:)
+
+!sensing setup
+integer, allocatable :: vision(:)
+integer,parameter :: data_rate=500
+real :: look !test variable for randomisiong vision array
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2, info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=100
+integer :: moves=0, epoch, epoch_total=1000
 
 !risk and reward
-integer :: use_reward=25
+integer :: use_reward=30, blood_gradient=30
 
 !timing
-real :: start, finish, delay_time=0.1
+real :: start, finish, delay_time=0.5
 
 !printing
-integer,parameter :: individual_width=2
+integer,parameter :: individual_width=2, separation_space=10
 character(len=individual_width) :: data_cha
-character(len=12) :: individual_width_cha
-character(len=17) :: width
+character(len=12) :: individual_width_cha,separation_cha
+character(len=17) :: width,width_separation
 character(len=:),allocatable :: print_row
 
 
@@ -33,40 +37,52 @@ character(len=:),allocatable :: print_row
 call CPU_Time(start)
 
 !allocation block
+allocate(vision(columns)) !allocate the variable for input into the network
 allocate(brain(info_ports,columns,rows)) !allocate the network variable
-allocate(blood(info_ports,columns,rows)) !allocate the network variable
-allocate(character(columns*individual_width+1) :: print_row) !allocate the printing variable
+allocate(blood(info_ports,columns,rows)) !allocate the reward variable
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
 
-!set the width to print for each datum
-write(individual_width_cha,*)individual_width
-width="(I"//trim(individual_width_cha)//")"
 
 !initialise the network
-call initialiser(brain,blood)
+call initialiser(brain,blood,vision)
+!do column_number_2=1,columns
+!	print*,blood(info_ports,column_number_2,rows)
+!end do
 
 !test injection - an origin must accompany the data
-brain(info_ports-1,columns/2,1)=2
-brain(info_ports,columns/2,1)=1
-brain(info_ports-1,(columns/2)-1,1)=2
-brain(info_ports,(columns/2)-1,1)=1
+vision(2)=1 !change this to detect the food position when I attach this to the game
+vision(14)=1
+do column_number=1,columns
+	if (vision(column_number)==1) then	
+		brain(info_ports-1,column_number,1)=2
+		brain(info_ports,column_number,1)=1
+	end if
+end do
+
 
 print*,"Brain moves: 0 Epoch: 0"
-do row_number=1,rows
-	do column_number=1,columns
-		write(data_cha,width)brain(info_ports,column_number,row_number)
-		print_row(column_number*individual_width-(individual_width-1):column_number*individual_width)=data_cha
-	end do
-	print *,print_row
-end do
+call print_network(brain,blood,vision)
 
 !this is the new song
 do epoch=1,epoch_total
 
 	!test injection - an origin must accompany the data
-	!brain(info_ports-1,columns/2,rows/2)=2
-	!brain(info_ports,columns/2,rows/2)=1
+	if (mod(epoch,data_rate)==0) then
+		do column_number=1,columns
+			if (vision(column_number)==1) then	
+				brain(info_ports-1,column_number,1)=2
+				brain(info_ports,column_number,1)=1
+			end if
+		end do
+	end if
+
+	!test - randomise vision
+	vision=0
+	call random_number(look)
+	vision(int(look*float(columns)))=1
+	call random_number(look)
+	vision(int(look*float(columns)))=1
 
 	!first, randomise random column and row lists
 	call randomised_list(row_random)
@@ -79,17 +95,29 @@ do epoch=1,epoch_total
 			column_random_number=column_random(column_number)
 			row_random_number=row_random(row_number)
 			
+			!irrespective, add the gradient
+			if (row_random_number==rows) then
+				blood(info_ports,column_random_number,row_random_number)=blood_gradient
+			else if (row_random_number==1) then
+				blood(info_ports,column_random_number,row_random_number)=1
+			end if
+			
+			!move the blood around
+			if (blood(info_ports,column_random_number,row_random_number)>1) then
+				call blood_mover(blood,column_random_number,row_random_number)
+			end if
+			
 			!only act on neurons that have data in them
 			if (brain(info_ports,column_random_number,row_random_number)==1) then
 			
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(brain,column_random_number,row_random_number,use_reward)
+				call selector(blood,brain,column_random_number,row_random_number,use_reward)
 				
-				!the chosing weights reduce by one if they are not used and increase by one if they are used
-				!this is done by subtracting one from all weights and adding 2 to weights that are used
+				!the choosing weights reduce by one if they are not used and increase by use_reward-1 if they are used
+				!this is done by subtracting one from all weights and adding use_reward to weights that are used
 				do info_number=1, info_ports-2
-					if (brain(info_number,column_random_number,row_random_number)>1) then
+					if (brain(info_number,column_random_number,row_random_number)>blood(info_ports,column_random_number,row_random_number)) then
 						brain(info_number,column_random_number,row_random_number)=&
 							brain(info_number,column_random_number,row_random_number)-1
 					end if
@@ -100,17 +128,11 @@ do epoch=1,epoch_total
 				
 				!increase the moves count
 				moves=moves+1
+
 				
 				!print each step
 				print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
-				do row_number_2=1,rows
-					do column_number_2=1,columns
-						write(data_cha,width)brain(info_ports,column_number_2,row_number_2)
-						print_row(column_number_2*individual_width-(individual_width-1):column_number_2*individual_width)=data_cha
-					end do
-					print *,print_row
-				end do
-				print*," "
+				call print_network(brain,blood,vision)
 				
 			end if
 			

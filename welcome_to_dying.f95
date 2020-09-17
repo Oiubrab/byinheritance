@@ -30,6 +30,68 @@ end subroutine delay
 
 
 
+subroutine print_network(brain,blood,vision)
+
+	integer,dimension(*) :: brain(:,:,:),blood(:,:,:),vision(:)
+	integer :: row_counter,column_counter,rows,columns,info_ports
+	!printing
+	integer,parameter :: individual_width=2, separation_space=10
+	character(len=individual_width) :: data_cha
+	character(len=12) :: individual_width_cha,separation_cha
+	character(len=17) :: width,width_separation
+	character(len=:),allocatable :: print_row
+	
+	!establish network dimensions
+	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
+	
+	!allocate the printing row with enough space to fit both brain and blood
+	allocate(character(columns*2*individual_width+2+separation_space) :: print_row) !allocate the printing variable
+	
+	!set the width to print for each datum
+	write(individual_width_cha,*)individual_width
+	!set the width to print for the separation between networks
+	write(separation_cha,*)separation_space
+	!width for brain/blood
+	width="(I"//trim(individual_width_cha)//")"
+	!width for separation
+	width_separation="(A"//trim(separation_cha)//")"
+
+	!print the vision array first
+	do column_counter=1,columns
+		write(data_cha,width)vision(column_counter)
+		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
+	end do
+	print*,print_row(1:individual_width*columns)
+	print*," "
+
+	!print the brain and blood networks beside eachother
+	do row_counter=1,rows
+		!this loop now handles printing both the brain and the blood networks, hence the columns*2
+		!the columns+1 position is empty and creates a space between the two networks
+		do column_counter=1,columns*2+1
+			!add brain numbers to the first half of the row
+			if (column_counter<=columns) then
+				write(data_cha,width)brain(info_ports,column_counter,row_counter)
+				print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
+			!create a break for the two networks
+			else if (column_counter==columns+1) then
+				print_row(column_counter*individual_width-(individual_width-1):&
+					column_counter*individual_width-(individual_width-1)+separation_space)="  "
+			!and blood numbers to the second half
+			else
+				write(data_cha,width)blood(info_ports,column_counter-(columns+1),row_counter)
+				print_row(column_counter*individual_width-(individual_width-1)+(separation_space-individual_width):&
+					column_counter*individual_width+(separation_space-individual_width))=data_cha
+			end if
+		end do
+		print *,print_row
+	end do
+	print*," "
+
+
+end subroutine print_network
+
+
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
 subroutine print_interval(start,finish)
 	real,intent(in) :: start, finish
@@ -94,7 +156,7 @@ end subroutine randomised_list
 
 
 
-!takes in the column, row position of the input neuron and a pointing number. Outputs the column or row of the output neuron depending on rowcolumn
+!takes in the column, row position of the input neuron and a pointing number. Outputs the column or row of the output neuron, depending on rowcolumn variable input
 function point_to_neuron(column_in,row_in,point,rowcolumn) result(finder)
 
 	integer,intent(in) :: column_in, row_in, point
@@ -181,21 +243,21 @@ end function weight_direction
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(brain,column,row,reward)
+subroutine selector(blood,brain,column,row,reward)
 
-	integer,dimension(*) :: brain(:,:,:)
+	integer,dimension(*) :: brain(:,:,:), blood(:,:,:)
 	integer,allocatable :: brain_select(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck
 	integer,intent(in) :: row,column,reward
-	integer :: point, connections, data_pos, origin
+	integer :: point, connections, data_pos, origin, tester
 	
 	!setup amount of data ports, data position and origin label
-	connections=int(sqrt(float(size(brain(:,1,1)-2))))
+	connections=int(sqrt(float(size(brain(:,1,1)-2)))) !8 for adjacent setup
 	data_pos=size(brain(:,1,1))
 	origin=brain(data_pos-1,column,row)
 	
-	!brain_select contains all the weights, as directed in the point variable contained in the second last brain entry (data_pos-1)
+	!brain_select collects all the weights, as directed in the point variable contained in the second last brain entry (data_pos-1)
 	allocate(brain_select(connections))
 	do point=1,size(brain_select)
 		if (brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
@@ -254,6 +316,9 @@ subroutine selector(brain,column,row,reward)
 				!add data and position indicator to targeted neuron	
 				brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
 				brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)
+				!add something to blood at that position
+				blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+					blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+1
 				exit
 			end if
 		end do
@@ -265,12 +330,54 @@ end subroutine selector
 
 
 
+!this subroutine takes in a neuron from the blood network and moves it around
+subroutine blood_mover(blood,column_num,row_num)
+
+	integer,dimension(*) :: blood(:,:,:)
+	integer :: column_num,row_num,info_ports,row_number_2,column_number_2
+	real :: blood_difference
+	integer :: blood_transition,rows,columns
+	
+	info_ports=size(blood(:,1,1)); rows=size(blood(1,1,:)); columns=size(blood(1,:,1))
+
+	!engage every blood neuron around the neuron in question
+	do row_number_2=row_num-1,row_num+1
+		do column_number_2=column_num-1,column_num+1
+			!the transitions need to act on any adjacent neuron that exists, i.e. not off the side of the network. They also must avoid acting on themselves
+			if (((row_number_2/=row_num) .and. (column_number_2/=column_num)) .and. &
+				((row_number_2<=rows) .and. (column_number_2<=columns) .and. (row_number_2>0) .and. (column_number_2>0))) then
+				
+				!calculate the transition to occur between neurons
+				!its half the origin neuron times the fraction of the difference between destination neuron and origin neuron, over the origin neuron
+				blood_difference=float(abs(blood(info_ports,column_num,row_num)-&
+					blood(info_ports,column_number_2,row_number_2)))/float(blood(info_ports,column_num,row_num))
+				!print*,blood_difference,abs(blood(info_ports,column_num,row_num)-&
+				!	blood(info_ports,column_number_2,row_number_2))
+				blood_transition=int(blood(info_ports,column_num,row_num)*(0.5*blood_difference))
+				
+				!make sure no neuron becomes negative
+				if (blood_transition>blood(info_ports,column_num,row_num)-1) then
+					blood_transition=blood(info_ports,column_num,row_num)-1
+				end if
+				
+				!make the transition
+				blood(info_ports,column_number_2,row_number_2)=blood(info_ports,column_number_2,row_number_2)+blood_transition
+				blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)-blood_transition
+					
+			end if
+		end do
+	end do
+
+	
+end subroutine blood_mover
+
+
+
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed 
-subroutine initialiser(brain,blood)
+subroutine initialiser(brain,blood,vision)
 
-	integer,dimension(*) :: brain(:,:,:)
-	real,dimension(*) :: blood(:,:,:)
+	integer,dimension(*) :: brain(:,:,:), blood(:,:,:), vision(:)
 	integer :: row_number, column_number, info_number
 	integer :: rows, columns, info_ports
 	integer :: modding=8,resultant
@@ -306,15 +413,21 @@ subroutine initialiser(brain,blood)
 		end do
 	end do
 	
+	!setting up blood network, below only adds 0.1 to every entry
 	do row_number=1,rows
 		do column_number=1,columns
 			do info_number=1,info_ports
 			
-				blood(info_number,column_number,row_number)=0.1
+				blood(info_number,column_number,row_number)=1
 				
 			end do
 		end do
 	end do	
+
+	!set up empty vision array 
+	do column_number=1,size(vision)
+		vision(column_number)=0
+	end do
 	
 end subroutine initialiser
 	
