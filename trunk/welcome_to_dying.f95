@@ -30,9 +30,9 @@ end subroutine delay
 
 
 
-subroutine print_network(brain,blood,vision)
+subroutine print_network(brain,blood,vision,response)
 
-	integer,dimension(*) :: brain(:,:,:),blood(:,:,:),vision(:)
+	integer,dimension(*) :: brain(:,:,:),blood(:,:,:),vision(:),response(:)
 	integer :: row_counter,column_counter,rows,columns,info_ports
 	!printing
 	integer,parameter :: individual_width=2, separation_space=10
@@ -88,6 +88,13 @@ subroutine print_network(brain,blood,vision)
 	end do
 	print*," "
 
+	!print the response array last
+	do column_counter=1,columns
+		write(data_cha,width)response(column_counter)
+		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
+	end do
+	print*,print_row(1:individual_width*columns)
+	print*," "
 
 end subroutine print_network
 
@@ -243,14 +250,17 @@ end function weight_direction
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(blood,brain,column,row,reward)
+subroutine selector(blood,brain,column,row,reward,response)
 
 	integer,dimension(*) :: brain(:,:,:), blood(:,:,:)
-	integer,allocatable :: brain_select(:)
+	integer,allocatable :: brain_select(:), response(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck
 	integer,intent(in) :: row,column,reward
-	integer :: point, connections, data_pos, origin, tester
+	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax
+	
+	!brain size
+	rowmax=size(brain(1,1,:)); columnmax=size(brain(1,:,1))
 	
 	!setup amount of data ports, data position and origin label
 	connections=int(sqrt(float(size(brain(:,1,1)-2)))) !8 for adjacent setup
@@ -260,9 +270,19 @@ subroutine selector(blood,brain,column,row,reward)
 	!brain_select collects all the weights, as directed in the point variable contained in the second last brain entry (data_pos-1)
 	allocate(brain_select(connections))
 	do point=1,size(brain_select)
-		if (brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
-			!label destinations that have data already in them with 0 weight
-			brain_select(point)=0
+		if ((point_to_neuron(column,row,point,"column")>0) .and. &
+			(point_to_neuron(column,row,point,"row")>0) .and. &
+			(point_to_neuron(column,row,point,"column")<columnmax+1) .and. &
+			(point_to_neuron(column,row,point,"row")<rowmax+1)) then
+			
+				if (brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
+					!label destinations that have data already in them with 0 weight
+					brain_select(point)=0
+				else
+					!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
+					brain_select(point)=brain(((origin-1)*connections)+point,column,row)
+				end if
+				
 		else
 			!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
 			brain_select(point)=brain(((origin-1)*connections)+point,column,row)
@@ -308,18 +328,47 @@ subroutine selector(blood,brain,column,row,reward)
 		!take the chosen neuron and move the data to it
 		do point=1,size(brain_select)
 			if (fuck<=rungs(point)) then
+				
+				!moving diagnostic
+				print*,"Move from:"
+				print*,column,row
+				print*,"Move to:"
+				print*,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
+				print*," "
+			
 				!add to weight selection. Weight add should overcome global reduction
 				brain(((origin-1)*connections)+point,column,row)=brain(((origin-1)*connections)+point,column,row)+reward
 				!remove data and position indicator from current neuron
 				brain(data_pos,column,row)=0
 				brain(data_pos-1,column,row)=0
-				!add data and position indicator to targeted neuron	
-				brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
-				brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)
-				!add something to blood at that position
-				blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
-					blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+1
+				
+				!if data is moving off the brain, direct it into the response array
+				!data moving off the sides needs to be directed to the correct row
+				if ((point_to_neuron(column,row,point,"column")==0) .or. &
+					(point_to_neuron(column,row,point,"column")==columnmax+1)) then
+					
+					response(point_to_neuron(column,row,point,"row"))=1
+					
+				!data moving of the top/bottom needs to be directed to the correct column
+				else if ((point_to_neuron(column,row,point,"row")==0) .or. &
+					(point_to_neuron(column,row,point,"row")==rowmax+1)) then
+					
+					response(point_to_neuron(column,row,point,"column"))=1
+					
+				!if the data is not moving off the brain, move it normally
+				else	
+							
+					!add data and position indicator to targeted neuron	
+					brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
+					brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)
+					!add something to blood at that position
+					blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+						blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+1
+				
+				end if
+				
 				exit
+				
 			end if
 		end do
 		
@@ -374,13 +423,15 @@ end subroutine blood_mover
 
 
 
-!This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed 
-subroutine initialiser(brain,blood,vision)
+!This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
+!the openside variable decides which side data will flow out from
+subroutine initialiser(brain,blood,vision,response,openside)
 
-	integer,dimension(*) :: brain(:,:,:), blood(:,:,:), vision(:)
+	integer,dimension(*) :: brain(:,:,:), blood(:,:,:), vision(:), response(:)
 	integer :: row_number, column_number, info_number
 	integer :: rows, columns, info_ports
 	integer :: modding=8,resultant
+	character(len=*) :: openside
 	
 	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
 
@@ -392,18 +443,30 @@ subroutine initialiser(brain,blood,vision)
 				!zero for the last two entries containing data and origin
 				if (info_number>=info_ports-1) then
 					brain(info_number,column_number,row_number)=0
-				!zero for any weight directing data off the top
-				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==0) then
-					brain(info_number,column_number,row_number)=0				
+				!zero for any weight directing data off the top if the top isn't open
+				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==0) .and. &
+					(openside/="top")) then
+					
+					brain(info_number,column_number,row_number)=0	
+								
 				!or bottom
-				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==rows+1) then
+				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==rows+1) .and. &
+					(openside/="bottom")) then
+
 					brain(info_number,column_number,row_number)=0
-				!zero for any weight diracting data off the left
-				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==0) then
+					
+				!zero for any weight diracting data off the left if it isn't open
+				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==0) .and. &
+					(openside/="left")) then
+					
 					brain(info_number,column_number,row_number)=0
+					
 				!or right
-				else if (point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==columns+1) then
+				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==columns+1) .and. &
+					(openside/="right")) then
+					
 					brain(info_number,column_number,row_number)=0
+					
 				!otherwise, all weights start off at one
 				else if (info_number<info_ports-1) then
 					brain(info_number,column_number,row_number)=1
@@ -427,6 +490,11 @@ subroutine initialiser(brain,blood,vision)
 	!set up empty vision array 
 	do column_number=1,size(vision)
 		vision(column_number)=0
+	end do
+	
+	!set up empty response array 
+	do column_number=1,size(vision)
+		response(column_number)=0
 	end do
 	
 end subroutine initialiser
