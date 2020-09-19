@@ -5,32 +5,27 @@ implicit none
 
 !network setup
 integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
-integer :: rows=10, columns=15
-integer, allocatable :: brain(:,:,:), blood(:,:,:)
+integer :: rows=6, columns=9
+integer, allocatable :: brain(:,:,:)
+real,allocatable :: blood(:,:,:)
 
 !sensing and response setup
 integer, allocatable :: vision(:), response(:)
-integer,parameter :: data_rate=200
+integer,parameter :: data_rate=50
 real :: look !test variable for randomisiong vision array
 character(len=6) :: opener="bottom"
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2, info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=1000
+integer :: moves=0, epoch, epoch_total=5000
 
 !risk and reward
-integer :: use_reward=30, blood_gradient=30
+integer :: use_reward=30 
+real :: blood_gradient=1.0
 
 !timing
-real :: start, finish, delay_time=0.05
-
-!printing
-integer,parameter :: individual_width=2, separation_space=10
-character(len=individual_width) :: data_cha
-character(len=12) :: individual_width_cha,separation_cha
-character(len=17) :: width,width_separation
-character(len=:),allocatable :: print_row
+real :: start, finish, delay_time=0.1
 
 
 
@@ -51,7 +46,6 @@ call initialiser(brain,blood,vision,response,opener)
 
 !test injection - an origin must accompany the data
 vision(2)=1 !change this to detect the food position when I attach this to the game
-vision(14)=1
 do column_number=1,columns
 	if (vision(column_number)==1) then	
 		brain(info_ports-1,column_number,1)=2
@@ -76,13 +70,6 @@ do epoch=1,epoch_total
 		end do
 	end if
 
-	!test - randomise vision
-	vision=0
-	call random_number(look)
-	vision(int(look*float(columns))+1)=1
-	call random_number(look)
-	vision(int(look*float(columns))+1)=1
-
 	!first, randomise random column and row lists
 	call randomised_list(row_random)
 	call randomised_list(column_random)
@@ -98,11 +85,11 @@ do epoch=1,epoch_total
 			if (row_random_number==rows) then
 				blood(info_ports,column_random_number,row_random_number)=blood_gradient
 			else if (row_random_number==1) then
-				blood(info_ports,column_random_number,row_random_number)=1
+				blood(info_ports,column_random_number,row_random_number)=0.01
 			end if
 			
 			!move the blood around
-			if (blood(info_ports,column_random_number,row_random_number)>1) then
+			if (blood(info_ports,column_random_number,row_random_number)>0.01) then
 				call blood_mover(blood,column_random_number,row_random_number)
 			end if
 			
@@ -112,16 +99,7 @@ do epoch=1,epoch_total
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
 				call selector(blood,brain,column_random_number,row_random_number,use_reward,response)
-				
-				!the choosing weights reduce by one if they are not used and increase by use_reward-1 if they are used
-				!this is done by subtracting one from all weights and adding use_reward to weights that are used
-				do info_number=1, info_ports-2
-					if (brain(info_number,column_random_number,row_random_number)>blood(info_ports,column_random_number,row_random_number)) then
-						brain(info_number,column_random_number,row_random_number)=&
-							brain(info_number,column_random_number,row_random_number)-1
-					end if
-				end do
-				
+							
 				!lag if necessary
 				call delay(delay_time)
 				
@@ -133,7 +111,26 @@ do epoch=1,epoch_total
 				print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
 				call print_network(brain,blood,vision,response)
 				
+				!test - response moves vision
+				do column_number_2=1,columns
+					if (response(column_number_2)==1) then
+						vision=0
+						vision(columns-column_number_2+1)=1
+						response=0
+					end if
+				end do
+				!call random_number(look)
+				
 			end if
+			
+			!the choosing weights reduce by one if they are not used and increase by use_reward-1 if they are used
+			!this is done by subtracting one from all weights and adding use_reward to weights that are used
+			do info_number=1, info_ports-2
+				if (brain(info_number,column_random_number,row_random_number)>1) then
+					brain(info_number,column_random_number,row_random_number)=&
+						brain(info_number,column_random_number,row_random_number)-1
+				end if
+			end do
 			
 		end do
 	end do
