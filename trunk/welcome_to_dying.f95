@@ -147,6 +147,80 @@ end subroutine randomised_list
 
 
 
+!!!!!!!!!
+!!maths!!
+!!!!!!!!!
+
+
+!this function either applies a sigmoid (forward) or inverse sigmoid (reverse) function depending on flow variable
+!one can also range strectch with range_stretch and domain stretch with domain_stretch (optional)
+!note, inverse sigmoid only goes up to 16*range_stretch
+function sigmoid(insig,flow,range_stretch,domain_stretch) result(outsig)
+	
+	real,intent(in) :: insig
+	real,intent(in),optional :: range_stretch,domain_stretch
+	real :: outsig
+	character(len=*) :: flow
+
+	!domain_stretch and range_stretch defined
+	if (present(domain_stretch) .and. present(range_stretch)) then
+		!sigmoid
+		if (flow=="forward") then
+			outsig=range_stretch/(1.+exp(-(1./domain_stretch)*insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-range_stretch*log((domain_stretch/insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if
+		end if
+
+	!domain_stretch defined
+	else if (present(domain_stretch)) then
+		!sigmoid
+		if (flow=="forward") then
+			outsig=1./(1.+exp(-(1./domain_stretch)*insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-1.*log((domain_stretch/insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if	
+		end if
+
+	!range_stretch defined
+	else if (present(range_stretch)) then
+		!sigmoid
+		if (flow=="forward") then
+			outsig=range_stretch/(1.+exp(-(1./1.)*insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-range_stretch*log((1./insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if	
+		end if
+
+	!unity sigmoid
+	else
+		!sigmoid
+		if (flow=="forward") then
+			outsig=1./(1.+exp(-insig))
+		!inverse sigmoid
+		else if (flow=="reverse") then
+			outsig=-log((1./insig)-1.)
+			if ((1./outsig)==0.) then
+				outsig=16.
+			end if
+		end if
+	end if
+
+end function sigmoid
+
+
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!breaking the fourth wall - array address finding!!
@@ -261,7 +335,7 @@ subroutine selector(blood,brain,column,row,reward,response)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck
 	integer,intent(in) :: row,column,reward
-	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax
+	integer :: point, connections, data_pos, blood_pos, origin, tester, columnmax, rowmax
 	
 	!brain size
 	rowmax=size(brain(1,1,:)); columnmax=size(brain(1,:,1))
@@ -269,6 +343,7 @@ subroutine selector(blood,brain,column,row,reward,response)
 	!setup amount of data ports, data position and origin label
 	connections=int(sqrt(float(size(brain(:,1,1)-2)))) !8 for adjacent setup
 	data_pos=size(brain(:,1,1))
+	blood_pos=size(blood(:,1,1))
 	origin=brain(data_pos-1,column,row)
 	
 	!brain_select collects all the weights, as directed in the point variable contained in the second last brain entry (data_pos-1)
@@ -374,8 +449,8 @@ subroutine selector(blood,brain,column,row,reward,response)
 					brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
 					brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)
 					!add something to blood at that position
-					blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
-						blood(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+0.1
+					blood(blood_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+						blood(blood_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+0.01
 				
 				end if
 				
@@ -395,37 +470,59 @@ end subroutine selector
 subroutine blood_mover(blood,column_num,row_num)
 
 	real,dimension(*) :: blood(:,:,:)
-	integer :: column_num,row_num,info_ports,row_number_2,column_number_2
-	real :: blood_difference
-	integer :: blood_transition,rows,columns
+	integer,allocatable :: row_randomised(:), column_randomised(:)
+	integer :: column_num,row_num,info_ports,row_select,column_select
+	real :: hope, fear, dist, distil, transition
+	integer :: rows,columns,row_number_2,column_number_2
 	
 	info_ports=size(blood(:,1,1)); rows=size(blood(1,1,:)); columns=size(blood(1,:,1))
 
+	!make the random arrays as big as columns and rows
+	allocate(row_randomised(rows))
+	allocate(column_randomised(columns))
+	
+	!randomise the row array
+	call randomised_list(row_randomised)
+	
 	!engage every blood neuron around the neuron in question
-	do row_number_2=row_num-1,row_num+1
-		do column_number_2=column_num-1,column_num+1
-			!the transitions need to act on any adjacent neuron that exists, i.e. not off the side of the network. They also must avoid acting on themselves
-			if (((row_number_2/=row_num) .and. (column_number_2/=column_num)) .and. &
-				((row_number_2<=rows) .and. (column_number_2<=columns) .and. (row_number_2>0) .and. (column_number_2>0))) then
-				
-				!calculate the transition to occur between neurons
-				!its half the origin neuron times the fraction of the difference between destination neuron and origin neuron, over the origin neuron
-				blood_difference=(abs(blood(info_ports,column_num,row_num)-&
-					blood(info_ports,column_number_2,row_number_2)))/blood(info_ports,column_num,row_num)
-				!print*,blood_difference,abs(blood(info_ports,column_num,row_num)-&
-				!	blood(info_ports,column_number_2,row_number_2))
-				blood_transition=blood(info_ports,column_num,row_num)*(0.5*blood_difference)
-				
-				!make sure no neuron becomes negative
-				if (blood_transition>blood(info_ports,column_num,row_num)-1) then
-					blood_transition=blood(info_ports,column_num,row_num)-1
-				end if
-				
-				!make the transition
-				blood(info_ports,column_number_2,row_number_2)=blood(info_ports,column_number_2,row_number_2)+blood_transition
-				blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)-blood_transition
-					
+	do row_select=1,rows
+		!first, randomise the row selection
+		row_number_2=row_randomised(row_select)
+		!before each row pass, randomise the column selection
+		call randomised_list(column_randomised)
+		
+		do column_select=1,rows
+			!randomise the column selection
+			column_number_2=column_randomised(column_select)
+
+			!set the prospective transitionn value random multipliers
+			call RANDOM_NUMBER(hope)
+			call RANDOM_NUMBER(fear)
+			!use the distance between the neurons and weight accordingly
+			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
+			distil=exp(-(dist*(sigmoid(blood(info_ports,column_num,row_num),"forward")**(-1.)))**2)*1.5
+			!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
+			transition=blood(info_ports,column_number_2,row_number_2)*distil*sigmoid((hope*blood(info_ports,column_num,row_num)&
+				-fear*blood(info_ports,column_number_2,row_number_2)),"forward")			
+
+			!check if the operation will drain more than the origin neuron has
+			if (transition<blood(info_ports,column_number_2,row_number_2)) then
+						
+				!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
+				blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+transition
+
+				!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
+				blood(info_ports,column_number_2,row_number_2)=blood(info_ports,column_number_2,row_number_2)-transition
+			
+				!otherwise, drain neuron dry
+			else if (transition>=blood(info_ports,column_number_2,row_number_2)) then
+				!all of the data from the z neuron is taken
+				blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+blood(info_ports,column_number_2,row_number_2)
+			
+				!this takes away all the data, transferred to the current neuron, from the z neuron
+				blood(info_ports,column_number_2,row_number_2)=0.0
 			end if
+
 		end do
 	end do
 
@@ -442,11 +539,11 @@ subroutine initialiser(brain,blood,vision,response,openside)
 	integer,dimension(*) :: brain(:,:,:), vision(:), response(:)
 	real,dimension(*) :: blood(:,:,:)
 	integer :: row_number, column_number, info_number
-	integer :: rows, columns, info_ports
+	integer :: rows, columns, info_ports, blood_ports
 	integer :: modding=8,resultant
 	character(len=*) :: openside
 	
-	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
+	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1)); blood_ports=size(blood(:,1,1))
 
 	do row_number=1,rows
 		do column_number=1,columns
@@ -494,7 +591,7 @@ subroutine initialiser(brain,blood,vision,response,openside)
 		do column_number=1,columns
 			do info_number=1,info_ports
 			
-				blood(info_number,column_number,row_number)=0.1
+				blood(blood_ports,column_number,row_number)=0.01
 				
 			end do
 		end do

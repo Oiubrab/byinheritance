@@ -5,6 +5,7 @@ implicit none
 
 !network setup
 integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
+integer,parameter :: blood_ports=2 !1 is neurochem, 2 is blood
 integer :: rows=6, columns=9
 integer, allocatable :: brain(:,:,:)
 real,allocatable :: blood(:,:,:)
@@ -36,7 +37,7 @@ call CPU_Time(start)
 allocate(vision(columns)) !allocate the array for input into the network, currently on top
 allocate(response(columns)) !allocate the array for output from the network, currently on bottom
 allocate(brain(info_ports,columns,rows)) !allocate the network variable
-allocate(blood(info_ports,columns,rows)) !allocate the reward variable
+allocate(blood(blood_ports,columns,rows)) !allocate the reward variable
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
 
@@ -82,14 +83,20 @@ do epoch=1,epoch_total
 			row_random_number=row_random(row_number)
 			
 			!irrespective, add the gradient
-			if (row_random_number==rows) then
-				blood(info_ports,column_random_number,row_random_number)=blood_gradient
-			else if (row_random_number==1) then
-				blood(info_ports,column_random_number,row_random_number)=0.01
+			if ((row_random_number==rows) .and. (blood(blood_ports,column_random_number,row_random_number)<0.5)) then
+			
+				blood(blood_ports,column_random_number,row_random_number)=&
+					blood(blood_ports,column_random_number,row_random_number)+blood_gradient
+					
+			else if ((row_random_number==1) .and. &
+				(blood(blood_ports,column_random_number,row_random_number)>0.01)) then
+				
+				blood(blood_ports,column_random_number,row_random_number)=blood(blood_ports,column_random_number,row_random_number)*0.5
+				
 			end if
 			
 			!move the blood around
-			if (blood(info_ports,column_random_number,row_random_number)>0.01) then
+			if (blood(blood_ports,column_random_number,row_random_number)>0.01) then
 				call blood_mover(blood,column_random_number,row_random_number)
 			end if
 			
