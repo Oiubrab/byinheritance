@@ -6,7 +6,7 @@ implicit none
 !network setup
 integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
 integer,parameter :: blood_ports=2 !1 is neurochem, 2 is blood
-integer :: rows=6, columns=9
+integer :: rows=6, columns=19
 integer, allocatable :: brain(:,:,:)
 real,allocatable :: blood(:,:,:)
 
@@ -19,10 +19,10 @@ character(len=6) :: opener="bottom"
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2, info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=5000
+integer :: moves=0, epoch, epoch_total=500
 
 !risk and reward
-integer :: use_reward=30 
+integer :: use_reward=20 
 real :: blood_gradient=1.0
 
 !timing

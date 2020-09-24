@@ -234,7 +234,7 @@ end function sigmoid
 ! 4 x 5
 ! 6 7 8
 
-!where x is the column,row position of the input
+!where x is the column,row position of the currently activated node
 
 
 
