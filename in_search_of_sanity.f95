@@ -2,12 +2,17 @@ program in_search_of_sanity
 use welcome_to_dying
 implicit none
 
+!define type for brain
+type mind
+	integer,allocatable :: brain_status(2,:,:)
+	real,allocatable :: brain_weight(64,:,:)
+end type mind
 
 !network setup
 integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
 integer,parameter :: blood_ports=2 !1 is neurochem, 2 is blood
 integer :: rows=6, columns=11
-integer, allocatable :: brain(:,:,:)
+integer, allocatable :: brain(:,:,:), brain_weights
 real,allocatable :: blood(:,:,:)
 
 !sensing and response setup
