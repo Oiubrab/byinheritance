@@ -6,7 +6,7 @@ implicit none
 !network setup
 integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
 integer,parameter :: blood_ports=2 !1 is neurochem, 2 is blood
-integer :: rows=6, columns=19
+integer :: rows=6, columns=11
 integer, allocatable :: brain(:,:,:)
 real,allocatable :: blood(:,:,:)
 
@@ -22,11 +22,14 @@ integer,allocatable :: column_random(:),row_random(:)
 integer :: moves=0, epoch, epoch_total=500
 
 !risk and reward
-integer :: use_reward=20 
+integer :: use_reward=20 ,blood_rate=20
 real :: blood_gradient=1.0
 
 !timing
 real :: start, finish, delay_time=0.1
+
+!printing
+character(len=3) :: print_yesno="yes"
 
 
 
@@ -54,12 +57,23 @@ do column_number=1,columns
 	end if
 end do
 
-
-print*,"Brain moves: 0 Epoch: 0"
-call print_network(brain,blood,vision,response)
+if (print_yesno=="yes") then
+	print*,"Brain moves: 0 Epoch: 0"
+	call print_network(brain,blood,vision,response)
+end if
 
 !this is the new song
 do epoch=1,epoch_total
+
+	!add the blood gradient
+	if (mod(epoch,blood_rate)==0) then
+		do column_number=1,columns 
+			blood(blood_ports,column_number,rows)=blood(blood_ports,column_number,rows)+blood_gradient		
+		end do	
+	end if
+	do column_number=1,columns
+		blood(blood_ports,column_number,1)=blood(blood_ports,column_number,1)*0.5
+	end do
 
 	!injection from vision into brain
 	if (mod(epoch,data_rate)==0) then
@@ -71,41 +85,30 @@ do epoch=1,epoch_total
 		end do
 	end if
 
-	!first, randomise random column and row lists
+	!first, randomise random row list
 	call randomised_list(row_random)
-	call randomised_list(column_random)
 	 
 	!now I shall send randomly selected neurons to have data moved
 	do row_number=1,rows
+	
+		!first, randomise column list for each row
+		call randomised_list(column_random)
+	
 		do column_number=1,columns
 		
+			!now, assign the random integer positional number to the requisite random number positional number holder number
 			column_random_number=column_random(column_number)
 			row_random_number=row_random(row_number)
 			
-			!irrespective, add the gradient
-			if ((row_random_number==rows) .and. (blood(blood_ports,column_random_number,row_random_number)<0.5)) then
-			
-				blood(blood_ports,column_random_number,row_random_number)=&
-					blood(blood_ports,column_random_number,row_random_number)+blood_gradient
-					
-			else if ((row_random_number==1) .and. &
-				(blood(blood_ports,column_random_number,row_random_number)>0.01)) then
-				
-				blood(blood_ports,column_random_number,row_random_number)=blood(blood_ports,column_random_number,row_random_number)*0.5
-				
-			end if
-			
 			!move the blood around
-			if (blood(blood_ports,column_random_number,row_random_number)>0.01) then
-				call blood_mover(blood,column_random_number,row_random_number)
-			end if
+			call blood_mover(blood,column_random_number,row_random_number)
 			
 			!only act on neurons that have data in them
 			if (brain(info_ports,column_random_number,row_random_number)==1) then
 			
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(blood,brain,column_random_number,row_random_number,use_reward,response)
+				call selector(blood,brain,column_random_number,row_random_number,use_reward,response,print_yesno)
 							
 				!lag if necessary
 				call delay(delay_time)
@@ -115,8 +118,10 @@ do epoch=1,epoch_total
 
 				
 				!print each step
-				print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
-				call print_network(brain,blood,vision,response)
+				if (print_yesno=="yes") then
+					print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
+					call print_network(brain,blood,vision,response)
+				end if
 				
 				!test - response moves vision
 				do column_number_2=1,columns

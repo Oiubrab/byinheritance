@@ -327,7 +327,7 @@ end function weight_direction
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(blood,brain,column,row,reward,response)
+subroutine selector(blood,brain,column,row,reward,response,printer)
 
 	integer,dimension(*) :: brain(:,:,:)
 	real,dimension(*) :: blood(:,:,:)
@@ -336,6 +336,7 @@ subroutine selector(blood,brain,column,row,reward,response)
 	real :: increment, fuck
 	integer,intent(in) :: row,column,reward
 	integer :: point, connections, data_pos, blood_pos, origin, tester, columnmax, rowmax
+	character(len=*) :: printer
 	
 	!brain size
 	rowmax=size(brain(1,1,:)); columnmax=size(brain(1,:,1))
@@ -401,10 +402,12 @@ subroutine selector(blood,brain,column,row,reward,response)
 		end if
 	end do
 
-	print*,"Maximum Rungs Value:"
-	print*,rungs(size(rungs))
-	print*,"Weightings from Direction 1 to 8:"
-	print*,brain_select
+	if (printer=="yes") then
+		print*,"Maximum Rungs Value:"
+		print*,rungs(size(rungs))
+		print*,"Weightings from Direction 1 to 8:"
+		print*,brain_select
+	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
 	if (rungs(size(rungs))/=0.0) then
@@ -417,11 +420,13 @@ subroutine selector(blood,brain,column,row,reward,response)
 			if (fuck<=rungs(point)) then
 				
 				!moving diagnostic
-				print*,"Move from:"
-				print*,column,row
-				print*,"Move to:"
-				print*,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
-				print*," "
+				if (printer=="yes") then
+					print*,"Move from:"
+					print*,column,row
+					print*,"Move to:"
+					print*,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
+					print*," "
+				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
 				brain(((origin-1)*connections)+point,column,row)=brain(((origin-1)*connections)+point,column,row)+reward
@@ -462,7 +467,7 @@ subroutine selector(blood,brain,column,row,reward,response)
 	end if
 
 end subroutine selector
-	
+
 
 
 
@@ -483,7 +488,7 @@ subroutine blood_mover(blood,column_num,row_num)
 	
 	!randomise the row array
 	call randomised_list(row_randomised)
-	
+
 	!engage every blood neuron around the neuron in question
 	do row_select=1,rows
 		!first, randomise the row selection
@@ -491,7 +496,7 @@ subroutine blood_mover(blood,column_num,row_num)
 		!before each row pass, randomise the column selection
 		call randomised_list(column_randomised)
 		
-		do column_select=1,rows
+		do column_select=1,columns
 			!randomise the column selection
 			column_number_2=column_randomised(column_select)
 
@@ -500,34 +505,43 @@ subroutine blood_mover(blood,column_num,row_num)
 			call RANDOM_NUMBER(fear)
 			!use the distance between the neurons and weight accordingly
 			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
-			distil=exp(-(dist*(sigmoid(blood(info_ports,column_num,row_num),"forward")**(-1.)))**2)*1.5
+			transition=exp(-(dist*(sigmoid(blood(info_ports,column_number_2,row_number_2),"forward")**(-1.)))**2)*1.0
 			!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-			transition=blood(info_ports,column_number_2,row_number_2)*distil*sigmoid((hope*blood(info_ports,column_num,row_num)&
-				-fear*blood(info_ports,column_number_2,row_number_2)),"forward")			
-
-			!check if the operation will drain more than the origin neuron has
-			if (transition<blood(info_ports,column_number_2,row_number_2)) then
-						
-				!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
-				blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+transition
-
-				!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-				blood(info_ports,column_number_2,row_number_2)=blood(info_ports,column_number_2,row_number_2)-transition
+			!transition=blood(info_ports,column_number_2,row_number_2)*distil*sigmoid(((1.+hope)*blood(info_ports,column_num,row_num)&
+			!	-(1.+fear)*blood(info_ports,column_number_2,row_number_2)),"forward")			
 			
-				!otherwise, drain neuron dry
-			else if (transition>=blood(info_ports,column_number_2,row_number_2)) then
-				!all of the data from the z neuron is taken
-				blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+blood(info_ports,column_number_2,row_number_2)
+			!don't act on yoself
+			if ((column_number_2/=column_num) .and. (row_number_2/=row_num)) then
 			
-				!this takes away all the data, transferred to the current neuron, from the z neuron
-				blood(info_ports,column_number_2,row_number_2)=0.0
+				!if (row_num==rows) then
+				!	print*,transition
+				!end if
+			
+				!check if the operation will drain more than the origin neuron has
+				if (transition<blood(info_ports,column_number_2,row_number_2)) then
+							
+					!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
+					blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+transition
+
+					!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
+					blood(info_ports,column_number_2,row_number_2)=blood(info_ports,column_number_2,row_number_2)-transition
+				
+					!otherwise, drain neuron dry
+				else if (transition>=blood(info_ports,column_number_2,row_number_2)) then
+					!all of the data from the z neuron is taken
+					blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+blood(info_ports,column_number_2,row_number_2)
+				
+					!this takes away all the data, transferred to the current neuron, from the z neuron
+					blood(info_ports,column_number_2,row_number_2)=0.0
+				end if
+			
 			end if
-
+			
 		end do
 	end do
 
-	
 end subroutine blood_mover
+
 
 
 
