@@ -3,8 +3,8 @@ use welcome_to_dying
 implicit none
 
 !network setup
-integer,parameter :: info_ports=64 
-integer :: rows=6, columns=11
+integer,parameter :: info_ports=64, rows=6, columns=11
+integer :: blood_rows=rows+1
 type(mind) :: think
 
 !sensing and response setup
@@ -16,11 +16,11 @@ character(len=6) :: opener="bottom"
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2, info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=500
+integer :: moves=0, epoch, epoch_total=5000
 
 !risk and reward
 integer :: blood_rate=20
-real :: blood_gradient=1.0, use_reward=100.0
+real :: blood_gradient=2.0, use_reward=200.0
 
 !timing
 real :: start, finish, delay_time=0.1
@@ -40,7 +40,7 @@ allocate(column_random(columns)) !allocate the column selection randomiser (rand
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
 allocate(think%brain_weight(info_ports,columns,rows)) !allocate the brain direction weighting 
-allocate(think%blood(columns,rows)) !allocate the gradient variable
+allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
 allocate(think%neurochem(columns,rows)) !allocate the reward variable
 
 !initialise the network
@@ -66,7 +66,7 @@ do epoch=1,epoch_total
 	!add the blood gradient
 	if (mod(epoch,blood_rate)==1) then
 		do column_number=1,columns 
-			think%blood(column_number,rows)=think%blood(column_number,rows)+blood_gradient		
+			think%blood(column_number,blood_rows)=think%blood(column_number,rows)+blood_gradient		
 		end do	
 	end if
 	do column_number=1,columns
@@ -138,6 +138,18 @@ do epoch=1,epoch_total
 			call weight_reducer(think%brain_weight,column_random_number,row_random_number)
 			
 		end do
+
+		!move the blood on the extra blood row
+		if (row_number==rows) then
+			call randomised_list(column_random)
+			do column_number=1,columns
+				!now, assign the random integer positional number to the requisite random number positional number holder number
+				column_random_number=column_random(column_number)	
+				!move the blood around
+				call blood_mover(think%blood,column_random_number,blood_rows)
+			end do
+		end if
+		
 	end do
 
 end do

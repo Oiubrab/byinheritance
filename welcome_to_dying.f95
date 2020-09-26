@@ -106,12 +106,27 @@ subroutine print_network(brain,blood,vision,response)
 	end do
 	print*," "
 
-	!print the response array last
-	do column_counter=1,columns
-		write(data_cha,width)response(column_counter)
-		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
+	!print the response and equivalent blood arrays last
+	do column_counter=1,columns+blood_columns+1
+		!add response numbers to the first half of the row
+		if (column_counter<=columns) then
+			write(data_cha,width)response(column_counter)
+			print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
+			!create a break for the two networks
+		else if (column_counter==columns+1) then
+			print_row(column_counter*individual_width-(individual_width-1):&
+				column_counter*individual_width-(individual_width-1)+separation_space)="  "
+		!and blood numbers to the second half
+		else
+			write(blood_cha,blood_width)blood(column_counter-(columns+1),blood_rows)
+			!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
+			!to: brain columns + separation + blood column number * blood column width
+			print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
+				individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
+				(column_counter-(columns+1))*individual_blood)=blood_cha
+		end if
 	end do
-	print*,print_row(1:individual_width*columns)
+	print*,print_row
 	print*," "
 
 end subroutine print_network
@@ -314,9 +329,9 @@ subroutine selector(idea,column,row,reward,response,printer)
 	type(mind) :: idea
 	integer,allocatable :: response(:)
 	real,allocatable :: rungs(:),brain_select(:)
-	real :: increment, fuck, reward
+	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column
-	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax
+	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax, counter, second_point
 	character(len=*) :: printer
 	
 	!brain size
@@ -341,13 +356,26 @@ subroutine selector(idea,column,row,reward,response,printer)
 
 				else
 					!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
-					brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)
+					!scale by blood in the pointed channel
+					brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)*&
+						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 
 				end if
 				
 		else
-			!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
-			brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)
+
+			!just hard coding in bottom option because it's too late in the night to fix. need to generalise for multi dimensional output
+			if ((point_to_neuron(column,row,point,"row")==rowmax+1) .and. &
+				(point_to_neuron(column,row,point,"column")>0) .and. &
+				(point_to_neuron(column,row,point,"column")<columnmax+1)) then
+				
+				brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)*&
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+			
+			else
+				!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
+				brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)
+			end if
 
 		end if
 	end do
@@ -368,14 +396,14 @@ subroutine selector(idea,column,row,reward,response,printer)
 	!if brain_select(point)==0 then close possibility off
 	
 	!set the first rung
-	if (brain_select(1)<0.1) then
+	if (brain_select(1)==0.0) then
 		rungs(1)=0.0
 	else
 		rungs(1)=increment+brain_select(1)
 	end if
 	!set the subsequent rungs
 	do point=2,size(brain_select)
-		if (brain_select(point)<0.1) then
+		if (brain_select(point)==0.0) then
 			rungs(point)=rungs(point-1)
 		else
 			rungs(point)=rungs(point-1)+increment+brain_select(point)
@@ -386,11 +414,11 @@ subroutine selector(idea,column,row,reward,response,printer)
 		print*,"Maximum Rungs Value, choice value:"
 		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
 		print*,"Weightings from Direction 1 to 8:"
-		print"(F6.2,F6.2,F6.2,F6.2,F6.2,F6.2,F6.2,F6.2)",brain_select
+		print"(F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2)",brain_select
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
-	if (rungs(size(rungs))>0.0) then
+	if (rungs(size(rungs))/=0.0) then
 			
 		!scale the fuck to be the same range as the rungs set
 		fuck=fuck*rungs(size(rungs))
@@ -434,9 +462,43 @@ subroutine selector(idea,column,row,reward,response,printer)
 					idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
 					idea%brain_status(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
 						point_origin(point)
-					!add something to blood at that position
+					!add something to blood at that position by taking away blood from channels surrounding it
+					counter=0
+					do second_point=1,connections
+						!first, check if channels around next channel exist
+						if ((point_to_neuron(point_to_neuron(column,row,point,"column"),&
+							point_to_neuron(column,row,point,"row"),second_point,"column")>1) .and. &
+							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+							point_to_neuron(column,row,point,"row"),second_point,"row")>1) .and. &
+							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+							point_to_neuron(column,row,point,"row"),second_point,"column")<=columnmax) .and. &
+							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+							point_to_neuron(column,row,point,"row"),second_point,"row")<=rowmax)) then
+							!then, check if those channels have enough blood to give
+							if (idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+								point_to_neuron(column,row,point,"row"),second_point,"column"),&
+								point_to_neuron(point_to_neuron(column,row,point,"column"),&
+								point_to_neuron(column,row,point,"row"),second_point,"row"))>blood_trans) then
+						
+								idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+									point_to_neuron(column,row,point,"row"),second_point,"column"),&
+									point_to_neuron(point_to_neuron(column,row,point,"column"),&
+									point_to_neuron(column,row,point,"row"),second_point,"row"))=&
+									idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+									point_to_neuron(column,row,point,"row"),second_point,"column"),&
+									point_to_neuron(point_to_neuron(column,row,point,"column"),&
+									point_to_neuron(column,row,point,"row"),second_point,"row"))-blood_trans
+								
+								counter=counter+1
+								
+							end if
+									
+						end if
+						
+					end do	
+					!finally, add the blood taken from surrounding channels into the next channel
 					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
-						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+0.01
+						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+(blood_trans*float(counter))
 				
 				end if
 				
@@ -578,7 +640,7 @@ subroutine initialiser(thought,vision,response,openside)
 	end do
 	
 	!setting up blood network, below only adds 0.1 to every entry
-	do row_number=1,rows
+	do row_number=1,rows+1
 		do column_number=1,columns
 			
 			thought%blood(column_number,row_number)=0.01
@@ -611,9 +673,9 @@ subroutine weight_reducer(weights,column,row)
 
 	real,dimension(*) :: weights(:,:,:)
 	integer :: info_number,info_ports,column,row
-	real,parameter :: max_height=249.0, start_axis=6.8, stretch=24.6, bottom=-5.2 !sigmoid parameters
-	real,parameter :: log_stretch=3.5,log_move=1.1,log_shift=1.1
-	real,parameter :: normal_height=4.3,normal_shift=-1.0,normal_stretch=13.0
+	real,parameter :: max_height=193.0, start_axis=6.8, stretch=24.6, bottom=-5.2 !sigmoid parameters
+	real,parameter :: log_stretch=3.5,log_move=1.1,log_shift=1.1 !natural log parameters
+	real,parameter :: normal_height=4.3,normal_shift=-0.9,normal_stretch=13.0 !gaussian parameters
 	real :: height=max_height-bottom
 	
 	info_ports=size(weights(:,1,1))
