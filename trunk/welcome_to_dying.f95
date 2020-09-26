@@ -1,4 +1,13 @@
 module welcome_to_dying
+
+!define type for brain
+type mind
+	integer,allocatable :: brain_status(:,:,:)
+	real,allocatable :: brain_weight(:,:,:)
+	real,allocatable :: blood(:,:)
+	real,allocatable :: neurochem(:,:)
+end type mind
+
 contains
 
 !this is where the magic happens
@@ -30,11 +39,16 @@ end subroutine delay
 
 
 
+
+
+
+
+
 subroutine print_network(brain,blood,vision,response)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
-	real,dimension(*) :: blood(:,:,:)
-	integer :: row_counter,column_counter,rows,columns,info_ports,blood_ports
+	real,dimension(*) :: blood(:,:)
+	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns
 	!printing
 	integer,parameter :: individual_width=2, individual_blood=5, separation_space=10
 	character(len=individual_width) :: data_cha
@@ -44,10 +58,11 @@ subroutine print_network(brain,blood,vision,response)
 	character(len=:),allocatable :: print_row
 	
 	!establish network dimensions
-	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1)); blood_ports=size(blood(:,1,1))
+	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
+	blood_rows=size(blood(1,:)); blood_columns=size(blood(:,1))
 	
 	!allocate the printing row with enough space to fit both brain and blood
-	allocate(character((columns*individual_width)+(columns*individual_blood)+2+separation_space) :: print_row) !allocate the printing variable
+	allocate(character((columns*individual_width)+(blood_columns*individual_blood)+2+separation_space) :: print_row) !allocate the printing variable
 	
 	!set the width to print for each datum
 	write(individual_width_cha,*)individual_width
@@ -68,7 +83,7 @@ subroutine print_network(brain,blood,vision,response)
 	do row_counter=1,rows
 		!this loop now handles printing both the brain and the blood networks, hence the columns*2
 		!the columns+1 position is empty and creates a space between the two networks
-		do column_counter=1,columns*2+1
+		do column_counter=1,columns+blood_columns+1
 			!add brain numbers to the first half of the row
 			if (column_counter<=columns) then
 				write(data_cha,width)brain(info_ports,column_counter,row_counter)
@@ -79,7 +94,7 @@ subroutine print_network(brain,blood,vision,response)
 					column_counter*individual_width-(individual_width-1)+separation_space)="  "
 			!and blood numbers to the second half
 			else
-				write(blood_cha,blood_width)blood(blood_ports,column_counter-(columns+1),row_counter)
+				write(blood_cha,blood_width)blood(column_counter-(columns+1),row_counter)
 				!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
 				!to: brain columns + separation + blood column number * blood column width
 				print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
@@ -102,6 +117,11 @@ subroutine print_network(brain,blood,vision,response)
 end subroutine print_network
 
 
+
+
+
+
+
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
 subroutine print_interval(start,finish)
 	real,intent(in) :: start, finish
@@ -115,6 +135,11 @@ subroutine print_interval(start,finish)
 	print'(A14,I2,A5,I2,A7,F5.2,A4)',"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
 
 end subroutine print_interval
+
+
+
+
+
 
 
 
@@ -153,65 +178,22 @@ end subroutine randomised_list
 
 
 !this function either applies a sigmoid (forward) or inverse sigmoid (reverse) function depending on flow variable
-!one can also range strectch with range_stretch and domain stretch with domain_stretch (optional)
 !note, inverse sigmoid only goes up to 16*range_stretch
-function sigmoid(insig,flow,range_stretch,domain_stretch) result(outsig)
+function sigmoid(insig,flow,range_stretch,domain_stretch,range_shift,domain_shift) result(outsig)
 	
 	real,intent(in) :: insig
-	real,intent(in),optional :: range_stretch,domain_stretch
+	real,intent(in) :: range_stretch,domain_stretch,range_shift,domain_shift
 	real :: outsig
 	character(len=*) :: flow
 
-	!domain_stretch and range_stretch defined
-	if (present(domain_stretch) .and. present(range_stretch)) then
-		!sigmoid
-		if (flow=="forward") then
-			outsig=range_stretch/(1.+exp(-(1./domain_stretch)*insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-range_stretch*log((domain_stretch/insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if
-		end if
-
-	!domain_stretch defined
-	else if (present(domain_stretch)) then
-		!sigmoid
-		if (flow=="forward") then
-			outsig=1./(1.+exp(-(1./domain_stretch)*insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-1.*log((domain_stretch/insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if	
-		end if
-
-	!range_stretch defined
-	else if (present(range_stretch)) then
-		!sigmoid
-		if (flow=="forward") then
-			outsig=range_stretch/(1.+exp(-(1./1.)*insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-range_stretch*log((1./insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if	
-		end if
-
-	!unity sigmoid
-	else
-		!sigmoid
-		if (flow=="forward") then
-			outsig=1./(1.+exp(-insig))
-		!inverse sigmoid
-		else if (flow=="reverse") then
-			outsig=-log((1./insig)-1.)
-			if ((1./outsig)==0.) then
-				outsig=16.
-			end if
+	!sigmoid
+	if (flow=="forward") then
+		outsig=range_shift+(range_stretch/(1.+exp(domain_shift-(1./domain_stretch)*insig)))
+	!inverse sigmoid
+	else if (flow=="reverse") then
+		outsig=(log((insig-range_shift)/(range_stretch+range_shift-insig))+domain_shift)/(1./domain_stretch)
+		if ((1./outsig)==0.) then
+			outsig=16.
 		end if
 	end if
 
@@ -327,25 +309,23 @@ end function weight_direction
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(blood,brain,column,row,reward,response,printer)
+subroutine selector(idea,column,row,reward,response,printer)
 
-	integer,dimension(*) :: brain(:,:,:)
-	real,dimension(*) :: blood(:,:,:)
-	integer,allocatable :: brain_select(:), response(:)
-	real,allocatable :: rungs(:)
-	real :: increment, fuck
-	integer,intent(in) :: row,column,reward
-	integer :: point, connections, data_pos, blood_pos, origin, tester, columnmax, rowmax
+	type(mind) :: idea
+	integer,allocatable :: response(:)
+	real,allocatable :: rungs(:),brain_select(:)
+	real :: increment, fuck, reward
+	integer,intent(in) :: row,column
+	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax
 	character(len=*) :: printer
 	
 	!brain size
-	rowmax=size(brain(1,1,:)); columnmax=size(brain(1,:,1))
+	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1))
 	
 	!setup amount of data ports, data position and origin label
-	connections=int(sqrt(float(size(brain(:,1,1)-2)))) !8 for adjacent setup
-	data_pos=size(brain(:,1,1))
-	blood_pos=size(blood(:,1,1))
-	origin=brain(data_pos-1,column,row)
+	connections=int(sqrt(float(size(idea%brain_weight(:,1,1))))) !8 for adjacent setup
+	data_pos=size(idea%brain_status(:,1,1))
+	origin=idea%brain_status(data_pos-1,column,row)
 	
 	!brain_select collects all the weights, as directed in the point variable contained in the second last brain entry (data_pos-1)
 	allocate(brain_select(connections))
@@ -355,19 +335,19 @@ subroutine selector(blood,brain,column,row,reward,response,printer)
 			(point_to_neuron(column,row,point,"column")<columnmax+1) .and. &
 			(point_to_neuron(column,row,point,"row")<rowmax+1)) then
 			
-				if (brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
+				if (idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
 					!label destinations that have data already in them with 0 weight
-					brain_select(point)=0
+					brain_select(point)=0.
 
 				else
 					!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
-					brain_select(point)=brain(((origin-1)*connections)+point,column,row)
+					brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)
 
 				end if
 				
 		else
 			!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
-			brain_select(point)=brain(((origin-1)*connections)+point,column,row)
+			brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)
 
 		end if
 	end do
@@ -388,29 +368,29 @@ subroutine selector(blood,brain,column,row,reward,response,printer)
 	!if brain_select(point)==0 then close possibility off
 	
 	!set the first rung
-	if (brain_select(1)==0) then
+	if (brain_select(1)<0.1) then
 		rungs(1)=0.0
 	else
-		rungs(1)=increment+float(brain_select(1))
+		rungs(1)=increment+brain_select(1)
 	end if
 	!set the subsequent rungs
 	do point=2,size(brain_select)
-		if (brain_select(point)==0) then
+		if (brain_select(point)<0.1) then
 			rungs(point)=rungs(point-1)
 		else
-			rungs(point)=rungs(point-1)+increment+float(brain_select(point))
+			rungs(point)=rungs(point-1)+increment+brain_select(point)
 		end if
 	end do
 
 	if (printer=="yes") then
-		print*,"Maximum Rungs Value:"
-		print*,rungs(size(rungs))
+		print*,"Maximum Rungs Value, choice value:"
+		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
 		print*,"Weightings from Direction 1 to 8:"
-		print*,brain_select
+		print"(F6.2,F6.2,F6.2,F6.2,F6.2,F6.2,F6.2,F6.2)",brain_select
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
-	if (rungs(size(rungs))/=0.0) then
+	if (rungs(size(rungs))>0.0) then
 			
 		!scale the fuck to be the same range as the rungs set
 		fuck=fuck*rungs(size(rungs))
@@ -429,10 +409,10 @@ subroutine selector(blood,brain,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				brain(((origin-1)*connections)+point,column,row)=brain(((origin-1)*connections)+point,column,row)+reward
+				idea%brain_weight(((origin-1)*connections)+point,column,row)=idea%brain_weight(((origin-1)*connections)+point,column,row)+reward
 				!remove data and position indicator from current neuron
-				brain(data_pos,column,row)=0
-				brain(data_pos-1,column,row)=0
+				idea%brain_status(data_pos,column,row)=0
+				idea%brain_status(data_pos-1,column,row)=0
 				
 				!if data is moving off the brain, direct it into the response array
 				!data moving off the sides needs to be directed to the correct row
@@ -451,11 +431,12 @@ subroutine selector(blood,brain,column,row,reward,response,printer)
 				else	
 							
 					!add data and position indicator to targeted neuron	
-					brain(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
-					brain(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=point_origin(point)
+					idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
+					idea%brain_status(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+						point_origin(point)
 					!add something to blood at that position
-					blood(blood_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
-						blood(blood_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+0.01
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+0.01
 				
 				end if
 				
@@ -474,13 +455,13 @@ end subroutine selector
 !this subroutine takes in a neuron from the blood network and moves it around
 subroutine blood_mover(blood,column_num,row_num)
 
-	real,dimension(*) :: blood(:,:,:)
+	real,dimension(*) :: blood(:,:)
 	integer,allocatable :: row_randomised(:), column_randomised(:)
-	integer :: column_num,row_num,info_ports,row_select,column_select
+	integer :: column_num,row_num,row_select,column_select
 	real :: hope, fear, dist, distil, transition
 	integer :: rows,columns,row_number_2,column_number_2
 	
-	info_ports=size(blood(:,1,1)); rows=size(blood(1,1,:)); columns=size(blood(1,:,1))
+	rows=size(blood(1,:)); columns=size(blood(:,1))
 
 	!make the random arrays as big as columns and rows
 	allocate(row_randomised(rows))
@@ -503,36 +484,30 @@ subroutine blood_mover(blood,column_num,row_num)
 			!set the prospective transitionn value random multipliers
 			call RANDOM_NUMBER(hope)
 			call RANDOM_NUMBER(fear)
-			!use the distance between the neurons and weight accordingly
+			!use the distance between the blood channels accordingly
 			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
-			transition=exp(-(dist*(sigmoid(blood(info_ports,column_number_2,row_number_2),"forward")**(-1.)))**2)*1.0
-			!data element of the z neuron * distance * sigmoid goverened by weights and random numbers
-			!transition=blood(info_ports,column_number_2,row_number_2)*distil*sigmoid(((1.+hope)*blood(info_ports,column_num,row_num)&
-			!	-(1.+fear)*blood(info_ports,column_number_2,row_number_2)),"forward")			
+			transition=exp(-(dist*(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)**(-1.)))**2)	
 			
-			!don't act on yoself
+			!don't act on yo-self
 			if ((column_number_2/=column_num) .and. (row_number_2/=row_num)) then
-			
-				!if (row_num==rows) then
-				!	print*,transition
-				!end if
-			
-				!check if the operation will drain more than the origin neuron has
-				if (transition<blood(info_ports,column_number_2,row_number_2)) then
-							
-					!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z neuron
-					blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+transition
 
-					!this takes away the transition amount of data, transferred to the current neuron, from the z neuron
-					blood(info_ports,column_number_2,row_number_2)=blood(info_ports,column_number_2,row_number_2)-transition
+			
+				!check if the operation will drain more than the origin channel has
+				if (transition<blood(column_number_2,row_number_2)) then
+							
+					!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z channel
+					blood(column_num,row_num)=blood(column_num,row_num)+transition
+
+					!this takes away the transition amount of data, transferred to the current neuron, from the z channel
+					blood(column_number_2,row_number_2)=blood(column_number_2,row_number_2)-transition
 				
-					!otherwise, drain neuron dry
-				else if (transition>=blood(info_ports,column_number_2,row_number_2)) then
+					!otherwise, drain channel dry
+				else if (transition>=blood(column_number_2,row_number_2)) then
 					!all of the data from the z neuron is taken
-					blood(info_ports,column_num,row_num)=blood(info_ports,column_num,row_num)+blood(info_ports,column_number_2,row_number_2)
+					blood(column_num,row_num)=blood(column_num,row_num)+blood(column_number_2,row_number_2)
 				
-					!this takes away all the data, transferred to the current neuron, from the z neuron
-					blood(info_ports,column_number_2,row_number_2)=0.0
+					!this takes away all the data, transferred to the current channel, from the z channel
+					blood(column_number_2,row_number_2)=0.0
 				end if
 			
 			end if
@@ -548,52 +523,54 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !the openside variable decides which side data will flow out from
-subroutine initialiser(brain,blood,vision,response,openside)
+subroutine initialiser(thought,vision,response,openside)
 
-	integer,dimension(*) :: brain(:,:,:), vision(:), response(:)
-	real,dimension(*) :: blood(:,:,:)
+	integer,dimension(*) :: vision(:), response(:)
 	integer :: row_number, column_number, info_number
-	integer :: rows, columns, info_ports, blood_ports
+	integer :: rows, columns, info_ports
 	integer :: modding=8,resultant
 	character(len=*) :: openside
+	type(mind) :: thought
 	
-	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1)); blood_ports=size(blood(:,1,1))
-
+	rows=size(thought%brain_weight(1,1,:)); columns=size(thought%brain_weight(1,:,1)) 
+	info_ports=size(thought%brain_status(:,1,1)); info_weight=size(thought%brain_weight(:,1,1))
 	do row_number=1,rows
 		do column_number=1,columns
-			do info_number=1,info_ports
+		
+			!zero out brain_status
+			thought%brain_status(1,column_number,row_number)=0
+			thought%brain_status(2,column_number,row_number)=0			
+			
+			do info_number=1,info_weight
 			
 				!set up the ones and zeroes
-				!zero for the last two entries containing data and origin
-				if (info_number>=info_ports-1) then
-					brain(info_number,column_number,row_number)=0
 				!zero for any weight directing data off the top if the top isn't open
-				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==0) .and. &
+				if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==0) .and. &
 					(openside/="top")) then
 					
-					brain(info_number,column_number,row_number)=0	
+					thought%brain_weight(info_number,column_number,row_number)=0.	
 								
 				!or bottom
 				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==rows+1) .and. &
 					(openside/="bottom")) then
 
-					brain(info_number,column_number,row_number)=0
+					thought%brain_weight(info_number,column_number,row_number)=0.
 					
 				!zero for any weight diracting data off the left if it isn't open
 				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==0) .and. &
 					(openside/="left")) then
 					
-					brain(info_number,column_number,row_number)=0
+					thought%brain_weight(info_number,column_number,row_number)=0.
 					
 				!or right
 				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==columns+1) .and. &
 					(openside/="right")) then
 					
-					brain(info_number,column_number,row_number)=0
+					thought%brain_weight(info_number,column_number,row_number)=0.
 					
 				!otherwise, all weights start off at one
-				else if (info_number<info_ports-1) then
-					brain(info_number,column_number,row_number)=1
+				else
+					thought%brain_weight(info_number,column_number,row_number)=1.
 				end if
 				
 			end do
@@ -603,11 +580,9 @@ subroutine initialiser(brain,blood,vision,response,openside)
 	!setting up blood network, below only adds 0.1 to every entry
 	do row_number=1,rows
 		do column_number=1,columns
-			do info_number=1,info_ports
 			
-				blood(blood_ports,column_number,row_number)=0.01
+			thought%blood(column_number,row_number)=0.01
 				
-			end do
 		end do
 	end do	
 
@@ -625,5 +600,34 @@ end subroutine initialiser
 	
 	
 	
+
+!!!!!!!!!!!!!!!!!!!
+!!weight handling!!
+!!!!!!!!!!!!!!!!!!!
+
+
+
+subroutine weight_reducer(weights,column,row)
+
+	real,dimension(*) :: weights(:,:,:)
+	integer :: info_number,info_ports,column,row
+	real,parameter :: max_height=249.0, start_axis=6.8, stretch=24.6, bottom=-5.2 !sigmoid parameters
+	real,parameter :: log_stretch=3.5,log_move=1.1,log_shift=1.1
+	real,parameter :: normal_height=4.3,normal_shift=-1.0,normal_stretch=13.0
+	real :: height=max_height-bottom
+	
+	info_ports=size(weights(:,1,1))
+
+	do info_number=1, info_ports
+		if (weights(info_number,column,row)>1.) then
+			!weight is scaled down by a sigmoid (significant over large numbers) plus a natural log (significant over medium numbers) 
+			!plus a gaussian (significant over small numbers)
+			weights(info_number,column,row)=sigmoid(weights(info_number,column,row),"forward",height,stretch,bottom,start_axis)+&
+				log_stretch*log(log_move*weights(info_number,column,row)+log_shift)+&
+				normal_height*exp((normal_shift-weights(info_number,column,row))/normal_stretch)
+		end if
+	end do
+
+end subroutine weight_reducer
 	
 end module welcome_to_dying

@@ -2,18 +2,10 @@ program in_search_of_sanity
 use welcome_to_dying
 implicit none
 
-!define type for brain
-type mind
-	integer,allocatable :: brain_status(2,:,:)
-	real,allocatable :: brain_weight(64,:,:)
-end type mind
-
 !network setup
-integer,parameter :: info_ports=66 !first 64 are weights, 65 the origin address of data (if present), 66 is data port
-integer,parameter :: blood_ports=2 !1 is neurochem, 2 is blood
+integer,parameter :: info_ports=64 
 integer :: rows=6, columns=11
-integer, allocatable :: brain(:,:,:), brain_weights
-real,allocatable :: blood(:,:,:)
+type(mind) :: think
 
 !sensing and response setup
 integer, allocatable :: vision(:), response(:)
@@ -27,8 +19,8 @@ integer,allocatable :: column_random(:),row_random(:)
 integer :: moves=0, epoch, epoch_total=500
 
 !risk and reward
-integer :: use_reward=20 ,blood_rate=20
-real :: blood_gradient=1.0
+integer :: blood_rate=20
+real :: blood_gradient=1.0, use_reward=100.0
 
 !timing
 real :: start, finish, delay_time=0.1
@@ -44,48 +36,49 @@ call CPU_Time(start)
 !allocation block
 allocate(vision(columns)) !allocate the array for input into the network, currently on top
 allocate(response(columns)) !allocate the array for output from the network, currently on bottom
-allocate(brain(info_ports,columns,rows)) !allocate the network variable
-allocate(blood(blood_ports,columns,rows)) !allocate the reward variable
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
-
+allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
+allocate(think%brain_weight(info_ports,columns,rows)) !allocate the brain direction weighting 
+allocate(think%blood(columns,rows)) !allocate the gradient variable
+allocate(think%neurochem(columns,rows)) !allocate the reward variable
 
 !initialise the network
-call initialiser(brain,blood,vision,response,opener)
+call initialiser(think,vision,response,opener)
 
 !test injection - an origin must accompany the data
 vision(2)=1 !change this to detect the food position when I attach this to the game
 do column_number=1,columns
 	if (vision(column_number)==1) then	
-		brain(info_ports-1,column_number,1)=2
-		brain(info_ports,column_number,1)=1
+		think%brain_status(1,column_number,1)=2
+		think%brain_status(2,column_number,1)=1
 	end if
 end do
 
 if (print_yesno=="yes") then
 	print*,"Brain moves: 0 Epoch: 0"
-	call print_network(brain,blood,vision,response)
+	call print_network(think%brain_status,think%blood,vision,response)
 end if
 
 !this is the new song
 do epoch=1,epoch_total
 
 	!add the blood gradient
-	if (mod(epoch,blood_rate)==0) then
+	if (mod(epoch,blood_rate)==1) then
 		do column_number=1,columns 
-			blood(blood_ports,column_number,rows)=blood(blood_ports,column_number,rows)+blood_gradient		
+			think%blood(column_number,rows)=think%blood(column_number,rows)+blood_gradient		
 		end do	
 	end if
 	do column_number=1,columns
-		blood(blood_ports,column_number,1)=blood(blood_ports,column_number,1)*0.5
+		think%blood(column_number,1)=think%blood(column_number,1)*0.5
 	end do
 
 	!injection from vision into brain
-	if (mod(epoch,data_rate)==0) then
+	if (mod(epoch,data_rate)==1) then
 		do column_number=1,columns
 			if (vision(column_number)==1) then	
-				brain(info_ports-1,column_number,1)=2 !an origin must accompany the data
-				brain(info_ports,column_number,1)=1
+				think%brain_status(1,column_number,1)=2
+				think%brain_status(2,column_number,1)=1
 			end if
 		end do
 	end if
@@ -106,14 +99,14 @@ do epoch=1,epoch_total
 			row_random_number=row_random(row_number)
 			
 			!move the blood around
-			call blood_mover(blood,column_random_number,row_random_number)
+			call blood_mover(think%blood,column_random_number,row_random_number)
 			
 			!only act on neurons that have data in them
-			if (brain(info_ports,column_random_number,row_random_number)==1) then
+			if (think%brain_status(2,column_random_number,row_random_number)==1) then
 			
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(blood,brain,column_random_number,row_random_number,use_reward,response,print_yesno)
+				call selector(think,column_random_number,row_random_number,use_reward,response,print_yesno)
 							
 				!lag if necessary
 				call delay(delay_time)
@@ -125,7 +118,7 @@ do epoch=1,epoch_total
 				!print each step
 				if (print_yesno=="yes") then
 					print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
-					call print_network(brain,blood,vision,response)
+					call print_network(think%brain_status,think%blood,vision,response)
 				end if
 				
 				!test - response moves vision
@@ -142,12 +135,7 @@ do epoch=1,epoch_total
 			
 			!the choosing weights reduce by one if they are not used and increase by use_reward-1 if they are used
 			!this is done by subtracting one from all weights and adding use_reward to weights that are used
-			do info_number=1, info_ports-2
-				if (brain(info_number,column_random_number,row_random_number)>1) then
-					brain(info_number,column_random_number,row_random_number)=&
-						brain(info_number,column_random_number,row_random_number)-1
-				end if
-			end do
+			call weight_reducer(think%brain_weight,column_random_number,row_random_number)
 			
 		end do
 	end do
