@@ -437,7 +437,8 @@ subroutine selector(idea,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(((origin-1)*connections)+point,column,row)=idea%brain_weight(((origin-1)*connections)+point,column,row)+reward
+				idea%brain_weight(((origin-1)*connections)+point,column,row)=idea%brain_weight(((origin-1)*connections)+point,column,row)+&
+					reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
@@ -515,12 +516,13 @@ end subroutine selector
 
 
 !this subroutine takes in a neuron from the blood network and moves it around
-subroutine blood_mover(blood,column_num,row_num)
+subroutine blood_mover(blood,column_num,row_num,gradient)
 
 	real,dimension(*) :: blood(:,:)
 	integer,allocatable :: row_randomised(:), column_randomised(:)
 	integer :: column_num,row_num,row_select,column_select
 	real :: hope, fear, dist, distil, transition
+	real :: gradient !controls how quickly blood flows. bigger is faster
 	integer :: rows,columns,row_number_2,column_number_2
 	
 	rows=size(blood(1,:)); columns=size(blood(:,1))
@@ -548,7 +550,8 @@ subroutine blood_mover(blood,column_num,row_num)
 			call RANDOM_NUMBER(fear)
 			!use the distance between the blood channels accordingly
 			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
-			transition=exp(-(dist*(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)**(-1.)))**2)	
+			transition=exp(-(dist*(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)**(-1.))/gradient)**2)*&
+				blood(column_number_2,row_number_2)	
 			
 			!don't act on yo-self
 			if ((column_number_2/=column_num) .and. (row_number_2/=row_num)) then
@@ -668,25 +671,37 @@ end subroutine initialiser
 !!!!!!!!!!!!!!!!!!!
 
 
-
+!This subroutine controls the weight reductions per weight per action
 subroutine weight_reducer(weights,column,row)
 
 	real,dimension(*) :: weights(:,:,:)
 	integer :: info_number,info_ports,column,row
-	real,parameter :: max_height=193.0, start_axis=6.8, stretch=24.6, bottom=-5.2 !sigmoid parameters
-	real,parameter :: log_stretch=3.5,log_move=1.1,log_shift=1.1 !natural log parameters
-	real,parameter :: normal_height=4.3,normal_shift=-0.9,normal_stretch=13.0 !gaussian parameters
-	real :: height=max_height-bottom
+	real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
+	real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
+	real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
+	real,parameter :: second_period_inverse=10.0,second_amplitude=0.0008,second_sin_shift=300.0 !2nd sinusoid, 2nd stage, parameters
+	real,parameter :: normal_height=4.3,normal_distance=2.6,normal_width=5.205 !gaussian parameters
+	real,parameter :: overload=5.0 !over 1050 constant reduction
 	
 	info_ports=size(weights(:,1,1))
 
 	do info_number=1, info_ports
 		if (weights(info_number,column,row)>1.) then
-			!weight is scaled down by a sigmoid (significant over large numbers) plus a natural log (significant over medium numbers) 
-			!plus a gaussian (significant over small numbers)
-			weights(info_number,column,row)=sigmoid(weights(info_number,column,row),"forward",height,stretch,bottom,start_axis)+&
-				log_stretch*log(log_move*weights(info_number,column,row)+log_shift)+&
-				normal_height*exp((normal_shift-weights(info_number,column,row))/normal_stretch)
+			!between 1 and 35, scaling is linear
+			if (weights(info_number,column,row)<=35.0) then
+				weights(info_number,column,row)=first_gradient*weights(info_number,column,row)+first_height
+			!between 35 and 1050, scaling is a non linear function
+			else if ((weights(info_number,column,row)>35.0) .and. (weights(info_number,column,row)<1050.0)) then
+				!weight is scaled down by a gaussian (smalll numbers), plus a linear (general shape), plus a quadratic (limiter), plus a sinusoid (variation)
+				!range within the effective domain (1,big) must stay below the y=x line and above the y=1 line 
+				weights(info_number,column,row)=amplitude*sin(0.1*period*weights(info_number,column,row))+&
+					gradient*weights(info_number,column,row)+height-&
+					second_amplitude*sin((weights(info_number,column,row)+second_sin_shift)/second_period_inverse)+&
+					normal_height*exp(-1.0*(((weights(info_number,column,row)-normal_distance)/normal_width)**2))
+			!if weight is over 1050, just do a constant reduction
+			else
+				weights(info_number,column,row)=weights(info_number,column,row)-overload
+			end if
 		end if
 	end do
 
