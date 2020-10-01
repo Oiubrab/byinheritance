@@ -1,7 +1,11 @@
 program weight_reducer
+implicit none
+
+!this program ia a cunt. It counts how many steps a weight would take to get back to unity, assuming no further stimulation
+
 
 integer :: counter
-real :: weight_max=250.0
+real :: weight_max=20.0
 real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
@@ -11,7 +15,7 @@ real,parameter :: overload=5.0 !over 1050 constant reduction
 
 
 counter=0
-do while (weight_max>5)
+do while (weight_max>1.1)
 	print*,weight_max,counter
 	if (weight_max>1.) then
 		!between 1 and 35, scaling is linear

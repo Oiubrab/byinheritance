@@ -5,7 +5,7 @@ type mind
 	integer,allocatable :: brain_status(:,:,:)
 	real,allocatable :: brain_weight(:,:,:)
 	real,allocatable :: blood(:,:)
-	real,allocatable :: neurochem(:,:)
+	integer,allocatable :: neurochem(:,:)
 end type mind
 
 contains
@@ -442,6 +442,8 @@ subroutine selector(idea,column,row,reward,response,printer)
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
+				!add data to neurochem
+				idea%neurochem(column,row)=1
 				
 				!if data is moving off the brain, direct it into the response array
 				!data moving off the sides needs to be directed to the correct row
@@ -588,17 +590,20 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !the openside variable decides which side data will flow out from
-subroutine initialiser(thought,vision,response,openside)
+subroutine initialiser(thought,vision,response,volume,openside)
 
 	integer,dimension(*) :: vision(:), response(:)
 	integer :: row_number, column_number, info_number
-	integer :: rows, columns, info_ports
-	integer :: modding=8,resultant
+	integer :: rows, columns, info_ports,blood_rows
 	character(len=*) :: openside
+	real :: volume
 	type(mind) :: thought
 	
 	rows=size(thought%brain_weight(1,1,:)); columns=size(thought%brain_weight(1,:,1)) 
 	info_ports=size(thought%brain_status(:,1,1)); info_weight=size(thought%brain_weight(:,1,1))
+	blood_rows=size(thought%blood(1,:))
+	
+	!set the initial brain values first
 	do row_number=1,rows
 		do column_number=1,columns
 		
@@ -643,13 +648,16 @@ subroutine initialiser(thought,vision,response,openside)
 	end do
 	
 	!setting up blood network, below only adds 0.1 to every entry
-	do row_number=1,rows+1
+	do row_number=1,blood_rows
 		do column_number=1,columns
 			
-			thought%blood(column_number,row_number)=0.01
+			thought%blood(column_number,row_number)=(float(row_number)/float(blood_rows))*(volume*2.0)
 				
 		end do
 	end do	
+	
+	!zero out neurochem
+	thought%neurochem=0
 
 	!set up empty vision array 
 	do column_number=1,size(vision)
@@ -669,6 +677,31 @@ end subroutine initialiser
 !!!!!!!!!!!!!!!!!!!
 !!weight handling!!
 !!!!!!!!!!!!!!!!!!!
+
+
+!this subroutine controls how the neurochem modifies weights to reward certain behaviour
+subroutine motivation(neurochemical,weighting,looking,effect)
+
+	integer,dimension(*) :: neurochemical(:,:),looking(:)
+	real,dimension(*) :: weighting(:,:,:)
+	integer :: dist_from_centre,column,row
+	real :: effect
+	
+	dist_from_centre=abs(((size(looking)/2)+1)-findloc(looking,1,dim=1))
+	
+	!currently: affect all weights in nodes that were activated from the last vision drop
+	!multiply those weights based on where the vision datum is now
+	do row=1,size(neurochemical(1,:))	
+		do column=1,size(neurochemical(:,1))
+			if (neurochemical(column,row)==1) then
+				weighting(:,column,row)=weighting(:,column,row)*float(((size(looking)/2)+1)-dist_from_centre)*effect
+			end if
+		end do
+	end do
+	
+
+end subroutine motivation
+
 
 
 !This subroutine controls the weight reductions per weight per action
