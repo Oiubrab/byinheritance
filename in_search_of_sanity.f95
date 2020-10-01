@@ -3,7 +3,7 @@ use welcome_to_dying
 implicit none
 
 !network setup
-integer,parameter :: info_ports=64, rows=5, columns=7
+integer,parameter :: info_ports=64, rows=5, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 
@@ -21,10 +21,14 @@ integer :: moves=0, epoch, epoch_total=5000
 
 !risk and reward
 integer :: blood_rate=15
-real :: blood_volume=5.0, blood_gradient=0.8, use_reward=200.0
+real :: blood_volume=5.0, blood_gradient=0.7, node_use_reward=20.0, chem_effect=1.0
+
+!testing
+real :: random_see
+integer :: knock_number=200
 
 !timing
-real :: start, finish, delay_time=0.2
+real :: start, finish, delay_time=0.05
 
 !printing
 character(len=3) :: print_yesno="yes"
@@ -48,7 +52,7 @@ allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra
 allocate(think%neurochem(columns,rows)) !allocate the reward variable
 
 !initialise the network
-call initialiser(think,vision,response,opener)
+call initialiser(think,vision,response,blood_volume,opener)
 
 !test injection - an origin must accompany the data
 vision(2)=1 !change this to detect the food position when I attach this to the game
@@ -78,13 +82,20 @@ do epoch=1,epoch_total
 		think%blood(column_number,1)=think%blood(column_number,1)*0.7
 	end do
 
+	!this is just here to knock the vision out, to test surprise
+	if (mod(epoch,knock_number)==1) then
+		vision=0
+		call random_number(random_see)
+		vision(int(random_see*size(vision))+1)=1
+	end if
+
 	!injection from vision into brain
 	if (mod(epoch,data_rate)==1) then
 		do column_number=1,columns
 			if (vision(column_number)==1) then	
 				think%brain_status(1,column_number,1)=2
 				think%brain_status(2,column_number,1)=1
-				
+				think%neurochem=0
 			end if
 		end do
 	end if
@@ -112,7 +123,7 @@ do epoch=1,epoch_total
 			
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(think,column_random_number,row_random_number,use_reward,response,print_yesno)
+				call selector(think,column_random_number,row_random_number,node_use_reward,response,print_yesno)
 							
 				!lag if necessary
 				call delay(delay_time)
@@ -144,14 +155,16 @@ do epoch=1,epoch_total
 						vision=0
 						vision(columns-column_number_2+1)=1
 						response=0
+						!currently rewards dara moving towards middle of vision
+						call motivation(think%neurochem,think%brain_weight,vision,chem_effect)
 					end if
 				end do
 				!call random_number(look)
 				
 			end if
 			
-			!the choosing weights reduce by one if they are not used and increase by use_reward-1 if they are used
-			!this is done by subtracting one from all weights and adding use_reward to weights that are used
+			!the choosing weights reduce by one if they are not used and increase by node_use_reward-1 if they are used
+			!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
 			call weight_reducer(think%brain_weight,column_random_number,row_random_number)
 			
 		end do
