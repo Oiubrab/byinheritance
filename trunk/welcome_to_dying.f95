@@ -3,7 +3,7 @@ module welcome_to_dying
 !define type for brain
 type mind
 	integer,allocatable :: brain_status(:,:,:)
-	real,allocatable :: brain_weight(:,:,:)
+	real,allocatable :: brain_weight(:,:,:,:)
 	real,allocatable :: blood(:,:)
 	integer,allocatable :: neurochem(:,:)
 end type mind
@@ -328,7 +328,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 
 	type(mind) :: idea
 	integer,allocatable :: response(:)
-	real,allocatable :: rungs(:),brain_select(:)
+	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column
 	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax, counter, second_point
@@ -338,83 +338,81 @@ subroutine selector(idea,column,row,reward,response,printer)
 	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1))
 	
 	!setup amount of data ports, data position and origin label
-	connections=int(sqrt(float(size(idea%brain_weight(:,1,1))))) !8 for adjacent setup
+	connections=size(idea%brain_weight(:,1,1,1))
 	data_pos=size(idea%brain_status(:,1,1))
 	origin=idea%brain_status(data_pos-1,column,row)
 	
-	!brain_select collects all the weights, as directed in the point variable contained in the second last brain entry (data_pos-1)
-	allocate(brain_select(connections))
-	do point=1,size(brain_select)
-		if ((point_to_neuron(column,row,point,"column")>0) .and. &
-			(point_to_neuron(column,row,point,"row")>0) .and. &
-			(point_to_neuron(column,row,point,"column")<columnmax+1) .and. &
-			(point_to_neuron(column,row,point,"row")<rowmax+1)) then
-			
-				if (idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
-					!label destinations that have data already in them with 0 weight
-					brain_select(point)=0.
-
-				else
-					!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
-					!scale by blood in the pointed channel
-					brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)*&
-						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
-
-				end if
-				
-		else
-
-			!just hard coding in bottom option because it's too late in the night to fix. need to generalise for multi dimensional output
-			if ((point_to_neuron(column,row,point,"row")==rowmax+1) .and. &
-				(point_to_neuron(column,row,point,"column")>0) .and. &
-				(point_to_neuron(column,row,point,"column")<columnmax+1)) then
-				
-				brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)*&
-					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
-			
-			else
-				!select the set of weights that correspond to the eight directions, as directed by the data's origin (data_pos-1)
-				brain_select(point)=idea%brain_weight(((origin-1)*connections)+point,column,row)
-			end if
-
-		end if
-	end do
-	
 	!set up rungs array	- number of rungs must equal the number of possible neuron selections
-	allocate(rungs(1:size(brain_select)))
+	allocate(rungs(connections))
 	do point=1,size(rungs)
 		rungs(point)=0.
 	end do
 	
 	!base incrementation of the rungs must be monotonic
-	increment=1/float(size(brain_select))
+	increment=1/float(connections)
 
 	call random_number(fuck)
 
+
+
 	!set the rungs - ranges for each selection
-	!rungs = increment + weight stored in neuron for brain_select position
-	!if brain_select(point)==0 then close possibility off
-	
+	!rungs = increment + weight stored in neuron
+	!if brain_status(point)==0 then close possibility off
 	!set the first rung
-	if (brain_select(1)==0.0) then
+	if (idea%brain_weight(1,origin,column,row)==0.0) then
+	
 		rungs(1)=0.0
-	else
-		rungs(1)=increment+brain_select(1)
-	end if
-	!set the subsequent rungs
-	do point=2,size(brain_select)
-		if (brain_select(point)==0.0) then
-			rungs(point)=rungs(point-1)
+	
+	else if ((point_to_neuron(column,row,1,"column")>=1) .and. (point_to_neuron(column,row,1,"row")>=1) .and. &
+		(point_to_neuron(column,row,1,"column")<=columnmax) .and. (point_to_neuron(column,row,1,"row")<=rowmax)) then
+	
+		if (idea%brain_status(data_pos,point_to_neuron(column,row,1,"column"),point_to_neuron(column,row,1,"row"))==1) then
+			rungs(1)=0.0
 		else
-			rungs(point)=rungs(point-1)+increment+brain_select(point)
+			rungs(1)=increment+idea%brain_weight(1,origin,column,row)*&
+				idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 		end if
+		
+	else
+	
+		rungs(1)=increment+idea%brain_weight(1,origin,column,row)*&
+			idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+		
+	end if
+	
+	!set the subsequent rungs
+	do point=2,connections
+	
+		if (idea%brain_weight(point,origin,column,row)==0.0) then
+
+			rungs(point)=rungs(point-1)		
+		
+		else if ((point_to_neuron(column,row,point,"column")>=1) .and. (point_to_neuron(column,row,point,"row")>=1) .and. &
+			(point_to_neuron(column,row,point,"column")<=columnmax) .and. (point_to_neuron(column,row,point,"row")<=rowmax)) then
+		
+			if (idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
+				rungs(point)=rungs(point-1)		
+			else
+				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+			end if
+			
+		else
+		
+			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
+				idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+			
+		end if
+		
 	end do
+
+
 
 	if (printer=="yes") then
 		print*,"Maximum Rungs Value, choice value:"
 		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
 		print*,"Weightings from Direction 1 to 8:"
-		print"(F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2)",brain_select
+		print"(F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2)",idea%brain_weight(:,origin,column,row)
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
@@ -424,7 +422,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 		fuck=fuck*rungs(size(rungs))
 		
 		!take the chosen neuron and move the data to it
-		do point=1,size(brain_select)
+		do point=1,connections
 			if (fuck<=rungs(point)) then
 				
 				!moving diagnostic
@@ -437,13 +435,13 @@ subroutine selector(idea,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(((origin-1)*connections)+point,column,row)=idea%brain_weight(((origin-1)*connections)+point,column,row)+&
+				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+&
 					reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
 				!add data to neurochem
-				idea%neurochem(column,row)=1
+				idea%neurochem(column,row)=origin
 				
 				!if data is moving off the brain, direct it into the response array
 				!data moving off the sides needs to be directed to the correct row
@@ -465,6 +463,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 					idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
 					idea%brain_status(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
 						point_origin(point)
+						
 					!add something to blood at that position by taking away blood from channels surrounding it
 					counter=0
 					do second_point=1,connections
@@ -593,14 +592,14 @@ end subroutine blood_mover
 subroutine initialiser(thought,vision,response,volume,openside)
 
 	integer,dimension(*) :: vision(:), response(:)
-	integer :: row_number, column_number, info_number
+	integer :: row_number, column_number, path_from, path_to, paths
 	integer :: rows, columns, info_ports,blood_rows
 	character(len=*) :: openside
 	real :: volume
 	type(mind) :: thought
 	
-	rows=size(thought%brain_weight(1,1,:)); columns=size(thought%brain_weight(1,:,1)) 
-	info_ports=size(thought%brain_status(:,1,1)); info_weight=size(thought%brain_weight(:,1,1))
+	rows=size(thought%brain_weight(1,1,1,:)); columns=size(thought%brain_weight(1,1,:,1)) 
+	info_ports=size(thought%brain_status(:,1,1)); paths=size(thought%brain_weight(1,:,1,1))
 	blood_rows=size(thought%blood(1,:))
 	
 	!set the initial brain values first
@@ -609,40 +608,75 @@ subroutine initialiser(thought,vision,response,volume,openside)
 		
 			!zero out brain_status
 			thought%brain_status(1,column_number,row_number)=0
-			thought%brain_status(2,column_number,row_number)=0			
-			
-			do info_number=1,info_weight
-			
-				!set up the ones and zeroes
-				!zero for any weight directing data off the top if the top isn't open
-				if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==0) .and. &
-					(openside/="top")) then
+			thought%brain_status(2,column_number,row_number)=0	
 					
-					thought%brain_weight(info_number,column_number,row_number)=0.	
-								
-				!or bottom
-				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"row")==rows+1) .and. &
-					(openside/="bottom")) then
-
-					thought%brain_weight(info_number,column_number,row_number)=0.
-					
-				!zero for any weight diracting data off the left if it isn't open
-				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==0) .and. &
-					(openside/="left")) then
-					
-					thought%brain_weight(info_number,column_number,row_number)=0.
-					
-				!or right
-				else if ((point_to_neuron(column_number,row_number,weight_direction(info_number),"column")==columns+1) .and. &
-					(openside/="right")) then
-					
-					thought%brain_weight(info_number,column_number,row_number)=0.
-					
-				!otherwise, all weights start off at one
-				else
-					thought%brain_weight(info_number,column_number,row_number)=1.
-				end if
+			do path_from=1,paths
+				do path_to=1,paths
 				
+					!set up the ones and zeroes
+					!zero for any weight directing data off the top if the top isn't open
+					if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
+						
+						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="top") .and. &
+							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
+						
+						else
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
+						
+						end if
+									
+					!or bottom
+					else if (point_to_neuron(column_number,row_number,path_to,"row")==rows+1) then
+						
+
+						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="bottom") .and. &
+							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
+						
+						else
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
+						
+						end if
+						
+					!zero for any weight diracting data off the left if it isn't open
+					else if (point_to_neuron(column_number,row_number,path_to,"column")==0) then
+						
+						if ((point_to_neuron(column_number,row_number,path_to,"row")>0) .and. (openside=="left") .and. &
+							(point_to_neuron(column_number,row_number,path_to,"row")<rows+1)) then
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
+						
+						else
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
+						
+						end if
+						
+					!or right
+					else if (point_to_neuron(column_number,row_number,path_to,"column")==columns+1) then
+						
+						if ((point_to_neuron(column_number,row_number,path_to,"row")>0) .and. (openside=="right") .and. &
+							(point_to_neuron(column_number,row_number,path_to,"row")<rows+1)) then
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
+						
+						else
+						
+							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
+						
+						end if
+						
+					!otherwise, all weights start off at one
+					else
+						thought%brain_weight(path_to,path_from,column_number,row_number)=1.
+					end if
+					
+				end do
 			end do
 		end do
 	end do
@@ -683,7 +717,7 @@ end subroutine initialiser
 subroutine motivation(neurochemical,weighting,looking,effect)
 
 	integer,dimension(*) :: neurochemical(:,:),looking(:)
-	real,dimension(*) :: weighting(:,:,:)
+	real,dimension(*) :: weighting(:,:,:,:)
 	integer :: dist_from_centre,column,row
 	real :: effect
 	
@@ -693,8 +727,9 @@ subroutine motivation(neurochemical,weighting,looking,effect)
 	!multiply those weights based on where the vision datum is now
 	do row=1,size(neurochemical(1,:))	
 		do column=1,size(neurochemical(:,1))
-			if (neurochemical(column,row)==1) then
-				weighting(:,column,row)=weighting(:,column,row)*float(((size(looking)/2)+1)-dist_from_centre)*effect
+			if (neurochemical(column,row)/=0) then
+				weighting(:,neurochemical(column,row),column,row)=&
+					weighting(:,neurochemical(column,row),column,row)*float(((size(looking)/2)+1)-dist_from_centre)*effect
 			end if
 		end do
 	end do
@@ -707,8 +742,8 @@ end subroutine motivation
 !This subroutine controls the weight reductions per weight per action
 subroutine weight_reducer(weights,column,row)
 
-	real,dimension(*) :: weights(:,:,:)
-	integer :: info_number,info_ports,column,row
+	real,dimension(*) :: weights(:,:,:,:)
+	integer :: from,to,connections,column,row
 	real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 	real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 	real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
@@ -716,26 +751,28 @@ subroutine weight_reducer(weights,column,row)
 	real,parameter :: normal_height=4.3,normal_distance=2.6,normal_width=5.205 !gaussian parameters
 	real,parameter :: overload=5.0 !over 1050 constant reduction
 	
-	info_ports=size(weights(:,1,1))
+	connections=size(weights(:,1,1,1))
 
-	do info_number=1, info_ports
-		if (weights(info_number,column,row)>1.) then
-			!between 1 and 35, scaling is linear
-			if (weights(info_number,column,row)<=35.0) then
-				weights(info_number,column,row)=first_gradient*weights(info_number,column,row)+first_height
-			!between 35 and 1050, scaling is a non linear function
-			else if ((weights(info_number,column,row)>35.0) .and. (weights(info_number,column,row)<1050.0)) then
-				!weight is scaled down by a gaussian (smalll numbers), plus a linear (general shape), plus a quadratic (limiter), plus a sinusoid (variation)
-				!range within the effective domain (1,big) must stay below the y=x line and above the y=1 line 
-				weights(info_number,column,row)=amplitude*sin(0.1*period*weights(info_number,column,row))+&
-					gradient*weights(info_number,column,row)+height-&
-					second_amplitude*sin((weights(info_number,column,row)+second_sin_shift)/second_period_inverse)+&
-					normal_height*exp(-1.0*(((weights(info_number,column,row)-normal_distance)/normal_width)**2))
-			!if weight is over 1050, just do a constant reduction
-			else
-				weights(info_number,column,row)=weights(info_number,column,row)-overload
+	do from=1, connections
+		do to=1, connections
+			if (weights(to,from,column,row)>1.) then
+				!between 1 and 35, scaling is linear
+				if (weights(to,from,column,row)<=35.0) then
+					weights(to,from,column,row)=first_gradient*weights(to,from,column,row)+first_height
+				!between 35 and 1050, scaling is a non linear function
+				else if ((weights(to,from,column,row)>35.0) .and. (weights(to,from,column,row)<1050.0)) then
+					!weight is scaled down by a gaussian (smalll numbers), plus a linear (general shape), plus a quadratic (limiter), plus a sinusoid (variation)
+					!range within the effective domain (1,big) must stay below the y=x line and above the y=1 line 
+					weights(to,from,column,row)=amplitude*sin(0.1*period*weights(to,from,column,row))+&
+						gradient*weights(to,from,column,row)+height-&
+						second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
+						normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
+				!if weight is over 1050, just do a constant reduction
+				else
+					weights(to,from,column,row)=weights(to,from,column,row)-overload
+				end if
 			end if
-		end if
+		end do
 	end do
 
 end subroutine weight_reducer

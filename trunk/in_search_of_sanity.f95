@@ -3,7 +3,7 @@ use welcome_to_dying
 implicit none
 
 !network setup
-integer,parameter :: info_ports=64, rows=5, columns=11
+integer,parameter :: directions=8, rows=5, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 
@@ -21,14 +21,14 @@ integer :: moves=0, epoch, epoch_total=5000
 
 !risk and reward
 integer :: blood_rate=15
-real :: blood_volume=5.0, blood_gradient=1.0, node_use_reward=20.0, chem_effect=10.0
+real :: blood_volume=5.0, blood_gradient=0.7, node_use_reward=20.0, chem_effect=1.0
 
 !testing
 real :: random_see
 integer :: knock_number=800, movement, vision_place
 
 !timing
-real :: start, finish, delay_time=0.08
+real :: start, finish, delay_time=0.5
 
 !printing
 character(len=3) :: print_yesno="yes"
@@ -47,7 +47,7 @@ allocate(response_counter(columns,columns)) !allocat the array that will keep tr
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
-allocate(think%brain_weight(info_ports,columns,rows)) !allocate the brain direction weighting 
+allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the brain direction weighting 
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
 allocate(think%neurochem(columns,rows)) !allocate the reward variable
 
