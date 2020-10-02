@@ -5,7 +5,7 @@ implicit none
 
 
 integer :: counter
-real :: weight_max=20.0
+real :: weight_max=20.0, weight_max_holder
 real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
@@ -13,9 +13,14 @@ real,parameter :: second_period_inverse=10.0,second_amplitude=0.0008,second_sin_
 real,parameter :: normal_height=4.3,normal_distance=2.6,normal_width=5.205 !gaussian parameters
 real,parameter :: overload=5.0 !over 1050 constant reduction
 
-
+weight_max_holder=0.0
 counter=0
-do while (weight_max>1.1)
+do while (weight_max>1.0)
+	!stop when we reach the bottom
+	if (weight_max==weight_max_holder) then
+		exit
+	end if
+	weight_max_holder=weight_max
 	print*,weight_max,counter
 	if (weight_max>1.) then
 		!between 1 and 35, scaling is linear
