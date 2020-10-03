@@ -5,7 +5,7 @@ implicit none
 
 
 integer :: counter
-real :: weight_max=20.0, weight_max_holder
+real :: weight_max=50000.0, weight_max_holder
 real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
@@ -15,7 +15,7 @@ real,parameter :: overload=5.0 !over 1050 constant reduction
 
 weight_max_holder=0.0
 counter=0
-do while (weight_max>1.0)
+do while (weight_max>1.1)
 	!stop when we reach the bottom
 	if (weight_max==weight_max_holder) then
 		exit

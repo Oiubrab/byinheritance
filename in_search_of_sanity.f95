@@ -3,12 +3,12 @@ use welcome_to_dying
 implicit none
 
 !network setup
-integer,parameter :: directions=8, rows=5, columns=11
+integer,parameter :: directions=8, rows=6, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 
 !sensing and response setup
-integer, allocatable :: vision(:), response(:), response_counter(:,:) !vision is rows, response is columns
+integer, allocatable :: vision(:), response(:), response_counter(:,:)
 integer,parameter :: data_rate=20
 real :: look !test variable for randomisiong vision array
 character(len=6) :: opener="bottom"
@@ -17,18 +17,18 @@ character(len=6) :: opener="bottom"
 integer :: row_number, column_number, row_number_2, column_number_2
 integer :: column_number_3,info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=5000
+integer :: moves=0, epoch, epoch_total=50000
 
 !risk and reward
-integer :: blood_rate=15
-real :: blood_volume=5.0, blood_gradient=0.7, node_use_reward=20.0, chem_effect=1.0
+integer :: blood_rate=20
+real :: blood_volume=5.0, blood_gradient=0.6, node_use_reward=20.0, chem_effect=1.0
 
 !testing
 real :: random_see
-integer :: knock_number=800, movement, vision_place
+integer :: knock_number=200, movement, vision_place
 
 !timing
-real :: start, finish, delay_time=0.5
+real :: start, finish, delay_time=0.05
 
 !printing
 character(len=3) :: print_yesno="yes"
@@ -83,10 +83,18 @@ do epoch=1,epoch_total
 	end do
 
 	!this is just here to knock the vision out, to test surprise
-	if (mod(epoch,knock_number)==1) then
-		vision=0
-		call random_number(random_see)
-		vision(int(random_see*size(vision))+1)=1
+	if (epoch<5000) then
+		if (mod(epoch,knock_number)==1) then
+			vision=0
+			call random_number(random_see)
+			vision(int(random_see*size(vision))+1)=1
+		end if
+	else
+		if (mod(epoch,knock_number*10)==1) then
+			vision=0
+			call random_number(random_see)
+			vision(int(random_see*size(vision))+1)=1
+		end if	
 	end if
 
 	!injection from vision into brain
@@ -158,20 +166,20 @@ do epoch=1,epoch_total
 						!vision(columns-column_number_2+1)=1
 						
 						!vision datum is moved x number of spots depending on the response datum's position off centre
-						movement=(columns/2+1)-column_number_2
+						movement=-1*((columns/2+1)-column_number_2)
 						vision_place=findloc(vision,1,dim=1)
 						vision=0
-						if (vision_place-movement<1) then
+						if (vision_place+movement<1) then
 							vision(1)=1
-						else if (vision_place-movement>columns) then
+						else if (vision_place+movement>columns) then
 							vision(columns)=1
 						else
-							vision(vision_place-movement)=1
+							vision(vision_place+movement)=1
 						end if
 						
 						response=0
 						!currently rewards dara moving towards middle of vision
-						call motivation(think%neurochem,think%brain_weight,vision,chem_effect)
+						call motivation(think%neurochem,think%brain_weight,vision_place,movement,chem_effect)
 					end if
 				end do
 				!call random_number(look)
