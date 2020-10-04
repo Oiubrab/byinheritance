@@ -5,7 +5,7 @@ implicit none
 
 
 integer :: counter
-real :: weight_max=50000.0, weight_max_holder
+real :: weight_max=1000000.0, weight_max_holder
 real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters

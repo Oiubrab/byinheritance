@@ -9,7 +9,7 @@ type(mind) :: think
 
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
-integer,parameter :: data_rate=20
+integer,parameter :: data_rate=30
 real :: look !test variable for randomisiong vision array
 character(len=6) :: opener="bottom"
 
@@ -17,15 +17,15 @@ character(len=6) :: opener="bottom"
 integer :: row_number, column_number, row_number_2, column_number_2
 integer :: column_number_3,info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=50000
+integer :: moves=0, epoch, epoch_total=40000
 
 !risk and reward
 integer :: blood_rate=20
-real :: blood_volume=5.0, blood_gradient=0.6, node_use_reward=20.0, chem_effect=1.0
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=20.0, chem_effect=1.0
 
 !testing
 real :: random_see
-integer :: knock_number=200, movement, vision_place
+integer :: knock_number=800, movement, vision_place
 
 !timing
 real :: start, finish, delay_time=0.05
@@ -39,6 +39,9 @@ character(len=:),allocatable :: column_cha
 !start timer
 call CPU_Time(start)
 
+!fuck you
+call random_seed()
+
 !allocation block
 allocate(character(columns*3+1) :: column_cha) !allocate the printing variable
 allocate(vision(columns)) !allocate the array for input into the network, currently on top
@@ -49,13 +52,15 @@ allocate(row_random(rows)) !allocate the row selection randomiser (randomised at
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
 allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the brain direction weighting 
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
-allocate(think%neurochem(columns,rows)) !allocate the reward variable
+allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point
 
 !initialise the network
 call initialiser(think,vision,response,blood_volume,opener)
 
+call preprogram(think%brain_weight)
+
 !test injection - an origin must accompany the data
-vision(2)=1 !change this to detect the food position when I attach this to the game
+vision(6)=1 !change this to detect the food position when I attach this to the game
 do column_number=1,columns
 	if (vision(column_number)==1) then	
 		think%brain_status(1,column_number,1)=2
@@ -83,19 +88,21 @@ do epoch=1,epoch_total
 	end do
 
 	!this is just here to knock the vision out, to test surprise
-	if (epoch<5000) then
-		if (mod(epoch,knock_number)==1) then
-			vision=0
-			call random_number(random_see)
-			vision(int(random_see*size(vision))+1)=1
-		end if
-	else
-		if (mod(epoch,knock_number*10)==1) then
-			vision=0
-			call random_number(random_see)
-			vision(int(random_see*size(vision))+1)=1
-		end if	
-	end if
+	!if (epoch<25000) then
+	!	if (mod(epoch,knock_number)==0) then
+	!		vision=0
+	!		call random_number(random_see)
+	!		!vision(int(random_see*size(vision))+1)=1
+	!		vision(columns)=1
+	!	end if
+	!else
+	!	if (mod(epoch,knock_number*10)==0) then
+	!		vision=0
+	!		call random_number(random_see)
+	!		!vision(int(random_see*size(vision))+1)=1
+	!		vision(columns)=1
+	!	end if	
+	!end if
 
 	!injection from vision into brain
 	if (mod(epoch,data_rate)==1) then
@@ -128,10 +135,10 @@ do epoch=1,epoch_total
 			
 			!only act on neurons that have data in them
 			if (think%brain_status(2,column_random_number,row_random_number)==1) then
-			
+
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(think,column_random_number,row_random_number,node_use_reward,response,print_yesno)
+				call selector(think,column_random_number,row_random_number,node_use_reward,response,print_yesno)		
 							
 				!lag if necessary
 				call delay(delay_time)
@@ -155,8 +162,8 @@ do epoch=1,epoch_total
 							end do
 						end if
 					end do							
-				end if
-				
+				end if		
+
 				!test - response moves vision
 				do column_number_2=1,columns
 					if (response(column_number_2)==1) then
