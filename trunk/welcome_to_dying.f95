@@ -5,7 +5,7 @@ type mind
 	integer,allocatable :: brain_status(:,:,:)
 	real,allocatable :: brain_weight(:,:,:,:)
 	real,allocatable :: blood(:,:)
-	integer,allocatable :: neurochem(:,:)
+	integer,allocatable :: neurochem(:,:,:)
 end type mind
 
 contains
@@ -349,7 +349,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 	end do
 	
 	!base incrementation of the rungs must be monotonic
-	increment=1/float(connections)
+	increment=1.0/float(connections)
 
 	call random_number(fuck)
 
@@ -378,8 +378,8 @@ subroutine selector(idea,column,row,reward,response,printer)
 		
 	else
 	
-		rungs(1)=increment+idea%brain_weight(1,origin,column,row)*&
-			idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+		rungs(1)=increment+idea%brain_weight(1,origin,column,row)!*&
+			!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 		
 	end if
 	
@@ -399,14 +399,14 @@ subroutine selector(idea,column,row,reward,response,printer)
 				rungs(point)=rungs(point-1)		
 			!open node in network
 			else
-				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
-					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)!*&
+					!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			end if
 		!response array	
 		else
 		
-			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
-				idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)!*&
+				!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			
 		end if
 		
@@ -418,7 +418,9 @@ subroutine selector(idea,column,row,reward,response,printer)
 		print*,"Maximum Rungs Value, choice value:"
 		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
 		print*,"Weightings from Direction 1 to 8:"
-		print"(F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2,F7.2)",idea%brain_weight(:,origin,column,row)
+		print"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)",idea%brain_weight(:,origin,column,row)
+		print*,"Rungs from Direction 1 to 8:"
+		print"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)",rungs
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
@@ -441,13 +443,14 @@ subroutine selector(idea,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+&
-					reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)!+&
+					!reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
 				!add data to neurochem
-				idea%neurochem(column,row)=origin
+				idea%neurochem(1,column,row)=origin
+				idea%neurochem(2,column,row)=point				
 				
 				!if data is moving off the brain, direct it into the response array
 				!data moving off the sides needs to be directed to the correct row
@@ -620,12 +623,12 @@ subroutine initialiser(thought,vision,response,volume,openside)
 				do path_to=1,paths
 				
 					!activate the if statement below to stop upwards movement in the network
-					!if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
-					!	thought%brain_weight(path_to,path_from,column_number,row_number)=0.
+					if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
+						thought%brain_weight(path_to,path_from,column_number,row_number)=0.
 					
 					!set up the ones and zeroes
 					!zero for any weight directing data off the top if the top isn't open
-					if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
+					else if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
 						
 						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="top") .and. &
 							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
@@ -726,33 +729,45 @@ end subroutine initialiser
 !this subroutine controls how the neurochem modifies weights to reward certain behaviour
 subroutine motivation(neurochemical,weighting,looking,move,effect)
 
-	integer,dimension(*) :: neurochemical(:,:)
+	integer,dimension(*) :: neurochemical(:,:,:)
 	real,dimension(*) :: weighting(:,:,:,:)
 	integer :: centre,column,row,looking,move,path
 	real :: effect
 	
 	centre=(size(weighting(1,1,:,1))/2)+1
+	difference_to_centre=abs(centre-looking)-abs(centre-(looking+move)) !pos if colser to centre, neg if further away
 	
 	!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
 	!if the response moves vision towards the centre (pleasure), increase the weight disparity
-	do row=1,size(neurochemical(1,:))	
-		do column=1,size(neurochemical(:,1))
-			if (neurochemical(column,row)/=0) then
-			
-				do path=1,size(weighting(:,1,1,1))
-					!don't act on closed paths
-					if (weighting(path,neurochemical(column,row),column,row)/=0.0) then
-						!pleasure: the vision datum is being driven closer to centre
-						if (abs(centre-looking)>abs(centre-(looking+move))) then
-							weighting(path,neurochemical(column,row),column,row)=&
-								weighting(path,neurochemical(column,row),column,row)**2
-						!pain: the vision datum is being driven away from the centre
-						else if (abs(centre-looking)<abs(centre-(looking+move))) then	
-							weighting(path,neurochemical(column,row),column,row)=&
-								log(weighting(path,neurochemical(column,row),column,row)+exp(1.0)-1.0)
+	do row=1,size(neurochemical(1,1,:))	
+		do column=1,size(neurochemical(1,:,1))
+			if (neurochemical(1,column,row)/=0) then		
+
+				!don't act on closed paths
+				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)/=0.0) then
+					!pleasure: the vision datum is being driven closer to centre
+					if (difference_to_centre>=1) then
+						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)&
+							+100000.0*abs(difference_to_centre)
+					!pain: the vision datum is being driven away from the centre
+					else if (difference_to_centre<=1) then
+						!try adding to the other paths
+						!do path=1,size(weighting(:,1,1,1))
+						!	if ((path/=neurochemical(2,column,row)) .and. (weighting(path,neurochemical(1,column,row),column,row)/=0.0)) then
+						!		weighting(path,neurochemical(1,column,row),column,row)=&
+						!			exp(weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-1.0)
+						!	end if
+						!end do
+						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0<1.0) then
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
+						else
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
+								weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)&
+								-100.0*abs(difference_to_centre)
 						end if
 					end if
-				end do
+				end if
 					
 			end if
 		end do
@@ -792,16 +807,37 @@ subroutine weight_reducer(weights,column,row)
 						second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
 						normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
 				!if weight is between 1050 and 10000, just do a constant reduction
-				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<10000.0)) then
+				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=1000000.0)) then
 					weights(to,from,column,row)=weights(to,from,column,row)-overload
 				!limit weight to 10000
 				else
-					weights(to,from,column,row)=10000.0
+					weights(to,from,column,row)=1000000.0
 				end if
 			end if
 		end do
 	end do
 
 end subroutine weight_reducer
+	
+	
+	
+!this subroutine can be called to set weights, after the initialiser, but before the main loop, so as to direct neurons from the beginning	
+subroutine preprogram(weights)
+	
+	real,dimension(*) :: weights(:,:,:,:)
+	integer :: pathfinder, rows,columns
+	
+	rows=size(weights(1,1,1,:)); columns=size(weights(1,1,:,1))
+	
+	!here, I am directing data coming from the extreme left and extreme right to cross the network
+	
+
+	!subsequent nodes on the path
+	do pathfinder=1,rows
+		weights(7,2,pathfinder,pathfinder)=1000000.0
+	end do	
+	
+end subroutine preprogram
+	
 	
 end module welcome_to_dying
