@@ -429,6 +429,30 @@ end function weight_direction
 !!planting and payoff - initialisation and data moving!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+subroutine angle_to_vision(vision,select_range,cat_angle)
+
+	real,parameter :: pi=4.*asin(1./sqrt(2.))
+	real :: select_range,cat_angle
+	integer :: column_number
+	integer,dimension(*) :: vision(:)
+
+	select_range=(2.*pi)/float(size(vision))
+	do column_number=1,size(vision)
+		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
+		!print*,vision
+		if ((select_range*float(column_number)>=(cat_angle+pi)) .and. (select_range*float(column_number-1)<=(cat_angle+pi))) then
+			vision(column_number)=1
+			!print*,"help"
+		else
+			vision(column_number)=0
+		end if
+	end do
+
+end subroutine angle_to_vision
+
+
+
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
 subroutine selector(idea,column,row,reward,response,printer)
@@ -947,9 +971,16 @@ subroutine preprogram(weights)
 	!here, I am directing data coming from the extreme left and extreme right to cross the network
 	
 
-	!subsequent nodes on the path
-	do pathfinder=1,rows
-		weights(8,2,pathfinder,pathfinder)=1000000.0
+	!subsequent nodes on the path from extreme left
+	weights(8,2,1,1)=1000000.0
+	do pathfinder=2,rows
+		weights(8,1,pathfinder,pathfinder)=1000000.0
+	end do	
+	
+	!subsequent nodes on the path from extreme right
+	weights(6,2,columns,1)=1000000.0
+	do pathfinder=2,rows
+		weights(6,3,columns-pathfinder+1,pathfinder)=1000000.0
 	end do	
 	
 end subroutine preprogram

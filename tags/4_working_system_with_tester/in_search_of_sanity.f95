@@ -3,7 +3,7 @@ use welcome_to_dying
 implicit none
 
 !network setup
-integer,parameter :: directions=8, rows=6, columns=11
+integer,parameter :: directions=8, rows=8, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 
@@ -17,7 +17,7 @@ character(len=6) :: opener="bottom"
 integer :: row_number, column_number, row_number_2, column_number_2
 integer :: column_number_3,info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=100000
+integer :: moves=0, epoch, epoch_total=40000
 
 !risk and reward
 integer :: blood_rate=20
@@ -28,7 +28,7 @@ real :: random_see
 integer :: knock_number=800, movement, vision_place
 
 !timing
-real :: start, finish, delay_time=0.8
+real :: start, finish, delay_time=0.05
 
 !printing
 character(len=3) :: print_yesno="yes"
@@ -38,6 +38,9 @@ character(len=:),allocatable :: column_cha
 
 !start timer
 call CPU_Time(start)
+
+!fuck you
+call random_seed()
 
 !allocation block
 allocate(character(columns*3+1) :: column_cha) !allocate the printing variable
@@ -57,7 +60,7 @@ call initialiser(think,vision,response,blood_volume,opener)
 call preprogram(think%brain_weight)
 
 !test injection - an origin must accompany the data
-vision(2)=1 !change this to detect the food position when I attach this to the game
+vision(6)=1 !change this to detect the food position when I attach this to the game
 do column_number=1,columns
 	if (vision(column_number)==1) then	
 		think%brain_status(1,column_number,1)=2
@@ -86,14 +89,14 @@ do epoch=1,epoch_total
 
 	!this is just here to knock the vision out, to test surprise
 	if (epoch<25000) then
-		if (mod(epoch,knock_number)==1) then
+		if (mod(epoch,knock_number)==0) then
 			vision=0
 			call random_number(random_see)
 			!vision(int(random_see*size(vision))+1)=1
 			vision(columns)=1
 		end if
 	else
-		if (mod(epoch,knock_number*10)==1) then
+		if (mod(epoch,knock_number*10)==0) then
 			vision=0
 			call random_number(random_see)
 			!vision(int(random_see*size(vision))+1)=1
@@ -132,10 +135,10 @@ do epoch=1,epoch_total
 			
 			!only act on neurons that have data in them
 			if (think%brain_status(2,column_random_number,row_random_number)==1) then
-			
+
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(think,column_random_number,row_random_number,node_use_reward,response,print_yesno)
+				call selector(think,column_random_number,row_random_number,node_use_reward,response,print_yesno)		
 							
 				!lag if necessary
 				call delay(delay_time)
@@ -159,8 +162,8 @@ do epoch=1,epoch_total
 							end do
 						end if
 					end do							
-				end if
-				
+				end if		
+
 				!test - response moves vision
 				do column_number_2=1,columns
 					if (response(column_number_2)==1) then

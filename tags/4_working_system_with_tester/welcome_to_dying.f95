@@ -349,7 +349,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 	end do
 	
 	!base incrementation of the rungs must be monotonic
-	increment=1/float(connections)
+	increment=1.0/float(connections)
 
 	call random_number(fuck)
 
@@ -378,8 +378,8 @@ subroutine selector(idea,column,row,reward,response,printer)
 		
 	else
 	
-		rungs(1)=increment+idea%brain_weight(1,origin,column,row)!*&
-			!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+		rungs(1)=increment+idea%brain_weight(1,origin,column,row)*&
+			idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 		
 	end if
 	
@@ -399,14 +399,14 @@ subroutine selector(idea,column,row,reward,response,printer)
 				rungs(point)=rungs(point-1)		
 			!open node in network
 			else
-				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)!*&
-					!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			end if
 		!response array	
 		else
 		
-			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)!*&
-				!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
+				idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			
 		end if
 		
@@ -418,7 +418,9 @@ subroutine selector(idea,column,row,reward,response,printer)
 		print*,"Maximum Rungs Value, choice value:"
 		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
 		print*,"Weightings from Direction 1 to 8:"
-		print"(F9.2,F9.2,F9.2,F9.2,F9.2,F9.2,F9.2,F9.2)",idea%brain_weight(:,origin,column,row)
+		print"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)",idea%brain_weight(:,origin,column,row)
+		print*,"Rungs from Direction 1 to 8:"
+		print"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)",rungs
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
@@ -441,8 +443,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+&
-					reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+reward
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
@@ -733,6 +734,7 @@ subroutine motivation(neurochemical,weighting,looking,move,effect)
 	real :: effect
 	
 	centre=(size(weighting(1,1,:,1))/2)+1
+	difference_to_centre=abs(centre-looking)-abs(centre-(looking+move)) !pos if colser to centre, neg if further away
 	
 	!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
 	!if the response moves vision towards the centre (pleasure), increase the weight disparity
@@ -743,11 +745,12 @@ subroutine motivation(neurochemical,weighting,looking,move,effect)
 				!don't act on closed paths
 				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)/=0.0) then
 					!pleasure: the vision datum is being driven closer to centre
-					if (abs(centre-looking)>abs(centre-(looking+move))) then
+					if (difference_to_centre>=1) then
 						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-							exp(weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-1.0)
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)&
+							+100000.0*abs(difference_to_centre)
 					!pain: the vision datum is being driven away from the centre
-					else if (abs(centre-looking)<abs(centre-(looking+move))) then
+					else if (difference_to_centre<=1) then
 						!try adding to the other paths
 						!do path=1,size(weighting(:,1,1,1))
 						!	if ((path/=neurochemical(2,column,row)) .and. (weighting(path,neurochemical(1,column,row),column,row)/=0.0)) then
@@ -755,8 +758,13 @@ subroutine motivation(neurochemical,weighting,looking,move,effect)
 						!			exp(weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-1.0)
 						!	end if
 						!end do
-						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-							log(weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+exp(1.0)-1.0)
+						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-1000.0<1.0) then
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
+						else
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
+								weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)&
+								-1000.0*abs(difference_to_centre)
+						end if
 					end if
 				end if
 					
@@ -822,26 +830,18 @@ subroutine preprogram(weights)
 	
 	!here, I am directing data coming from the extreme left and extreme right to cross the network
 	
-	!the first node on the extreme left
+
+	!subsequent nodes on the path from extreme left
 	weights(8,2,1,1)=1000000.0
-	!subsequent nodes on the path
 	do pathfinder=2,rows
 		weights(8,1,pathfinder,pathfinder)=1000000.0
-	end do
+	end do	
 	
-	!the first node on the extreme right
+	!subsequent nodes on the path from extreme right
 	weights(6,2,columns,1)=1000000.0
-	!subsequent nodes on the path
-	do pathfinder=2,size(weights(1,1,1,:))
-		weights(6,3,columns-(pathfinder+1),pathfinder)=1000000.0
-	end do
-	
-	!get rid of all leftism
-	weights(5,2,1,1)=1000000.0
-	do pathfinder=2,columns-1
-		weights(5,4,pathfinder,1)=1000000.0
-	end do
-	weights(7,2,1,1)=0.0	
+	do pathfinder=2,rows
+		weights(6,3,columns-pathfinder+1,pathfinder)=1000000.0
+	end do	
 	
 end subroutine preprogram
 	

@@ -14,6 +14,22 @@ contains
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!housekeeping - time and metadata!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -36,9 +52,6 @@ subroutine delay(time)
 	past=.false.
 	
 end subroutine delay
-
-
-
 
 
 
@@ -185,6 +198,62 @@ end subroutine randomised_list
 
 
 
+!read in the network or write out to a text file
+subroutine read_write(think,epoch,moves,vision,direction)
+	type(mind) :: think
+	integer :: epoch,vision
+	character(len=*) :: direction
+	integer :: column,row
+	
+	if (direction=="read") then
+	
+		!retrieve previous network
+		open(unit=1,file="will.txt")
+		read(1,*) think%brain_status
+		read(1,*) think%brain_weight
+		read(1,*) think%blood
+		read(1,*) think%neurochem				
+		read(1,*) epoch
+		read(1,*) moves
+		read(1,*) vision
+		close(1)
+		
+	else if (direction=="write") then
+	
+		!write the networks to file
+		open(unit=2,file="will.txt")
+		write(2,*) think%brain_status
+		write(2,*) think%brain_weight
+		write(2,*) think%blood
+		write(2,*) think%neurochem		
+		write(2,*) epoch
+		write(2,*) moves
+		write(2,*) vision
+		close(2)
+	
+	end if
+	
+end subroutine read_write
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 !!!!!!!!!
@@ -213,6 +282,25 @@ function sigmoid(insig,flow,range_stretch,domain_stretch,range_shift,domain_shif
 	end if
 
 end function sigmoid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -318,9 +406,52 @@ end function weight_direction
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!planting and payoff - initialisation and data moving!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+subroutine angle_to_vision(vision,select_range,cat_angle)
+
+	real,parameter :: pi=4.*asin(1./sqrt(2.))
+	real :: select_range,cat_angle
+	integer :: column_number
+	integer,dimension(*) :: vision(:)
+
+	select_range=(2.*pi)/float(size(vision))
+	do column_number=1,size(vision)
+		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
+		!print*,vision
+		if ((select_range*float(column_number)>=(cat_angle+pi)) .and. (select_range*float(column_number-1)<=(cat_angle+pi))) then
+			vision(column_number)=1
+			!print*,"help"
+		else
+			vision(column_number)=0
+		end if
+	end do
+
+end subroutine angle_to_vision
+
+
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
@@ -332,7 +463,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column
 	integer :: point, connections, data_pos, origin, tester, columnmax, rowmax, counter, second_point
-	character(len=*) :: printer
+	logical :: printer
 	
 	!brain size
 	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1))
@@ -378,8 +509,8 @@ subroutine selector(idea,column,row,reward,response,printer)
 		
 	else
 	
-		rungs(1)=increment+idea%brain_weight(1,origin,column,row)!*&
-			!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+		rungs(1)=increment+idea%brain_weight(1,origin,column,row)*&
+			idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 		
 	end if
 	
@@ -399,14 +530,14 @@ subroutine selector(idea,column,row,reward,response,printer)
 				rungs(point)=rungs(point-1)		
 			!open node in network
 			else
-				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)!*&
-					!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			end if
 		!response array	
 		else
 		
-			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)!*&
-				!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+			rungs(point)=rungs(point-1)+increment+idea%brain_weight(point,origin,column,row)*&
+				idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			
 		end if
 		
@@ -414,7 +545,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 
 
 
-	if (printer=="yes") then
+	if (printer .eqv. .true.) then
 		print*,"Maximum Rungs Value, choice value:"
 		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
 		print*,"Weightings from Direction 1 to 8:"
@@ -434,7 +565,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 			if (fuck<=rungs(point)) then
 				
 				!moving diagnostic
-				if (printer=="yes") then
+				if (printer .eqv. .true.) then
 					print*,"Move from:"
 					print*,column,row
 					print*,"Move to:"
@@ -443,8 +574,8 @@ subroutine selector(idea,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)!+&
-					!reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+&
+					reward!*idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
@@ -598,9 +729,9 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !the openside variable decides which side data will flow out from
-subroutine initialiser(thought,vision,response,volume,openside)
+subroutine initialiser(thought,response,volume,openside)
 
-	integer,dimension(*) :: vision(:), response(:)
+	integer,dimension(*) :: response(:)
 	integer :: row_number, column_number, path_from, path_to, paths
 	integer :: rows, columns, info_ports,blood_rows
 	character(len=*) :: openside
@@ -623,12 +754,12 @@ subroutine initialiser(thought,vision,response,volume,openside)
 				do path_to=1,paths
 				
 					!activate the if statement below to stop upwards movement in the network
-					if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
-						thought%brain_weight(path_to,path_from,column_number,row_number)=0.
+					!if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
+					!	thought%brain_weight(path_to,path_from,column_number,row_number)=0.
 					
 					!set up the ones and zeroes
 					!zero for any weight directing data off the top if the top isn't open
-					else if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
+					if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
 						
 						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="top") .and. &
 							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
@@ -705,20 +836,28 @@ subroutine initialiser(thought,vision,response,volume,openside)
 	
 	!zero out neurochem
 	thought%neurochem=0
-
-	!set up empty vision array 
-	do column_number=1,size(vision)
-		vision(column_number)=0
-	end do
 	
 	!set up empty response array 
-	do column_number=1,size(vision)
+	do column_number=1,size(response)
 		response(column_number)=0
 	end do
 	
 end subroutine initialiser
 	
 	
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 
 !!!!!!!!!!!!!!!!!!!
@@ -727,15 +866,15 @@ end subroutine initialiser
 
 
 !this subroutine controls how the neurochem modifies weights to reward certain behaviour
-subroutine motivation(neurochemical,weighting,looking,move,effect)
+subroutine motivation(neurochemical,weighting,looking,new_look,effect)
 
 	integer,dimension(*) :: neurochemical(:,:,:)
 	real,dimension(*) :: weighting(:,:,:,:)
-	integer :: centre,column,row,looking,move,path
+	integer :: centre,column,row,looking,new_look,path
 	real :: effect
 	
 	centre=(size(weighting(1,1,:,1))/2)+1
-	difference_to_centre=abs(centre-looking)-abs(centre-(looking+move)) !pos if colser to centre, neg if further away
+	difference_to_centre=abs(centre-looking)-abs(centre-new_look) !pos if closer to centre, neg if further away
 	
 	!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
 	!if the response moves vision towards the centre (pleasure), increase the weight disparity
@@ -832,12 +971,39 @@ subroutine preprogram(weights)
 	!here, I am directing data coming from the extreme left and extreme right to cross the network
 	
 
-	!subsequent nodes on the path
-	do pathfinder=1,rows
-		weights(7,2,pathfinder,pathfinder)=1000000.0
+	!subsequent nodes on the path from extreme left
+	weights(8,2,1,1)=1000000.0
+	do pathfinder=2,rows
+		weights(8,1,pathfinder,pathfinder)=1000000.0
+	end do	
+	
+	!subsequent nodes on the path from extreme right
+	weights(6,2,columns,1)=1000000.0
+	do pathfinder=2,rows
+		weights(6,3,columns-pathfinder+1,pathfinder)=1000000.0
 	end do	
 	
 end subroutine preprogram
 	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!Testing - to be used only when testing - who would have thought!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
 end module welcome_to_dying

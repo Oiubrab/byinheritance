@@ -1,37 +1,44 @@
 program in_search_of_sanity
 use welcome_to_dying
+!note, needs an angle input, from the command line, to run
+!alternatively, place eudm in the folder and run it
 implicit none
 
-!network setup
-integer,parameter :: directions=8, rows=6, columns=11
+!network setup and reading
+integer,parameter :: directions=8, rows=7, columns=13
 integer :: blood_rows=rows+1
 type(mind) :: think
+logical :: file_exists, proaction=.false.
 
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
-integer,parameter :: data_rate=30
-real :: look !test variable for randomisiong vision array
 character(len=6) :: opener="bottom"
+integer :: movement, vision_place, new_vision_place
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
 integer :: column_number_3,info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves=0, epoch, epoch_total=40000
+integer :: moves, epoch, epoch_start
+
+!from the outside
+real,parameter :: pi=4.*asin(1./sqrt(2.))
+real :: select_range,cat_angle
+character(len=1000) :: angle_from_cat_cha
+integer :: cutoff=100
 
 !risk and reward
-integer :: blood_rate=20
+integer :: blood_rate=20, data_rate=20
 real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=20.0, chem_effect=1.0
 
 !testing
 real :: random_see
-integer :: knock_number=800, movement, vision_place
+logical :: testing=.true.
 
 !timing
-real :: start, finish, delay_time=0.05
+real :: start, finish, delay_time=0.00
 
 !printing
-character(len=3) :: print_yesno="yes"
 character(len=:),allocatable :: column_cha
 
 
@@ -54,28 +61,65 @@ allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the b
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
 allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point
 
-!initialise the network
-call initialiser(think,vision,response,blood_volume,opener)
+!read in the angle to the food
+CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha)
+READ(angle_from_cat_cha,*)cat_angle
 
-call preprogram(think%brain_weight)
+!translate angle to all the foods into vision node
+call angle_to_vision(vision,select_range,cat_angle)
 
-!test injection - an origin must accompany the data
-vision(6)=1 !change this to detect the food position when I attach this to the game
+!if this is the first time this network is activated, it has to be initialised
+INQUIRE(FILE="will.txt", EXIST=file_exists)
+if (file_exists .eqv. .true.) then
+	call read_write(think,epoch,moves,vision_place,"read")
+	epoch_start=epoch
+else
+
+	!initialise the network
+	call initialiser(think,response,blood_volume,opener)
+
+	call preprogram(think%brain_weight)
+
+	!injection into brain - an origin must accompany the data
+	!vision(6)=1
+	do column_number=1,columns
+		if (vision(column_number)==1) then	
+			think%brain_status(1,column_number,1)=2
+			think%brain_status(2,column_number,1)=1
+		end if
+	end do
+
+	if (testing .eqv. .true.) then
+		print*,"By Inheritance"
+		print*,"Brain moves: 0 Epoch: 0"
+		call print_network(think%brain_status,think%blood,vision,response)
+	end if
+
+	epoch=0
+	epoch_start=0
+	moves=0
+	vision_place=(columns/2)+1
+
+end if
+
+!currently rewards data moving towards middle of vision
+new_vision_place=findloc(vision,1,dim=1)
+call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,chem_effect)
+
+!injection from vision into brain
 do column_number=1,columns
 	if (vision(column_number)==1) then	
 		think%brain_status(1,column_number,1)=2
 		think%brain_status(2,column_number,1)=1
+		think%neurochem=0
 	end if
 end do
 
-if (print_yesno=="yes") then
-	print*,"By Inheritance"
-	print*,"Brain moves: 0 Epoch: 0"
-	call print_network(think%brain_status,think%blood,vision,response)
-end if
-
 !this is the new song
-do epoch=1,epoch_total
+do while (proaction .eqv. .false.)
+
+	!increment epoch
+	epoch=epoch+1
 
 	!add the blood gradient
 	if (mod(epoch,blood_rate)==1) then
@@ -86,34 +130,6 @@ do epoch=1,epoch_total
 	do column_number=1,columns
 		think%blood(column_number,1)=think%blood(column_number,1)*0.7
 	end do
-
-	!this is just here to knock the vision out, to test surprise
-	!if (epoch<25000) then
-	!	if (mod(epoch,knock_number)==0) then
-	!		vision=0
-	!		call random_number(random_see)
-	!		!vision(int(random_see*size(vision))+1)=1
-	!		vision(columns)=1
-	!	end if
-	!else
-	!	if (mod(epoch,knock_number*10)==0) then
-	!		vision=0
-	!		call random_number(random_see)
-	!		!vision(int(random_see*size(vision))+1)=1
-	!		vision(columns)=1
-	!	end if	
-	!end if
-
-	!injection from vision into brain
-	if (mod(epoch,data_rate)==1) then
-		do column_number=1,columns
-			if (vision(column_number)==1) then	
-				think%brain_status(1,column_number,1)=2
-				think%brain_status(2,column_number,1)=1
-				think%neurochem=0
-			end if
-		end do
-	end if
 
 	!first, randomise random row list
 	call randomised_list(row_random)
@@ -138,7 +154,7 @@ do epoch=1,epoch_total
 
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(think,column_random_number,row_random_number,node_use_reward,response,print_yesno)		
+				call selector(think,column_random_number,row_random_number,node_use_reward,response,testing)		
 							
 				!lag if necessary
 				call delay(delay_time)
@@ -147,7 +163,7 @@ do epoch=1,epoch_total
 				moves=moves+1
 			
 				!print each step
-				if (print_yesno=="yes") then
+				if (testing .eqv. .true.) then
 					print*,"By Inheritance"
 					print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
 					call print_network(think%brain_status,think%blood,vision,response)
@@ -164,32 +180,18 @@ do epoch=1,epoch_total
 					end do							
 				end if		
 
-				!test - response moves vision
+				!response translation into movement
 				do column_number_2=1,columns
 					if (response(column_number_2)==1) then
 						
-						!vision datum goes to the opposite of the response
-						!vision=0
-						!vision(columns-column_number_2+1)=1
-						
 						!vision datum is moved x number of spots depending on the response datum's position off centre
-						movement=-1*((columns/2+1)-column_number_2)
-						vision_place=findloc(vision,1,dim=1)
-						vision=0
-						if (vision_place+movement<1) then
-							vision(1)=1
-						else if (vision_place+movement>columns) then
-							vision(columns)=1
-						else
-							vision(vision_place+movement)=1
-						end if
+						movement=-1*((columns/2+1)-column_number_2) !neg is to the left, pos is to the right
 						
-						response=0
-						!currently rewards dara moving towards middle of vision
-						call motivation(think%neurochem,think%brain_weight,vision_place,movement,chem_effect)
+						!stop the main loop
+						proaction=.true.
+						
 					end if
 				end do
-				!call random_number(look)
 				
 			end if
 			
@@ -212,29 +214,49 @@ do epoch=1,epoch_total
 		
 	end do
 
-end do
-
-!report results of each channel between vision and response at the end
-!first, setup printing format
-column_cha(1:1) = "("
-do column_number=1,columns
-	if (column_number==columns) then
-		column_cha(2+3*(column_number-1):2+3*(column_number-1)+2)="I4)"
-	else
-		column_cha(2+3*(column_number-1):2+3*(column_number-1)+2)="I4,"
+	!if nothing has happened for data_rate epochs, emit another datum from vision
+	!if nothing has happened for cutoff, exit and output 0
+	if (mod(epoch-epoch_start,data_rate)==0) then
+		call angle_to_vision(vision,select_range,cat_angle)
+	else if ((epoch-epoch_start)>cutoff) then
+		proaction=.true.
+		movement=0
 	end if
+
 end do
-!now, print each combinating of vision and response
-do column_number=1,columns
-	print"(A28,I0,A1)","Response counter for vision ",column_number,":"
-	write(*,column_cha) response_counter(:,column_number)
-end do	
 
-!end timer
-call CPU_Time(finish)
+!print all the run data
+if (testing .eqv. .true.) then
 
-!print time elapsed
-print*," "
-call print_interval(start,finish)
+	!report results of each channel between vision and response at the end
+	!first, setup printing format
+	column_cha(1:1) = "("
+	do column_number=1,columns
+		if (column_number==columns) then
+			column_cha(2+3*(column_number-1):2+3*(column_number-1)+2)="I4)"
+		else
+			column_cha(2+3*(column_number-1):2+3*(column_number-1)+2)="I4,"
+		end if
+	end do
+	!now, print each combinating of vision and response
+	do column_number=1,columns
+		print"(A28,I0,A1)","Response counter for vision ",column_number,":"
+		write(*,column_cha) response_counter(:,column_number)
+	end do	
+
+	!end timer
+	call CPU_Time(finish)
+
+	!print time elapsed
+	print*," "
+	call print_interval(start,finish)
+
+end if
+
+!place all the information network in a text file
+call read_write(think,epoch,moves,new_vision_place,"write")
+
+!print out the movement variable
+print"(I0)",movement
 
 end program in_search_of_sanity

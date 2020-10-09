@@ -18,15 +18,16 @@ integer :: movement, vision_place, new_vision_place
 integer :: row_number, column_number, row_number_2, column_number_2
 integer :: column_number_3,info_number, row_random_number, column_random_number
 integer,allocatable :: column_random(:),row_random(:)
-integer :: moves, epoch
+integer :: moves, epoch, epoch_start
 
 !from the outside
 real,parameter :: pi=4.*asin(1./sqrt(2.))
 real :: select_range,cat_angle
 character(len=1000) :: angle_from_cat_cha
+integer :: cutoff=100
 
 !risk and reward
-integer :: blood_rate=20
+integer :: blood_rate=20, data_rate=20
 real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=20.0, chem_effect=1.0
 
 !testing
@@ -36,7 +37,7 @@ real :: random_see
 real :: start, finish, delay_time=0.00
 
 !printing
-character(len=3) :: print_yesno="no "
+character(len=3) :: print_yesno="no ",print_end="no "
 character(len=:),allocatable :: column_cha
 
 
@@ -64,22 +65,13 @@ CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha)
 READ(angle_from_cat_cha,*)cat_angle
 
 !translate angle to all the foods into vision node
-select_range=(2.*pi)/float(size(vision))
-do column_number=1,size(vision)
-	!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
-	!print*,vision
-	if ((select_range*float(column_number)>=(cat_angle+pi)) .and. (select_range*float(column_number-1)<=(cat_angle+pi))) then
-		vision(column_number)=1
-		!print*,"help"
-	else
-		vision(column_number)=0
-	end if
-end do
+call angle_to_vision(vision,select_range,cat_angle)
 
 !if this is the first time this network is activated, it has to be initialised
 INQUIRE(FILE="will.txt", EXIST=file_exists)
 if (file_exists .eqv. .true.) then
 	call read_write(think,epoch,moves,vision_place,"read")
+	epoch_start=epoch
 else
 
 	!initialise the network
@@ -103,6 +95,7 @@ else
 	end if
 
 	epoch=0
+	epoch_start=0
 	moves=0
 	vision_place=(columns/2)+1
 
@@ -220,10 +213,19 @@ do while (proaction .eqv. .false.)
 		
 	end do
 
+	!if nothing has happened for data_rate epochs, emit another datum from vision
+	!if nothing has happened for cutoff, exit and output 0
+	if (mod(epoch-epoch_start,data_rate)==0) then
+		call angle_to_vision(vision,select_range,cat_angle)
+	else if ((epoch-epoch_start)>cutoff) then
+		proaction=.true.
+		movement=0
+	end if
+
 end do
 
 !print all the run data
-if (print_yesno=="yes") then
+if (print_end=="yes") then
 
 	!report results of each channel between vision and response at the end
 	!first, setup printing format
