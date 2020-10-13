@@ -914,8 +914,13 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
 					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+100.0*(centre-new_difference)	
 				!straight punishment - further from centre, higher the punishment
-				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0*(new_difference+1)	
+				!ensure connection is not zeroed
+				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0*(new_difference+1)>1.0) then
+					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
+						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0*(new_difference+1)
+				else
+					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
+				end if
 				!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
 				!if the response moves vision towards the centre (pleasure), increase the weight disparity
 				!don't act on closed paths
