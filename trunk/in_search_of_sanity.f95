@@ -5,7 +5,7 @@ use welcome_to_dying
 implicit none
 
 !network setup and reading
-integer,parameter :: directions=8, rows=7, columns=13
+integer,parameter :: directions=8, rows=6, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 logical :: file_exists, proaction=.false.
@@ -25,18 +25,21 @@ integer :: moves, epoch, epoch_start
 real,parameter :: pi=4.*asin(1./sqrt(2.))
 real :: select_range,cat_angle
 character(len=1000) :: angle_from_cat_cha
-integer :: cutoff=100
+integer :: epoch_cutoff=100
 
 !risk and reward
 integer :: blood_rate=20, data_rate=20
-real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=20.0, chem_effect=1.0
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=0.43
+real :: neuro_reward=10000.0,neuro_punishment=1000.0
 
 !testing
 real :: random_see
-logical :: testing=.true.
+logical :: testing=.false.
+integer :: epoch_test_max=10000
+integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
-real :: start, finish, delay_time=0.00
+real :: start, finish, delay_time=0.07
 
 !printing
 character(len=:),allocatable :: column_cha
@@ -61,59 +64,81 @@ allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the b
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
 allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point
 
-!read in the angle to the food
-CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha)
-READ(angle_from_cat_cha,*)cat_angle
+!if no command line argument is present, turn testing on
+IF(COMMAND_ARGUMENT_COUNT().NE.1)THEN
+	testing=.true.
+ENDIF
 
-!translate angle to all the foods into vision node
-call angle_to_vision(vision,select_range,cat_angle)
+!engage the precycle system setup
+if (testing .eqv. .false.) then
 
-!if this is the first time this network is activated, it has to be initialised
-INQUIRE(FILE="will.txt", EXIST=file_exists)
-if (file_exists .eqv. .true.) then
-	call read_write(think,epoch,moves,vision_place,"read")
-	epoch_start=epoch
+	!read in the angle to the food
+	CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha)
+	READ(angle_from_cat_cha,*)cat_angle
+
+	!translate angle to all the foods into vision node
+	call angle_to_vision(vision,select_range,cat_angle)
+
+	!if this is is a continuation of the algorithm, then load the previous cycle
+	INQUIRE(FILE="will.txt", EXIST=file_exists)
+	if (file_exists .eqv. .true.) then
+		call read_write(think,epoch,moves,vision_place,"read")
+		epoch_start=epoch
+	!Otherwise, if this is the first time this network is activated, it has to be initialised
+	else
+
+		!initialise the network
+		call initialiser(think,response,blood_volume,opener)
+		call preprogram(think%brain_weight)
+
+		do column_number=1,columns
+			if (vision(column_number)==1) then	
+				think%brain_status(1,column_number,1)=2
+				think%brain_status(2,column_number,1)=1
+			end if
+		end do
+
+		epoch=0
+		epoch_start=0
+		moves=0
+		vision_place=(columns/2)+1
+
+	end if
+	
+	!currently rewards data moving towards middle of vision
+	new_vision_place=findloc(vision,1,dim=1)
+	call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,neuro_reward,neuro_punishment)
+
+!if testing, a one time setup is needed
 else
 
 	!initialise the network
 	call initialiser(think,response,blood_volume,opener)
-
-	call preprogram(think%brain_weight)
-
-	!injection into brain - an origin must accompany the data
-	!vision(6)=1
-	do column_number=1,columns
-		if (vision(column_number)==1) then	
-			think%brain_status(1,column_number,1)=2
-			think%brain_status(2,column_number,1)=1
-		end if
-	end do
-
-	if (testing .eqv. .true.) then
-		print*,"By Inheritance"
-		print*,"Brain moves: 0 Epoch: 0"
-		call print_network(think%brain_status,think%blood,vision,response)
-	end if
-
+	!call preprogram(think%brain_weight)
+	!give vision a starting datum
+	vision=0
+	vision((columns/2)+1)=1
+	!initialise counters
 	epoch=0
 	epoch_start=0
 	moves=0
-	vision_place=(columns/2)+1
-
+	
 end if
 
-!currently rewards data moving towards middle of vision
-new_vision_place=findloc(vision,1,dim=1)
-call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,chem_effect)
-
-!injection from vision into brain
+!injection, from vision into brain
 do column_number=1,columns
 	if (vision(column_number)==1) then	
 		think%brain_status(1,column_number,1)=2
 		think%brain_status(2,column_number,1)=1
-		think%neurochem=0
 	end if
 end do
+
+!print the first network for testing purposes
+if (testing .eqv. .true.) then
+	print*,"By Inheritance"
+	print*,"Brain moves: 0 Epoch: 0"
+	call print_network(think%brain_status,think%blood,vision,response)
+end if
 
 !this is the new song
 do while (proaction .eqv. .false.)
@@ -136,7 +161,7 @@ do while (proaction .eqv. .false.)
 	 
 	!now I shall send randomly selected neurons to have data moved
 	do row_number=1,rows
-	
+
 		!first, randomise column list for each row
 		call randomised_list(column_random)
 	
@@ -157,7 +182,9 @@ do while (proaction .eqv. .false.)
 				call selector(think,column_random_number,row_random_number,node_use_reward,response,testing)		
 							
 				!lag if necessary
-				call delay(delay_time)
+				if (testing .eqv. .true.) then
+					call delay(delay_time)
+				end if
 				
 				!increase the moves count
 				moves=moves+1
@@ -178,8 +205,10 @@ do while (proaction .eqv. .false.)
 							end do
 						end if
 					end do							
-				end if		
-
+				end if	
+					
+				!print*,think%neurochem
+				
 				!response translation into movement
 				do column_number_2=1,columns
 					if (response(column_number_2)==1) then
@@ -188,7 +217,45 @@ do while (proaction .eqv. .false.)
 						movement=-1*((columns/2+1)-column_number_2) !neg is to the left, pos is to the right
 						
 						!stop the main loop
-						proaction=.true.
+						if (testing .eqv. .false.) then
+							proaction=.true.
+							
+						!in testing, move the vision datum as required
+						else
+							
+							!get old vision position
+							vision_place=findloc(vision,1,dim=1)
+							!move vision according to movement
+							vision=0
+							if (vision_place+movement<1) then
+								vision(columns+movement+vision_place)=1
+							else if (vision_place+movement>columns) then
+								vision(movement+(columns-vision_place))=1
+							else
+								vision(vision_place+movement)=1
+							end if
+							new_vision_place=findloc(vision,1,dim=1)
+							response=0
+							!activate motivation here
+							call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,neuro_reward,neuro_punishment)
+							
+							!testing - print all non unity neurons
+							!do testrow=1,rows
+							!	do testcolumn=1,columns
+							!		do testorigin=1,directions
+							!			do testpoint=1,directions
+							!				if (think%brain_weight(testpoint,testorigin,testcolumn,testrow)>1.0) then
+							!					print*,testpoint,testorigin,testcolumn,testrow,think%brain_weight(testpoint,testorigin,testcolumn,testrow)
+							!				end if
+							!			end do
+							!		end do
+							!	end do
+							!end do
+							
+							!reset neurochem
+							think%neurochem=0
+							
+						end if
 						
 					end if
 				end do
@@ -214,15 +281,38 @@ do while (proaction .eqv. .false.)
 		
 	end do
 
-	!if nothing has happened for data_rate epochs, emit another datum from vision
-	!if nothing has happened for cutoff, exit and output 0
-	if (mod(epoch-epoch_start,data_rate)==0) then
-		call angle_to_vision(vision,select_range,cat_angle)
-	else if ((epoch-epoch_start)>cutoff) then
-		proaction=.true.
-		movement=0
-	end if
 
+	!if nothing has happened for epoch_cutoff, exit and output 0
+	if (testing .eqv. .false.) then
+
+		if ((epoch-epoch_start)>epoch_cutoff) then
+			proaction=.true.
+			movement=0
+		end if
+		
+	!in testing conditions, continue untill maximum epoch reached
+	!emit a vision datum after data_rate
+	else 
+	
+		!emit a vision datum after data_rate
+		if (mod(epoch-epoch_start,data_rate)==0) then
+			!injection, from vision into brain
+			do column_number=1,columns
+				if (vision(column_number)==1) then	
+					think%brain_status(1,column_number,1)=2
+					think%brain_status(2,column_number,1)=1
+				end if
+			end do
+			!reset epoch_start for next cycle
+			epoch_start=epoch
+		end if
+		!end the mainloop
+		if (epoch>=epoch_test_max) then
+			proaction=.true.
+		end if
+	
+	end if
+	
 end do
 
 !print all the run data
@@ -251,12 +341,14 @@ if (testing .eqv. .true.) then
 	print*," "
 	call print_interval(start,finish)
 
+else
+
+	!place all the information network in a text file
+	call read_write(think,epoch,moves,new_vision_place,"write")
+
+	!print out the movement variable
+	print"(I0)",movement
+
 end if
-
-!place all the information network in a text file
-call read_write(think,epoch,moves,new_vision_place,"write")
-
-!print out the movement variable
-print"(I0)",movement
 
 end program in_search_of_sanity
