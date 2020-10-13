@@ -30,7 +30,7 @@ integer :: epoch_cutoff=100
 !risk and reward
 integer :: blood_rate=20, data_rate=20
 real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=0.43
-real :: neuro_reward=10000.0,neuro_punishment=1000.0
+real :: neuro_reward=10000.0,neuro_punishment=10000.0
 
 !testing
 real :: random_see

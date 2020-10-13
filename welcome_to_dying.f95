@@ -928,7 +928,7 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+effect_plus
 	!					print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 	!				!pain: the vision datum is being driven away from the centre
-	!				else if (difference_to_centre<=-1) then
+					else if (difference_to_centre<=-1) then
 	!					!try adding to the other paths
 	!					!do path=1,size(weighting(:,1,1,1))
 	!					!	if ((path/=neurochemical(2,column,row)) .and. (weighting(path,neurochemical(1,column,row),column,row)/=0.0)) then
@@ -940,18 +940,18 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 	!					!	end if
 	!					!end do
 	!					!subtracting from errant path
-	!					if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus<1.0) then
+						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus<1.0) then
 	!						print*,"painone",column,row
 	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
-	!						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
 	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
-	!					else
+						else
 	!						print*,"painreduce",column,row
 	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
-	!						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-	!							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus
+							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
+								weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus
 	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
-	!					end if
+						end if
 					end if
 				end if
 					
