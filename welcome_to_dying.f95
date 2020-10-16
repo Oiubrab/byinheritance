@@ -528,11 +528,11 @@ subroutine selector(idea,column,row,reward,response,printer)
 			!open node in network
 			else
 				if (rung==1) then
-					rungs(rung)=increment+idea%brain_weight(point,origin,column,row)!*&
-						!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+					rungs(rung)=increment+idea%brain_weight(point,origin,column,row)*&
+						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 				else
-					rungs(rung)=rungs(rung-1)+increment+idea%brain_weight(point,origin,column,row)!*&
-						!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+					rungs(rung)=rungs(rung-1)+increment+idea%brain_weight(point,origin,column,row)*&
+						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 				end if	
 				
 			end if
@@ -540,11 +540,11 @@ subroutine selector(idea,column,row,reward,response,printer)
 		else
 		
 			if (rung==1) then
-				rungs(rung)=increment+idea%brain_weight(point,origin,column,row)!*&
-					!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				rungs(rung)=increment+idea%brain_weight(point,origin,column,row)*&
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			else
-				rungs(rung)=rungs(rung-1)+increment+idea%brain_weight(point,origin,column,row)!*&
-					!idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
+				rungs(rung)=rungs(rung-1)+increment+idea%brain_weight(point,origin,column,row)*&
+					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))
 			end if	
 			
 		end if
@@ -587,7 +587,7 @@ subroutine selector(idea,column,row,reward,response,printer)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)!+reward
+				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+reward
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
@@ -766,12 +766,12 @@ subroutine initialiser(thought,response,volume,openside)
 				do path_to=1,paths
 				
 					!activate the if statement below to stop upwards movement in the network
-					if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
-						thought%brain_weight(path_to,path_from,column_number,row_number)=0.
+					!if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
+					!	thought%brain_weight(path_to,path_from,column_number,row_number)=0.
 					
 					!set up the ones and zeroes
 					!zero for any weight directing data off the top if the top isn't open
-					else if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
+					if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
 						
 						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="top") .and. &
 							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
@@ -878,14 +878,14 @@ end subroutine initialiser
 
 
 !this subroutine controls how the neurochem modifies weights to reward certain behaviour
-subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect_down)
+subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up,effect_down,effect_all_around,grad)
 
 	integer,dimension(*) :: neurochemical(:,:,:)
 	real,dimension(*) :: weighting(:,:,:,:)
 	integer :: centre,column,row,path,effect_plus,effect_minus
 	integer :: difference_to_centre,new_difference,old_difference
-	real,intent(in) :: effect_up,effect_down
-	integer,intent(in) :: old_look,new_look
+	real,intent(in) :: effect_up,effect_down,effect_all_around,grad
+	integer,intent(in) :: old_look,new_look,centre !note, grad must be less than (centre-1)/2
 	
 	!zero out all free variables just in case
 	difference_to_centre=0
@@ -893,7 +893,6 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 	old_difference=0
 	
 	!calculate the difference from the centrepoint before and after movement
-	centre=(size(weighting(1,1,:,1))/2)+1
 	old_difference=abs(centre-old_look)
 	new_difference=abs(centre-new_look)
 	difference_to_centre=old_difference-new_difference !pos if closer to centre, neg if further away
@@ -904,7 +903,8 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 	!print*,difference_to_centre,old_look,new_look,old_difference,new_difference,effect_plus,effect_minus
 	!print*,neurochemical
 	
-	
+	!print*,effect_all_around*(float(centre-new_difference)/float(centre)),effect_all_around
+	!print*,effect_all_around*(float(new_difference+1)/float(centre)),effect_all_around
 	!note: neurochem(1,:,:) is origin, neurochem(2,:,:) is point
 	!weighting(x,:,x,x) is origin, weighting(:,x,x,x) is point
 	do row=1,size(neurochemical(1,1,:))	
@@ -912,12 +912,17 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 			if (neurochemical(1,column,row)/=0) then	
 				!straight reward - closer to centre, higher the reward
 				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+100.0*(centre-new_difference)	
+					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+effect_all_around*&
+					((float(centre)-(grad*float(new_difference)))/float(centre))	
 				!straight punishment - further from centre, higher the punishment
 				!ensure connection is not zeroed
-				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0*(new_difference+1)>1.0) then
+				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_all_around*&
+					(((grad*float(new_difference))+1.0)/float(centre))>1.0) then
+					
 					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0*(new_difference+1)
+						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_all_around*&
+						(((grad*float(new_difference))+1.0)/float(centre))
+						
 				else
 					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
 				end if
@@ -934,16 +939,6 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,effect_up,effect
 	!					print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 	!				!pain: the vision datum is being driven away from the centre
 					else if (difference_to_centre<=-1) then
-	!					!try adding to the other paths
-	!					!do path=1,size(weighting(:,1,1,1))
-	!					!	if ((path/=neurochemical(2,column,row)) .and. (weighting(path,neurochemical(1,column,row),column,row)/=0.0)) then
-	!					!		print*,"pain",column,row
-	!					!		print*,weighting(path,neurochemical(1,column,row),column,row)
-	!					!	weighting(path,neurochemical(1,column,row),column,row)=&
-	!					!			weighting(path,neurochemical(1,column,row),column,row)+effect_minus
-	!					!		print*,weighting(path,neurochemical(1,column,row),column,row)
-	!					!	end if
-	!					!end do
 	!					!subtracting from errant path
 						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus<1.0) then
 	!						print*,"painone",column,row
