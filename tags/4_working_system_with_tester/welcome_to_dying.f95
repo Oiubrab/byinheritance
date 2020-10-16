@@ -758,12 +758,12 @@ subroutine motivation(neurochemical,weighting,looking,move,effect)
 						!			exp(weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-1.0)
 						!	end if
 						!end do
-						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-1000.0<1.0) then
+						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-100.0<1.0) then
 							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
 						else
 							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
 								weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)&
-								-1000.0*abs(difference_to_centre)
+								-100.0*abs(difference_to_centre)
 						end if
 					end if
 				end if

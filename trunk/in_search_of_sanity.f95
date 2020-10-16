@@ -28,9 +28,10 @@ character(len=1000) :: angle_from_cat_cha
 integer :: epoch_cutoff=100
 
 !risk and reward
+!note, grad must be less than (centre-1)/2
 integer :: blood_rate=20, data_rate=20
-real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=0.43
-real :: neuro_reward=10000.0,neuro_punishment=10000.0
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=21.0
+real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=600.0, motivation_gradient=1.2
 
 !testing
 real :: random_see
@@ -63,6 +64,9 @@ allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direct
 allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the brain direction weighting 
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
 allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point
+
+!find vision centre
+vision_centre=(size(vision)/2)+1
 
 !if no command line argument is present, turn testing on
 IF(COMMAND_ARGUMENT_COUNT().NE.1)THEN
@@ -107,7 +111,8 @@ if (testing .eqv. .false.) then
 	
 	!currently rewards data moving towards middle of vision
 	new_vision_place=findloc(vision,1,dim=1)
-	call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,neuro_reward,neuro_punishment)
+	call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,&
+		vision_centre,neuro_reward,neuro_punishment,straight_balance,motivation_gradient)
 
 !if testing, a one time setup is needed
 else
@@ -237,7 +242,8 @@ do while (proaction .eqv. .false.)
 							new_vision_place=findloc(vision,1,dim=1)
 							response=0
 							!activate motivation here
-							call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,neuro_reward,neuro_punishment)
+							call motivation(think%neurochem,think%brain_weight,vision_place,&
+								new_vision_place,vision_centre,neuro_reward,neuro_punishment,straight_balance,motivation_gradient)
 							
 							!testing - print all non unity neurons
 							!do testrow=1,rows
