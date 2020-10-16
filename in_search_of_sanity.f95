@@ -13,7 +13,7 @@ logical :: file_exists, proaction=.false.
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 character(len=6) :: opener="bottom"
-integer :: movement, vision_place, new_vision_place
+integer :: movement, vision_place, new_vision_place, vision_centre
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
