@@ -882,7 +882,7 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 
 	integer,dimension(*) :: neurochemical(:,:,:)
 	real,dimension(*) :: weighting(:,:,:,:)
-	integer :: centre,column,row,path,effect_plus,effect_minus
+	integer :: column,row,path,effect_plus,effect_minus
 	integer :: difference_to_centre,new_difference,old_difference
 	real,intent(in) :: effect_up,effect_down,effect_all_around,grad
 	integer,intent(in) :: old_look,new_look,centre !note, grad must be less than (centre-1)/2
