@@ -14,6 +14,7 @@ logical :: file_exists, proaction=.false.
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 character(len=6) :: opener="bottom"
 integer :: movement, vision_place, new_vision_place, vision_centre
+integer :: vision_length=7, response_length=7
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
@@ -29,14 +30,14 @@ integer :: epoch_cutoff=100
 
 !risk and reward
 !note, grad must be less than (centre-1)/2
-integer :: blood_rate=20, data_rate=20
-real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=21.0
-real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=600.0, motivation_gradient=1.2
+integer :: blood_rate=20
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=2.0
+real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, motivation_gradient=1.5
 
 !testing
 real :: random_see
 logical :: testing=.false.
-integer :: epoch_test_max=10000
+integer :: epoch_test_max=10000, data_rate=20
 integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
@@ -55,9 +56,9 @@ call random_seed()
 
 !allocation block
 allocate(character(columns*3+1) :: column_cha) !allocate the printing variable
-allocate(vision(columns)) !allocate the array for input into the network, currently on top
-allocate(response(columns)) !allocate the array for output from the network, currently on bottom
-allocate(response_counter(columns,columns)) !allocat the array that will keep track of the response for printing purposes
+allocate(vision(vision_length)) !allocate the array for input into the network, currently on top
+allocate(response(response_length)) !allocate the array for output from the network, currently on bottom
+allocate(response_counter(response_length,response_length)) !allocat the array that will keep track of the response for printing purposes
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
@@ -95,7 +96,7 @@ if (testing .eqv. .false.) then
 		call initialiser(think,response,blood_volume,opener)
 		call preprogram(think%brain_weight)
 
-		do column_number=1,columns
+		do column_number=1,vision_length
 			if (vision(column_number)==1) then	
 				think%brain_status(1,column_number,1)=2
 				think%brain_status(2,column_number,1)=1
@@ -105,7 +106,7 @@ if (testing .eqv. .false.) then
 		epoch=0
 		epoch_start=0
 		moves=0
-		vision_place=(columns/2)+1
+		vision_place=vision_centre
 
 	end if
 	
@@ -119,7 +120,7 @@ else
 
 	!initialise the network
 	call initialiser(think,response,blood_volume,opener)
-	!call preprogram(think%brain_weight)
+	call preprogram(think%brain_weight)
 	!give vision a starting datum
 	vision=0
 	vision((columns/2)+1)=1
@@ -244,19 +245,6 @@ do while (proaction .eqv. .false.)
 							!activate motivation here
 							call motivation(think%neurochem,think%brain_weight,vision_place,&
 								new_vision_place,vision_centre,neuro_reward,neuro_punishment,straight_balance,motivation_gradient)
-							
-							!testing - print all non unity neurons
-							!do testrow=1,rows
-							!	do testcolumn=1,columns
-							!		do testorigin=1,directions
-							!			do testpoint=1,directions
-							!				if (think%brain_weight(testpoint,testorigin,testcolumn,testrow)>1.0) then
-							!					print*,testpoint,testorigin,testcolumn,testrow,think%brain_weight(testpoint,testorigin,testcolumn,testrow)
-							!				end if
-							!			end do
-							!		end do
-							!	end do
-							!end do
 							
 							!reset neurochem
 							think%neurochem=0

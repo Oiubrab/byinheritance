@@ -5,7 +5,7 @@ use welcome_to_dying
 implicit none
 
 !network setup and reading
-integer,parameter :: directions=8, rows=6, columns=11
+integer,parameter :: directions=8, rows=9, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 logical :: file_exists, proaction=.false.
@@ -29,14 +29,14 @@ integer :: epoch_cutoff=100
 
 !risk and reward
 !note, grad must be less than (centre-1)/2
-integer :: blood_rate=20, data_rate=20
-real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=21.0
-real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=600.0, motivation_gradient=1.2
+integer :: blood_rate=20
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=2.0
+real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, motivation_gradient=1.5
 
 !testing
 real :: random_see
-logical :: testing=.false.
-integer :: epoch_test_max=10000
+logical :: testing=.false., show_blood=.true.
+integer :: epoch_test_max=10000, data_rate=20
 integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
@@ -142,7 +142,11 @@ end do
 if (testing .eqv. .true.) then
 	print*,"By Inheritance"
 	print*,"Brain moves: 0 Epoch: 0"
-	call print_network(think%brain_status,think%blood,vision,response)
+	if (show_blood .eqv. .true.) then
+		call print_network(vision,response,think%brain_status,think%blood)
+	else
+		call print_network(vision,response,think%brain_status)
+	end if
 end if
 
 !this is the new song
@@ -198,7 +202,11 @@ do while (proaction .eqv. .false.)
 				if (testing .eqv. .true.) then
 					print*,"By Inheritance"
 					print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
-					call print_network(think%brain_status,think%blood,vision,response)
+					if (show_blood .eqv. .true.) then
+						call print_network(vision,response,think%brain_status,think%blood)
+					else
+						call print_network(vision,response,think%brain_status)
+					end if
 					!keep track of response
 					do column_number_2=1,columns
 						if (response(column_number_2)==1) then
@@ -244,19 +252,6 @@ do while (proaction .eqv. .false.)
 							!activate motivation here
 							call motivation(think%neurochem,think%brain_weight,vision_place,&
 								new_vision_place,vision_centre,neuro_reward,neuro_punishment,straight_balance,motivation_gradient)
-							
-							!testing - print all non unity neurons
-							!do testrow=1,rows
-							!	do testcolumn=1,columns
-							!		do testorigin=1,directions
-							!			do testpoint=1,directions
-							!				if (think%brain_weight(testpoint,testorigin,testcolumn,testrow)>1.0) then
-							!					print*,testpoint,testorigin,testcolumn,testrow,think%brain_weight(testpoint,testorigin,testcolumn,testrow)
-							!				end if
-							!			end do
-							!		end do
-							!	end do
-							!end do
 							
 							!reset neurochem
 							think%neurochem=0

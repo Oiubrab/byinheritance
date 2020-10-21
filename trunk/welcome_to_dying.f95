@@ -57,10 +57,10 @@ end subroutine delay
 
 
 
-subroutine print_network(brain,blood,vision,response)
+subroutine print_network(vision,response,brain,blood)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
-	real,dimension(*) :: blood(:,:)
+	real,optional,dimension(*) :: blood(:,:)
 	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns
 	!printing
 	integer,parameter :: individual_width=2, individual_blood=6, separation_space=10
@@ -72,10 +72,19 @@ subroutine print_network(brain,blood,vision,response)
 	
 	!establish network dimensions
 	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
-	blood_rows=size(blood(1,:)); blood_columns=size(blood(:,1))
+	!if blood is present, set ther size, otherwise the size is zero
+	if (present(blood)) then
+		blood_rows=size(blood(1,:)); blood_columns=size(blood(:,1))
+	else 
+		blood_rows=0; blood_columns=0
+	end if	
 	
-	!allocate the printing row with enough space to fit both brain and blood
-	allocate(character((columns*individual_width)+(blood_columns*individual_blood)+2+separation_space) :: print_row) !allocate the printing variable
+	!allocate the printing row with enough space to fit both brain and blood if blood is present
+	if (present(blood)) then
+		allocate(character((columns*individual_width)+(blood_columns*individual_blood)+2+separation_space) :: print_row) !allocate the printing variable
+	else
+		allocate(character((columns*individual_width)+2) :: print_row) !allocate the printing variable	
+	end if
 	
 	!set the width to print for each datum
 	write(individual_width_cha,*)individual_width
@@ -92,7 +101,7 @@ subroutine print_network(brain,blood,vision,response)
 	print*,print_row(1:individual_width*columns)
 	print*," "
 
-	!print the brain and blood networks beside eachother
+	!the main brain printing loop
 	do row_counter=1,rows
 		!this loop now handles printing both the brain and the blood networks, hence the columns*2
 		!the columns+1 position is empty and creates a space between the two networks
@@ -101,18 +110,21 @@ subroutine print_network(brain,blood,vision,response)
 			if (column_counter<=columns) then
 				write(data_cha,width)brain(info_ports,column_counter,row_counter)
 				print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-			!create a break for the two networks
-			else if (column_counter==columns+1) then
-				print_row(column_counter*individual_width-(individual_width-1):&
-					column_counter*individual_width-(individual_width-1)+separation_space)="  "
-			!and blood numbers to the second half
-			else
-				write(blood_cha,blood_width)blood(column_counter-(columns+1),row_counter)
-				!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
-				!to: brain columns + separation + blood column number * blood column width
-				print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
-					individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
-					(column_counter-(columns+1))*individual_blood)=blood_cha
+			!print the brain and blood networks beside eachother if blood is passed in
+			else if (present(blood)) then
+				!create a break for the two networks
+				if (column_counter==columns+1) then
+					print_row(column_counter*individual_width-(individual_width-1):&
+						column_counter*individual_width-(individual_width-1)+separation_space)="  "
+				!and blood numbers to the second half
+				else
+					write(blood_cha,blood_width)blood(column_counter-(columns+1),row_counter)
+					!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
+					!to: brain columns + separation + blood column number * blood column width
+					print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
+						individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
+						(column_counter-(columns+1))*individual_blood)=blood_cha
+				end if
 			end if
 		end do
 		print *,print_row
@@ -125,18 +137,20 @@ subroutine print_network(brain,blood,vision,response)
 		if (column_counter<=columns) then
 			write(data_cha,width)response(column_counter)
 			print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-			!create a break for the two networks
-		else if (column_counter==columns+1) then
-			print_row(column_counter*individual_width-(individual_width-1):&
-				column_counter*individual_width-(individual_width-1)+separation_space)="  "
-		!and blood numbers to the second half
-		else
-			write(blood_cha,blood_width)blood(column_counter-(columns+1),blood_rows)
-			!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
-			!to: brain columns + separation + blood column number * blood column width
-			print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
-				individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
-				(column_counter-(columns+1))*individual_blood)=blood_cha
+		!print the brain and blood networks beside eachother if blood is passed in
+		else if (present(blood)) then
+			if (column_counter==columns+1) then
+				print_row(column_counter*individual_width-(individual_width-1):&
+					column_counter*individual_width-(individual_width-1)+separation_space)="  "
+			!and blood numbers to the second half
+			else
+				write(blood_cha,blood_width)blood(column_counter-(columns+1),blood_rows)
+				!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
+				!to: brain columns + separation + blood column number * blood column width
+				print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
+					individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
+					(column_counter-(columns+1))*individual_blood)=blood_cha
+			end if
 		end if
 	end do
 	print*,print_row
