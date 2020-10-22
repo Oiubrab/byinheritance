@@ -12,9 +12,9 @@ logical :: file_exists, proaction=.false.
 
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
-character(len=6) :: opener="bottom"
 integer :: movement, vision_place, new_vision_place, vision_centre
 integer :: vision_length=7, response_length=7
+integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
@@ -36,12 +36,12 @@ real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, mo
 
 !testing
 real :: random_see
-logical :: testing=.false.
-integer :: epoch_test_max=10000, data_rate=20
+logical :: testing=.false., show_blood=.true.
+integer :: epoch_test_max=10000, data_rate=20, random_probability=20
 integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
-real :: start, finish, delay_time=0.07
+real :: start, finish, delay_time=0.5
 
 !printing
 character(len=:),allocatable :: column_cha
@@ -93,13 +93,13 @@ if (testing .eqv. .false.) then
 	else
 
 		!initialise the network
-		call initialiser(think,response,blood_volume,opener)
+		call initialiser(think,response,blood_volume,response_socket)
 		call preprogram(think%brain_weight)
 
 		do column_number=1,vision_length
 			if (vision(column_number)==1) then	
-				think%brain_status(1,column_number,1)=2
-				think%brain_status(2,column_number,1)=1
+				think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
+				think%brain_status(2,plugin(column_number,vision_socket,vision_length,"brain"),1)=1
 			end if
 		end do
 
@@ -119,11 +119,11 @@ if (testing .eqv. .false.) then
 else
 
 	!initialise the network
-	call initialiser(think,response,blood_volume,opener)
+	call initialiser(think,response,blood_volume,response_socket)
 	call preprogram(think%brain_weight)
 	!give vision a starting datum
 	vision=0
-	vision((columns/2)+1)=1
+	vision((vision_length/2)+1)=1
 	!initialise counters
 	epoch=0
 	epoch_start=0
@@ -132,10 +132,10 @@ else
 end if
 
 !injection, from vision into brain
-do column_number=1,columns
+do column_number=1,vision_length
 	if (vision(column_number)==1) then	
-		think%brain_status(1,column_number,1)=2
-		think%brain_status(2,column_number,1)=1
+		think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
+		think%brain_status(2,plugin(column_number,vision_socket,vision_length,"brain"),1)=1
 	end if
 end do
 
@@ -143,7 +143,11 @@ end do
 if (testing .eqv. .true.) then
 	print*,"By Inheritance"
 	print*,"Brain moves: 0 Epoch: 0"
-	call print_network(think%brain_status,think%blood,vision,response)
+	if (show_blood .eqv. .true.) then
+		call print_network(vision,vision_socket,response,response_socket,think%brain_status,think%blood)
+	else
+		call print_network(vision,vision_socket,response,response_socket,think%brain_status)
+	end if
 end if
 
 !this is the new song
@@ -154,12 +158,14 @@ do while (proaction .eqv. .false.)
 
 	!add the blood gradient
 	if (mod(epoch,blood_rate)==1) then
-		do column_number=1,columns 
-			think%blood(column_number,blood_rows)=think%blood(column_number,blood_rows)+blood_volume	
+		do column_number=1,response_length
+			think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)=&
+				think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)+blood_volume	
 		end do	
 	end if
-	do column_number=1,columns
-		think%blood(column_number,1)=think%blood(column_number,1)*0.7
+	do column_number=1,vision_length
+		think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
+			think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
 	end do
 
 	!first, randomise random row list
@@ -185,7 +191,7 @@ do while (proaction .eqv. .false.)
 
 				!here is the important subroutine call that moves the data depending on how fat the neuron is 
 				!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-				call selector(think,column_random_number,row_random_number,node_use_reward,response,testing)		
+				call selector(think,column_random_number,row_random_number,node_use_reward,response,response_socket,testing)		
 							
 				!lag if necessary
 				if (testing .eqv. .true.) then
@@ -199,11 +205,15 @@ do while (proaction .eqv. .false.)
 				if (testing .eqv. .true.) then
 					print*,"By Inheritance"
 					print'(A15,I0,A8,I0)',"Brain moves: ",moves,"Epoch: ",epoch
-					call print_network(think%brain_status,think%blood,vision,response)
+					if (show_blood .eqv. .true.) then
+						call print_network(vision,vision_socket,response,response_socket,think%brain_status,think%blood)
+					else
+						call print_network(vision,vision_socket,response,response_socket,think%brain_status)
+					end if
 					!keep track of response
-					do column_number_2=1,columns
+					do column_number_2=1,response_length
 						if (response(column_number_2)==1) then
-							do column_number_3=1,columns
+							do column_number_3=1,vision_length
 								if (vision(column_number_3)==1) then
 									response_counter(column_number_2,column_number_3)=&
 										response_counter(column_number_2,column_number_3)+1
@@ -216,11 +226,11 @@ do while (proaction .eqv. .false.)
 				!print*,think%neurochem
 				
 				!response translation into movement
-				do column_number_2=1,columns
+				do column_number_2=1,response_length
 					if (response(column_number_2)==1) then
 						
 						!vision datum is moved x number of spots depending on the response datum's position off centre
-						movement=-1*((columns/2+1)-column_number_2) !neg is to the left, pos is to the right
+						movement=-1*((response_length/2+1)-column_number_2) !neg is to the left, pos is to the right
 						
 						!stop the main loop
 						if (testing .eqv. .false.) then
@@ -233,10 +243,15 @@ do while (proaction .eqv. .false.)
 							vision_place=findloc(vision,1,dim=1)
 							!move vision according to movement
 							vision=0
-							if (vision_place+movement<1) then
-								vision(columns+movement+vision_place)=1
-							else if (vision_place+movement>columns) then
-								vision(movement+(columns-vision_place))=1
+							
+							!every so often move the vision datum randomly
+							call random_number(random_see)
+							if (int(random_see*float(random_probability))==(random_probability/2)) then
+								vision(int(random_see)*vision_length+1)=1
+							else if (vision_place+movement<1) then
+								vision(vision_length+movement+vision_place)=1
+							else if (vision_place+movement>vision_length) then
+								vision(movement+(vision_length-vision_place))=1
 							else
 								vision(vision_place+movement)=1
 							end if
@@ -248,6 +263,7 @@ do while (proaction .eqv. .false.)
 							
 							!reset neurochem
 							think%neurochem=0
+							
 							
 						end if
 						
@@ -291,10 +307,10 @@ do while (proaction .eqv. .false.)
 		!emit a vision datum after data_rate
 		if (mod(epoch-epoch_start,data_rate)==0) then
 			!injection, from vision into brain
-			do column_number=1,columns
+			do column_number=1,vision_length
 				if (vision(column_number)==1) then	
-					think%brain_status(1,column_number,1)=2
-					think%brain_status(2,column_number,1)=1
+					think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
+					think%brain_status(2,plugin(column_number,vision_socket,vision_length,"brain"),1)=1
 				end if
 			end do
 			!reset epoch_start for next cycle
@@ -315,15 +331,15 @@ if (testing .eqv. .true.) then
 	!report results of each channel between vision and response at the end
 	!first, setup printing format
 	column_cha(1:1) = "("
-	do column_number=1,columns
-		if (column_number==columns) then
+	do column_number=1,response_length
+		if (column_number==response_length) then
 			column_cha(2+3*(column_number-1):2+3*(column_number-1)+2)="I4)"
 		else
 			column_cha(2+3*(column_number-1):2+3*(column_number-1)+2)="I4,"
 		end if
 	end do
 	!now, print each combinating of vision and response
-	do column_number=1,columns
+	do column_number=1,vision_length
 		print"(A28,I0,A1)","Response counter for vision ",column_number,":"
 		write(*,column_cha) response_counter(:,column_number)
 	end do	
