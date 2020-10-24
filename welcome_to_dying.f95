@@ -57,17 +57,18 @@ end subroutine delay
 
 
 
-subroutine print_network(vision,response,brain,blood)
+subroutine print_network(vision,vision_socket,response,response_socket,brain,blood)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
 	real,optional,dimension(*) :: blood(:,:)
-	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns
+	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns
+	integer,intent(in) :: vision_socket,response_socket
 	!printing
 	integer,parameter :: individual_width=2, individual_blood=6, separation_space=10
 	character(len=individual_width) :: data_cha
 	character(len=individual_blood) :: blood_cha
 	character(len=12) :: individual_width_cha,separation_cha,individual_blood_cha
-	character(len=17) :: width,blood_width
+	character(len=17) :: width,blood_width,empty_width
 	character(len=:),allocatable :: print_row
 	
 	!establish network dimensions
@@ -78,6 +79,8 @@ subroutine print_network(vision,response,brain,blood)
 	else 
 		blood_rows=0; blood_columns=0
 	end if	
+	!and set the com arrays
+	vision_columns=size(vision); response_columns=size(response)
 	
 	!allocate the printing row with enough space to fit both brain and blood if blood is present
 	if (present(blood)) then
@@ -91,15 +94,24 @@ subroutine print_network(vision,response,brain,blood)
 	write(individual_blood_cha,*)individual_blood
 	!width for brain/blood
 	width="(I"//trim(individual_width_cha)//")"
+	empty_width="(A"//trim(individual_width_cha)//")"
 	blood_width="(F"//trim(individual_blood_cha)//".2)"
 
 	!print the vision array first
 	do column_counter=1,columns
-		write(data_cha,width)vision(column_counter)
+		!print*,plugin(column_counter,vision_socket,vision_columns,"array"),column_counter
+		!set up printer to print vision array in the correct columns
+		if ((column_counter>=plugin(1,vision_socket,vision_columns,"brain")) .and. &
+			(column_counter<=plugin(vision_columns,vision_socket,vision_columns,"brain"))) then
+			write(data_cha,width)vision(plugin(column_counter,vision_socket,vision_columns,"array"))
+		else
+			write(data_cha,empty_width)"  "
+		end if
 		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
 	end do
 	print*,print_row(1:individual_width*columns)
 	print*," "
+	print_row(:)="  "
 
 	!the main brain printing loop
 	do row_counter=1,rows
@@ -130,13 +142,20 @@ subroutine print_network(vision,response,brain,blood)
 		print *,print_row
 	end do
 	print*," "
+	print_row(:)="  "
 
 	!print the response and equivalent blood arrays last
 	do column_counter=1,columns+blood_columns+1
 		!add response numbers to the first half of the row
 		if (column_counter<=columns) then
-			write(data_cha,width)response(column_counter)
-			print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
+			!place them where the socket is
+			if ((column_counter>=plugin(1,response_socket,response_columns,"brain")) .and. &
+				(column_counter<=plugin(response_columns,response_socket,response_columns,"brain"))) then
+				write(data_cha,width)response(plugin(column_counter,response_socket,response_columns,"array"))
+			else
+				write(data_cha,empty_width)"  "
+			end if
+		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
 		!print the brain and blood networks beside eachother if blood is passed in
 		else if (present(blood)) then
 			if (column_counter==columns+1) then
@@ -248,7 +267,6 @@ subroutine read_write(think,epoch,moves,vision,direction)
 	end if
 	
 end subroutine read_write
-
 
 
 
@@ -419,6 +437,24 @@ end function weight_direction
 
 
 
+!this function calculates the position of the corresponding brain/array column, given an array/brain column and a socket
+!socket number represents where the middle of the corresponding array meets the brain network
+!label is what is meant to be found, i.e brain label will give the brain column for a given response array position
+function plugin(in_pos,socket,com_length,label) result(out_pos)
+
+	character(len=*) :: label
+	integer,intent(in) :: in_pos,socket,com_length
+	integer :: out_pos
+	
+	if (label=="brain") then
+		out_pos=socket-((com_length/2)+1)+in_pos
+	else if (label=="array") then
+		out_pos=in_pos-socket+((com_length/2)+1)
+		!print*,"here",in_pos,socket,((com_length/2)+1),out_pos
+	end if
+	
+end function plugin
+
 
 
 
@@ -472,19 +508,19 @@ end subroutine angle_to_vision
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(idea,column,row,reward,response,printer)
+subroutine selector(idea,column,row,reward,response,response_socket,printer)
 
 	type(mind) :: idea
 	integer,allocatable :: response(:),connection_translation(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
-	integer,intent(in) :: row,column
+	integer,intent(in) :: row,column,response_socket
 	integer :: rung, point, connections, data_pos, origin, tester
-	integer :: columnmax, rowmax, counter, second_point
+	integer :: columnmax, rowmax, counter, second_point, response_length
 	logical :: printer
 	
 	!brain size
-	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1))
+	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1)); response_length=size(response)
 	
 	!setup amount of data ports, data position and origin label
 	connections=size(idea%brain_weight(:,1,1,1))
@@ -609,18 +645,10 @@ subroutine selector(idea,column,row,reward,response,printer)
 				idea%neurochem(1,column,row)=origin
 				idea%neurochem(2,column,row)=point				
 				
-				!if data is moving off the brain, direct it into the response array
-				!data moving off the sides needs to be directed to the correct row
-				if ((point_to_neuron(column,row,point,"column")==0) .or. &
-					(point_to_neuron(column,row,point,"column")==columnmax+1)) then
+				!if data is moving off the brain, direct it into the response array	
+				if (point_to_neuron(column,row,point,"row")==rowmax+1) then
 					
-					response(point_to_neuron(column,row,point,"row"))=1
-					
-				!data moving of the top/bottom needs to be directed to the correct column
-				else if ((point_to_neuron(column,row,point,"row")==0) .or. &
-					(point_to_neuron(column,row,point,"row")==rowmax+1)) then
-					
-					response(point_to_neuron(column,row,point,"column"))=1
+					response(plugin(point_to_neuron(column,row,point,"column"),response_socket,response_length,"array"))=1
 					
 				!if the data is not moving off the brain, move it normally
 				else	
@@ -754,19 +782,19 @@ end subroutine blood_mover
 
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
-!the openside variable decides which side data will flow out from
-subroutine initialiser(thought,response,volume,openside)
+!data is setup to flow to the bottom
+subroutine initialiser(thought,response,volume,response_socket)
 
 	integer,dimension(*) :: response(:)
-	integer :: row_number, column_number, path_from, path_to, paths
-	integer :: rows, columns, info_ports,blood_rows
-	character(len=*) :: openside
+	integer :: row_number, column_number, path_from, path_to, paths, response_columns
+	integer :: rows, columns, info_ports,blood_rows,response_socket
 	real :: volume
 	type(mind) :: thought
 	
 	rows=size(thought%brain_weight(1,1,1,:)); columns=size(thought%brain_weight(1,1,:,1)) 
 	info_ports=size(thought%brain_status(:,1,1)); paths=size(thought%brain_weight(1,:,1,1))
 	blood_rows=size(thought%blood(1,:))
+	response_columns=size(response)
 	
 	!set the initial brain values first
 	do row_number=1,rows
@@ -779,34 +807,24 @@ subroutine initialiser(thought,response,volume,openside)
 			do path_from=1,paths
 				do path_to=1,paths
 				
-					!activate the if statement below to stop upwards movement in the network
-					!if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
-					!	thought%brain_weight(path_to,path_from,column_number,row_number)=0.
 					
 					!set up the ones and zeroes
 					!zero for any weight directing data off the top if the top isn't open
 					if (point_to_neuron(column_number,row_number,path_to,"row")==0) then
 						
-						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="top") .and. &
-							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
-						
-							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-						
-						else
-						
-							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
-						
-						end if
+						thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
 									
 					!or bottom
+					!note, path to the response array is set up here
 					else if (point_to_neuron(column_number,row_number,path_to,"row")==rows+1) then
-						
-
-						if ((point_to_neuron(column_number,row_number,path_to,"column")>0) .and. (openside=="bottom") .and. &
-							(point_to_neuron(column_number,row_number,path_to,"column")<columns+1)) then
-						
+							
+						if ((plugin(point_to_neuron(column_number,row_number,path_to,"column"),&
+							response_socket,response_columns,"array")>=1) .and. &
+							(plugin(point_to_neuron(column_number,row_number,path_to,"column"),&
+							response_socket,response_columns,"array")<=response_columns)) then
+				
 							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-						
+
 						else
 						
 							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
@@ -816,42 +834,29 @@ subroutine initialiser(thought,response,volume,openside)
 					!zero for any weight diracting data off the left if it isn't open
 					else if (point_to_neuron(column_number,row_number,path_to,"column")==0) then
 						
-						if ((point_to_neuron(column_number,row_number,path_to,"row")>0) .and. (openside=="left") .and. &
-							(point_to_neuron(column_number,row_number,path_to,"row")<rows+1)) then
-						
-							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-						
-						else
-						
-							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
-						
-						end if
+						thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
 						
 					!or right
 					else if (point_to_neuron(column_number,row_number,path_to,"column")==columns+1) then
 						
-						if ((point_to_neuron(column_number,row_number,path_to,"row")>0) .and. (openside=="right") .and. &
-							(point_to_neuron(column_number,row_number,path_to,"row")<rows+1)) then
-						
-							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-						
-						else
-						
 							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
-						
-						end if
-						
+			
 					!otherwise, all weights start off at one
 					else
 						thought%brain_weight(path_to,path_from,column_number,row_number)=1.
 					end if
+					
+					!activate the if statement below to stop upwards movement in the network
+					!if ((path_to==1) .or. (path_to==2) .or. (path_to==3)) then
+					!	thought%brain_weight(path_to,path_from,column_number,row_number)=0.
+					!end if
 					
 				end do
 			end do
 		end do
 	end do
 	
-	!setting up blood network, below only adds 0.1 to every entry
+	!setting up blood network
 	do row_number=1,blood_rows
 		do column_number=1,columns
 			
@@ -914,11 +919,7 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 	!update effects with difference_to_centre values
 	effect_plus=effect_up*abs(difference_to_centre)
 	effect_minus=effect_down*abs(difference_to_centre)
-	!print*,difference_to_centre,old_look,new_look,old_difference,new_difference,effect_plus,effect_minus
-	!print*,neurochemical
 	
-	!print*,effect_all_around*(float(centre-new_difference)/float(centre)),effect_all_around
-	!print*,effect_all_around*(float(new_difference+1)/float(centre)),effect_all_around
 	!note: neurochem(1,:,:) is origin, neurochem(2,:,:) is point
 	!weighting(x,:,x,x) is origin, weighting(:,x,x,x) is point
 	do row=1,size(neurochemical(1,1,:))	
@@ -944,27 +945,18 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 				!if the response moves vision towards the centre (pleasure), increase the weight disparity
 				!don't act on closed paths
 				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)/=0.0) then
-	!				!pleasure: the vision datum is being driven closer to centre
+					!pleasure: the vision datum is being driven closer to centre
 					if (difference_to_centre>=1) then
-	!					print*,"pleasure",column,row
-	!					print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
 							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+effect_plus
-	!					print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
-	!				!pain: the vision datum is being driven away from the centre
+					!pain: the vision datum is being driven away from the centre
 					else if (difference_to_centre<=-1) then
-	!					!subtracting from errant path
+						!subtracting from errant path
 						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus<1.0) then
-	!						print*,"painone",column,row
-	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
-	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 						else
-	!						print*,"painreduce",column,row
-	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
 								weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus
-	!						print*,weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)
 						end if
 					end if
 				end if
@@ -987,7 +979,7 @@ subroutine weight_reducer(weights,column,row)
 	real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
 	real,parameter :: second_period_inverse=10.0,second_amplitude=0.0008,second_sin_shift=300.0 !2nd sinusoid, 2nd stage, parameters
 	real,parameter :: normal_height=4.3,normal_distance=2.6,normal_width=5.205 !gaussian parameters
-	real,parameter :: overload=5.0 !over 1050 constant reduction
+	real,parameter :: overload=5.0
 	
 	connections=size(weights(:,1,1,1))
 
