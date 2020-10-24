@@ -818,13 +818,13 @@ subroutine initialiser(thought,response,volume,response_socket)
 					!note, path to the response array is set up here
 					else if (point_to_neuron(column_number,row_number,path_to,"row")==rows+1) then
 							
-						if ((plugin(point_to_neuron(column_number,row_number,path_to,"column"),&
-							response_socket,response_columns,"array")>=1) .and. &
-							(plugin(point_to_neuron(column_number,row_number,path_to,"column"),&
-							response_socket,response_columns,"array")<=response_columns)) then
+						if ((point_to_neuron(column_number,row_number,path_to,"column")>=&
+							plugin(1,response_socket,response_columns,"brain")) .and. &
+							(point_to_neuron(column_number,row_number,path_to,"column")<=&
+							plugin(response_columns,response_socket,response_columns,"brain"))) then
 				
 							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-
+						
 						else
 						
 							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	

@@ -5,7 +5,7 @@ use welcome_to_dying
 implicit none
 
 !network setup and reading
-integer,parameter :: directions=8, rows=7, columns=15
+integer,parameter :: directions=8, rows=6, columns=11
 integer :: blood_rows=rows+1
 type(mind) :: think
 logical :: file_exists, proaction=.false.
@@ -14,7 +14,7 @@ logical :: file_exists, proaction=.false.
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 integer :: movement, vision_place, new_vision_place, vision_centre
 integer :: vision_length=7, response_length=5
-integer :: vision_socket=4, response_socket=13 !socket number represents where the middle of the corresponding array meets the brain network
+integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
@@ -41,7 +41,7 @@ integer :: epoch_test_max=5000, data_rate=20, random_probability=200
 integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
-real :: start, finish, delay_time=0.05
+real :: start, finish, delay_time=0.1
 
 !printing
 character(len=:),allocatable :: column_cha
@@ -94,7 +94,7 @@ if (testing .eqv. .false.) then
 
 		!initialise the network
 		call initialiser(think,response,blood_volume,response_socket)
-		!call preprogram(think%brain_weight)
+		call preprogram(think%brain_weight)
 
 		do column_number=1,vision_length
 			if (vision(column_number)==1) then	
@@ -120,7 +120,7 @@ else
 
 	!initialise the network
 	call initialiser(think,response,blood_volume,response_socket)
-	!call preprogram(think%brain_weight)
+	call preprogram(think%brain_weight)
 	!give vision a starting datum
 	vision=0
 	vision((vision_length/2)+1)=1
