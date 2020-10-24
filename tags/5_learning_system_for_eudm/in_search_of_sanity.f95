@@ -13,7 +13,7 @@ logical :: file_exists, proaction=.false.
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 integer :: movement, vision_place, new_vision_place, vision_centre
-integer :: vision_length=7, response_length=7
+integer :: vision_length=7, response_length=5
 integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
@@ -37,11 +37,11 @@ real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, mo
 !testing
 real :: random_see
 logical :: testing=.false., show_blood=.true.
-integer :: epoch_test_max=10000, data_rate=20, random_probability=20
+integer :: epoch_test_max=5000, data_rate=20, random_probability=200
 integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
-real :: start, finish, delay_time=0.5
+real :: start, finish, delay_time=0.1
 
 !printing
 character(len=:),allocatable :: column_cha
@@ -58,7 +58,7 @@ call random_seed()
 allocate(character(columns*3+1) :: column_cha) !allocate the printing variable
 allocate(vision(vision_length)) !allocate the array for input into the network, currently on top
 allocate(response(response_length)) !allocate the array for output from the network, currently on bottom
-allocate(response_counter(response_length,response_length)) !allocat the array that will keep track of the response for printing purposes
+allocate(response_counter(response_length,vision_length)) !allocat the array that will keep track of the response for printing purposes
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
@@ -248,6 +248,8 @@ do while (proaction .eqv. .false.)
 							call random_number(random_see)
 							if (int(random_see*float(random_probability))==(random_probability/2)) then
 								vision(int(random_see)*vision_length+1)=1
+								print*,"Random Shift"
+							!otherwise, move the vision datum in response to the response datum position
 							else if (vision_place+movement<1) then
 								vision(vision_length+movement+vision_place)=1
 							else if (vision_place+movement>vision_length) then
@@ -257,6 +259,9 @@ do while (proaction .eqv. .false.)
 							end if
 							new_vision_place=findloc(vision,1,dim=1)
 							response=0
+							print*,"vision place, movement, new vision place:"
+							print"(3(I3))",vision_place,movement,new_vision_place
+							print*," "
 							!activate motivation here
 							call motivation(think%neurochem,think%brain_weight,vision_place,&
 								new_vision_place,vision_centre,neuro_reward,neuro_punishment,straight_balance,motivation_gradient)
