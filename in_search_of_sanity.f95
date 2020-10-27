@@ -14,7 +14,7 @@ logical :: file_exists, proaction=.false.
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 integer :: movement, vision_place, new_vision_place, vision_centre
 integer :: vision_length=7, response_length=5
-integer :: vision_socket=4, response_socket=13 !socket number represents where the middle of the corresponding array meets the brain network
+integer :: vision_socket=4, response_socket=(columns/2)+1 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
@@ -31,12 +31,14 @@ integer :: epoch_cutoff=100
 !risk and reward
 !note, grad must be less than (centre-1)/2
 integer :: blood_rate=20
-real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=2.0
-real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, motivation_gradient=1.5
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=2.0, maximum_weight=10000000.0
+!smaller motivation_gradient gives larger region for reward in vision array
+!note, motivation_gradient must be less than (vision_centre-1)/2
+real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=10000.0, motivation_gradient=1.3
 
 !testing
 real :: random_see
-logical :: testing=.false., show_blood=.true.
+logical :: testing=.false., show_blood=.false.
 integer :: epoch_test_max=5000, data_rate=20, random_probability=200
 integer :: testrow,testcolumn,testorigin,testpoint
 
@@ -94,7 +96,7 @@ if (testing .eqv. .false.) then
 
 		!initialise the network
 		call initialiser(think,response,blood_volume,response_socket)
-		!call preprogram(think%brain_weight)
+		call preprogram(think%brain_weight)
 
 		do column_number=1,vision_length
 			if (vision(column_number)==1) then	
@@ -120,7 +122,7 @@ else
 
 	!initialise the network
 	call initialiser(think,response,blood_volume,response_socket)
-	!call preprogram(think%brain_weight)
+	call preprogram(think%brain_weight)
 	!give vision a starting datum
 	vision=0
 	vision((vision_length/2)+1)=1
@@ -279,7 +281,7 @@ do while (proaction .eqv. .false.)
 			
 			!the choosing weights reduce by one if they are not used and increase by node_use_reward-1 if they are used
 			!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
-			call weight_reducer(think%brain_weight,column_random_number,row_random_number)
+			call weight_reducer(think%brain_weight,column_random_number,row_random_number,maximum_weight)
 			
 		end do
 
