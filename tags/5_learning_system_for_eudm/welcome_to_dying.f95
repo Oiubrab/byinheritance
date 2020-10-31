@@ -818,10 +818,10 @@ subroutine initialiser(thought,response,volume,response_socket)
 					!note, path to the response array is set up here
 					else if (point_to_neuron(column_number,row_number,path_to,"row")==rows+1) then
 							
-						if ((point_to_neuron(column_number,row_number,path_to,"column")>=&
-							plugin(1,response_socket,response_columns,"brain")) .and. &
-							(point_to_neuron(column_number,row_number,path_to,"column")<=&
-							plugin(response_columns,response_socket,response_columns,"brain"))) then
+						if ((plugin(point_to_neuron(column_number,row_number,path_to,"column"),&
+							response_socket,response_columns,"array")>=1) .and. &
+							(plugin(point_to_neuron(column_number,row_number,path_to,"column"),&
+							response_socket,response_columns,"array")<=response_columns)) then
 				
 							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
 						
@@ -1013,6 +1013,7 @@ end subroutine weight_reducer
 	
 	
 !this subroutine can be called to set weights, after the initialiser, but before the main loop, so as to direct neurons from the beginning	
+!as of now, breaks the network. Do not use unless you fix it
 subroutine preprogram(weights)
 	
 	real,dimension(*) :: weights(:,:,:,:)

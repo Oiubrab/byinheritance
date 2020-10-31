@@ -94,7 +94,7 @@ if (testing .eqv. .false.) then
 
 		!initialise the network
 		call initialiser(think,response,blood_volume,response_socket)
-		call preprogram(think%brain_weight)
+		!call preprogram(think%brain_weight)
 
 		do column_number=1,vision_length
 			if (vision(column_number)==1) then	
@@ -120,7 +120,7 @@ else
 
 	!initialise the network
 	call initialiser(think,response,blood_volume,response_socket)
-	call preprogram(think%brain_weight)
+	!call preprogram(think%brain_weight)
 	!give vision a starting datum
 	vision=0
 	vision((vision_length/2)+1)=1
