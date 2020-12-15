@@ -8,6 +8,20 @@ type mind
 	integer,allocatable :: neurochem(:,:,:)
 end type mind
 
+!define type for vision
+type eyeball
+	integer,allocatable :: sense_action(:,:)
+	integer,allocatable :: socket_number(:)
+end type eyeball
+
+!define type for response
+type responder
+	integer,allocatable :: turn(:),speed(:) !turn is on left, speed is on right
+	!socket(1) is turn, socket(2) is speed
+	integer,dimension(2) :: socket_number
+end type responder
+
+
 contains
 
 !this is where the magic happens
@@ -480,23 +494,47 @@ end function plugin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine input_rules(vision,select_range,cat_angle)
+!this subroutine converts given angles, tracing a line from the cat to the mouse, into a position in an input array
+!currently, this takes in two 'eye' angles, leading from the left and right side of the cat, and translates them into positions for the left and right array
+!not done yet
+subroutine angle_to_vision(vision,cat_left_eye,cat_right_eye)
 
 	real,parameter :: pi=4.*asin(1./sqrt(2.))
-	real :: select_range,cat_angle
+	real :: select_range,cat_left_eye,cat_right_eye
+	real,dimension(2) :: left_range,right_range
 	integer :: column_number
-	integer,dimension(*) :: vision(:)
+	type(eyeball) :: vision
 
-	select_range=(2.*pi)/float(size(vision))
-	do column_number=1,size(vision)
-		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
-		!print*,vision
+	!these set the angular ranges that the character can see from each eye
+	!note: in the game, negative pi is on the left, and positive pi is on the right
+	!the whole system is revolved by +pi for mathematical simplicity (might be stupid)
+	!so, 0 to pi is left of the character, and pi to 2pi is right of the character
+	left_range=[0,pi*1.5]
+	right_range=[0.5*pi,2.0*pi]
+	!this assignment assumes the eyes are equal length, as there is only one select_range for two eyes
+	select_range=(1.5*pi)/float(size(vision%sense_action(:,1)))
+	!note, the +pi bit in the if statement converts the cat direction coming in (-pi to pi) into 0 to 2pi
+	!left eye
+	do column_number=1,size(vision%sense_action(:,1))
+	
+		if ((select_range*float(column_number)>=(cat_angle+pi)) .and. (select_range*float(column_number-1)<=(cat_angle+pi))) then
+			vision%(column_number)=1
+			!print*,"help"
+		else
+			vision(column_number)=0
+		end if
+		
+	end do
+	!right eye
+	do column_number=1,size(vision%sense_action(:,2))
+	
 		if ((select_range*float(column_number)>=(cat_angle+pi)) .and. (select_range*float(column_number-1)<=(cat_angle+pi))) then
 			vision(column_number)=1
 			!print*,"help"
 		else
 			vision(column_number)=0
 		end if
+		
 	end do
 
 end subroutine angle_to_vision
@@ -783,18 +821,17 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !data is setup to flow to the bottom
-subroutine initialiser(thought,response,volume,response_socket)
+subroutine initialiser(thought,response,volume)
 
-	integer,dimension(*) :: response(:)
+	type(responder) :: response
 	integer :: row_number, column_number, path_from, path_to, paths, response_columns
-	integer :: rows, columns, info_ports,blood_rows,response_socket
+	integer :: rows, columns, info_ports,blood_rows
 	real :: volume
 	type(mind) :: thought
 	
 	rows=size(thought%brain_weight(1,1,1,:)); columns=size(thought%brain_weight(1,1,:,1)) 
 	info_ports=size(thought%brain_status(:,1,1)); paths=size(thought%brain_weight(1,:,1,1))
 	blood_rows=size(thought%blood(1,:))
-	response_columns=size(response)
 	
 	!set the initial brain values first
 	do row_number=1,rows
@@ -824,7 +861,7 @@ subroutine initialiser(thought,response,volume,response_socket)
 							response_socket,response_columns,"array")<=response_columns)) then
 				
 							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-						
+
 						else
 						
 							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
@@ -924,6 +961,7 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 	!weighting(x,:,x,x) is origin, weighting(:,x,x,x) is point
 	do row=1,size(neurochemical(1,1,:))	
 		do column=1,size(neurochemical(1,:,1))
+		
 			if (neurochemical(1,column,row)/=0) then	
 				!straight reward - closer to centre, higher the reward
 				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
@@ -941,6 +979,7 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 				else
 					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
 				end if
+				
 				!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
 				!if the response moves vision towards the centre (pleasure), increase the weight disparity
 				!don't act on closed paths
@@ -970,9 +1009,10 @@ end subroutine motivation
 
 
 !This subroutine controls the weight reductions per weight per action
-subroutine weight_reducer(weights,column,row)
+subroutine weight_reducer(weights,column,row,max_weight)
 
 	real,dimension(*) :: weights(:,:,:,:)
+	real,intent(in) :: max_weight
 	integer :: from,to,connections,column,row
 	real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 	real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
@@ -997,12 +1037,12 @@ subroutine weight_reducer(weights,column,row)
 						gradient*weights(to,from,column,row)+height-&
 						second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
 						normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
-				!if weight is between 1050 and 1000000, just do a constant reduction
-				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=1000000.0)) then
+				!if weight is between 1050 and max_weight, just do a constant reduction
+				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=max_weight)) then
 					weights(to,from,column,row)=weights(to,from,column,row)-overload
-				!limit weight to 1000000
+				!limit weight to max_weight
 				else
-					weights(to,from,column,row)=1000000.0
+					weights(to,from,column,row)=max_weight
 				end if
 			end if
 		end do
@@ -1013,7 +1053,6 @@ end subroutine weight_reducer
 	
 	
 !this subroutine can be called to set weights, after the initialiser, but before the main loop, so as to direct neurons from the beginning	
-!as of now, breaks the network. Do not use unless you fix it
 subroutine preprogram(weights)
 	
 	real,dimension(*) :: weights(:,:,:,:)

@@ -5,16 +5,22 @@ use welcome_to_dying
 implicit none
 
 !network setup and reading
-integer,parameter :: directions=8, rows=6, columns=11
+integer,parameter :: directions=8, rows=7, columns=21
 integer :: blood_rows=rows+1
 type(mind) :: think
 logical :: file_exists, proaction=.false.
 
+!for all interaction and outside array setup, increasing valence represents position from left to right
+!i.e. for two vision arrays, vision(:,1) represents array of left eye and vision(:,2) represents array on right
+
 !sensing and response setup
-integer, allocatable :: vision(:), response(:), response_counter(:,:)
+integer, allocatable :: response_counter(:,:)
+type(eyeball) :: vision 
+type(responder) :: response
 integer :: movement, vision_place, new_vision_place, vision_centre
-integer :: vision_length=7, response_length=5
-integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
+integer :: vision_length=7, response_turn_length=5, response_speed_length=3
+!socket number represents where the middle of the corresponding array meets the brain network
+integer :: vision_socket_left=4, vision_socket_right=10, response_socket_turn=4, response_socket_speed=8 
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
@@ -24,24 +30,26 @@ integer :: moves, epoch, epoch_start
 
 !from the outside
 real,parameter :: pi=4.*asin(1./sqrt(2.))
-real :: select_range,cat_angle
-character(len=1000) :: angle_from_cat_cha
+real :: cat_angle_left,cat_angle_right
+character(len=1000) :: angle_from_cat_cha_left,angle_from_cat_cha_right
 integer :: epoch_cutoff=100
 
 !risk and reward
 !note, grad must be less than (centre-1)/2
 integer :: blood_rate=20
-real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=2.0
-real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, motivation_gradient=1.5
+real :: blood_volume=8.0, blood_gradient=0.6, node_use_reward=2.0, maximum_weight=10000000.0
+!smaller motivation_gradient gives larger region for reward in vision array
+!note, motivation_gradient must be less than (vision_centre-1)/2
+real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=10000.0, motivation_gradient=1.3
 
 !testing
 real :: random_see
-logical :: testing=.false., show_blood=.true.
+logical :: testing=.false., show_blood=.false.
 integer :: epoch_test_max=5000, data_rate=20, random_probability=200
 integer :: testrow,testcolumn,testorigin,testpoint
 
 !timing
-real :: start, finish, delay_time=0.1
+real :: start, finish, delay_time=0.05
 
 !printing
 character(len=:),allocatable :: column_cha
@@ -54,23 +62,37 @@ call CPU_Time(start)
 !fuck you
 call random_seed()
 
+
 !allocation block
 allocate(character(columns*3+1) :: column_cha) !allocate the printing variable
-allocate(vision(vision_length)) !allocate the array for input into the network, currently on top
-allocate(response(response_length)) !allocate the array for output from the network, currently on bottom
-allocate(response_counter(response_length,vision_length)) !allocat the array that will keep track of the response for printing purposes
+
+allocate(vision%sense_action(vision_length,2)) !allocate the arrays for input into the network, currently on top
+allocate(vision%socket_number(2))
+
+allocate(response%turn(response_turn_length)) !allocate the turning response array for output from the network
+allocate(response%speed(response_speed_length)) !allocate the speed response array for output from the network
+
+allocate(response_counter(response_length,vision_length)) !allocate the array that will keep track of the response for printing purposes
+
 allocate(column_random(columns)) !allocate the column selection randomiser (randomised at main loop start)
 allocate(row_random(rows)) !allocate the row selection randomiser (randomised at main loop start)
+
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
 allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the brain direction weighting 
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
 allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point
 
+!put socket numbers into socket
+vision%socket_number(1)=vision_socket_left
+vision%socket_number(2)=vision_socket_right
+response%socket_number(1)=response_socket_turn
+response%socket_number(2)=response_socket_speed
+
 !find vision centre
 vision_centre=(size(vision)/2)+1
 
 !if no command line argument is present, turn testing on
-IF(COMMAND_ARGUMENT_COUNT().NE.1)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.2)THEN
 	testing=.true.
 ENDIF
 
@@ -78,11 +100,13 @@ ENDIF
 if (testing .eqv. .false.) then
 
 	!read in the angle to the food
-	CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha)
-	READ(angle_from_cat_cha,*)cat_angle
+	CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha_left)
+	CALL GET_COMMAND_ARGUMENT(2,angle_from_cat_cha_right)
+	READ(angle_from_cat_cha_left,*)cat_angle_left
+	READ(angle_from_cat_cha_right,*)cat_angle_right
 
 	!translate angle to all the foods into vision node
-	call input_rules(vision,select_range,cat_angle)
+	call angle_to_vision(vision,cat_angle_left,cat_angle_right)
 
 	!if this is is a continuation of the algorithm, then load the previous cycle
 	INQUIRE(FILE="will.txt", EXIST=file_exists)
@@ -93,13 +117,21 @@ if (testing .eqv. .false.) then
 	else
 
 		!initialise the network
-		call initialiser(think,response,blood_volume,response_socket)
+		call initialiser(think,response,blood_volume)
 		!call preprogram(think%brain_weight)
 
+		!left eye
 		do column_number=1,vision_length
-			if (vision(column_number)==1) then	
-				think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
-				think%brain_status(2,plugin(column_number,vision_socket,vision_length,"brain"),1)=1
+			if (vision%sense_action(column_number,1)==1) then	
+				think%brain_status(1,plugin(column_number,vision%socket_number(1),vision_length,"brain"),1)=2
+				think%brain_status(2,plugin(column_number,vision%socket_number(1),vision_length,"brain"),1)=1
+			end if
+		end do
+		!right eye
+		do column_number=1,vision_length
+			if (vision%sense_action(column_number,2)==1) then	
+				think%brain_status(1,plugin(column_number,vision%socket_number(2),vision_length,"brain"),1)=2
+				think%brain_status(2,plugin(column_number,vision%socket_number(2),vision_length,"brain"),1)=1
 			end if
 		end do
 
@@ -119,11 +151,12 @@ if (testing .eqv. .false.) then
 else
 
 	!initialise the network
-	call initialiser(think,response,blood_volume,response_socket)
+	call initialiser(think,response,blood_volume)
 	!call preprogram(think%brain_weight)
 	!give vision a starting datum
-	vision=0
-	vision((vision_length/2)+1)=1
+	vision%sense_action=0
+	vision%sense_action(vision_length,1)=1
+	vision%sense_action((vision_length/2)+1,2)=1
 	!initialise counters
 	epoch=0
 	epoch_start=0
@@ -132,10 +165,18 @@ else
 end if
 
 !injection, from vision into brain
+!left eye
 do column_number=1,vision_length
-	if (vision(column_number)==1) then	
-		think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
-		think%brain_status(2,plugin(column_number,vision_socket,vision_length,"brain"),1)=1
+	if (vision%sense_action(column_number,1)==1) then	
+		think%brain_status(1,plugin(column_number,vision%socket_number(1),vision_length,"brain"),1)=2
+		think%brain_status(2,plugin(column_number,vision%socket_number(1),vision_length,"brain"),1)=1
+	end if
+end do
+!right eye
+do column_number=1,vision_length
+	if (vision%sense_action(column_number,2)==1) then	
+		think%brain_status(1,plugin(column_number,vision%socket_number(2),vision_length,"brain"),1)=2
+		think%brain_status(2,plugin(column_number,vision%socket_number(2),vision_length,"brain"),1)=1
 	end if
 end do
 
@@ -279,7 +320,7 @@ do while (proaction .eqv. .false.)
 			
 			!the choosing weights reduce by one if they are not used and increase by node_use_reward-1 if they are used
 			!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
-			call weight_reducer(think%brain_weight,column_random_number,row_random_number)
+			call weight_reducer(think%brain_weight,column_random_number,row_random_number,maximum_weight)
 			
 		end do
 
