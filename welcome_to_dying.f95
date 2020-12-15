@@ -480,7 +480,7 @@ end function plugin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine angle_to_vision(vision,select_range,cat_angle)
+subroutine input_rules(vision,select_range,cat_angle)
 
 	real,parameter :: pi=4.*asin(1./sqrt(2.))
 	real :: select_range,cat_angle
@@ -824,7 +824,7 @@ subroutine initialiser(thought,response,volume,response_socket)
 							response_socket,response_columns,"array")<=response_columns)) then
 				
 							thought%brain_weight(path_to,path_from,column_number,row_number)=1.
-
+						
 						else
 						
 							thought%brain_weight(path_to,path_from,column_number,row_number)=0.	
@@ -924,7 +924,6 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 	!weighting(x,:,x,x) is origin, weighting(:,x,x,x) is point
 	do row=1,size(neurochemical(1,1,:))	
 		do column=1,size(neurochemical(1,:,1))
-		
 			if (neurochemical(1,column,row)/=0) then	
 				!straight reward - closer to centre, higher the reward
 				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
@@ -942,7 +941,6 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 				else
 					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
 				end if
-				
 				!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
 				!if the response moves vision towards the centre (pleasure), increase the weight disparity
 				!don't act on closed paths
@@ -972,10 +970,9 @@ end subroutine motivation
 
 
 !This subroutine controls the weight reductions per weight per action
-subroutine weight_reducer(weights,column,row,max_weight)
+subroutine weight_reducer(weights,column,row)
 
 	real,dimension(*) :: weights(:,:,:,:)
-	real,intent(in) :: max_weight
 	integer :: from,to,connections,column,row
 	real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 	real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
@@ -1000,12 +997,12 @@ subroutine weight_reducer(weights,column,row,max_weight)
 						gradient*weights(to,from,column,row)+height-&
 						second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
 						normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
-				!if weight is between 1050 and max_weight, just do a constant reduction
-				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=max_weight)) then
+				!if weight is between 1050 and 1000000, just do a constant reduction
+				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=1000000.0)) then
 					weights(to,from,column,row)=weights(to,from,column,row)-overload
-				!limit weight to max_weight
+				!limit weight to 1000000
 				else
-					weights(to,from,column,row)=max_weight
+					weights(to,from,column,row)=1000000.0
 				end if
 			end if
 		end do
@@ -1016,6 +1013,7 @@ end subroutine weight_reducer
 	
 	
 !this subroutine can be called to set weights, after the initialiser, but before the main loop, so as to direct neurons from the beginning	
+!as of now, breaks the network. Do not use unless you fix it
 subroutine preprogram(weights)
 	
 	real,dimension(*) :: weights(:,:,:,:)
