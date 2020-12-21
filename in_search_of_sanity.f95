@@ -13,7 +13,7 @@ logical :: file_exists, proaction=.false.
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 integer :: movement, vision_place, new_vision_place, vision_centre
-integer :: vision_length=7, response_length=5
+integer :: vision_length=11, response_length=5
 integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
@@ -23,9 +23,10 @@ integer,allocatable :: column_random(:),row_random(:)
 integer :: moves, epoch, epoch_start
 
 !from the outside
+!note: cat angle left is 1st argument and cat angle right is 2nd argument
 real,parameter :: pi=4.*asin(1./sqrt(2.))
-real :: select_range,cat_angle
-character(len=1000) :: angle_from_cat_cha
+real :: cat_angle_left,cat_angle_right
+character(len=1000) :: angle_from_cat_left_cha,angle_from_cat_right_cha
 integer :: epoch_cutoff=100
 
 !risk and reward
@@ -36,7 +37,7 @@ real :: neuro_reward=1000.0,neuro_punishment=1000.0, straight_balance=1000.0, mo
 
 !testing
 real :: random_see
-logical :: testing=.false., show_blood=.true.
+logical :: testing=.false., show_blood=.false.
 integer :: epoch_test_max=5000, data_rate=20, random_probability=200
 integer :: testrow,testcolumn,testorigin,testpoint
 
@@ -70,7 +71,7 @@ allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is fo
 vision_centre=(size(vision)/2)+1
 
 !if no command line argument is present, turn testing on
-IF(COMMAND_ARGUMENT_COUNT().NE.1)THEN
+IF(COMMAND_ARGUMENT_COUNT().NE.2)THEN
 	testing=.true.
 ENDIF
 
@@ -78,11 +79,13 @@ ENDIF
 if (testing .eqv. .false.) then
 
 	!read in the angle to the food
-	CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_cha)
-	READ(angle_from_cat_cha,*)cat_angle
+	CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_left_cha)
+	CALL GET_COMMAND_ARGUMENT(2,angle_from_cat_right_cha)	
+	READ(angle_from_cat_left_cha,*)cat_angle_left
+	READ(angle_from_cat_right_cha,*)cat_angle_right
 
 	!translate angle to all the foods into vision node
-	call input_rules(vision,select_range,cat_angle)
+	call input_rules(vision,cat_angle_left,cat_angle_right)
 
 	!if this is is a continuation of the algorithm, then load the previous cycle
 	INQUIRE(FILE="will.txt", EXIST=file_exists)
@@ -110,6 +113,7 @@ if (testing .eqv. .false.) then
 
 	end if
 	
+	!!!reward!!!
 	!currently rewards data moving towards middle of vision
 	new_vision_place=findloc(vision,1,dim=1)
 	call motivation(think%neurochem,think%brain_weight,vision_place,new_vision_place,&

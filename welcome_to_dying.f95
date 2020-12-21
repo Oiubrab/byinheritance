@@ -480,26 +480,55 @@ end function plugin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine input_rules(vision,select_range,cat_angle)
+!this subroutine controls the input from external sources and arranges it in a format on the vision array
+subroutine input_rules(vision,cat_angle_left,cat_angle_right)
 
 	real,parameter :: pi=4.*asin(1./sqrt(2.))
-	real :: select_range,cat_angle
-	integer :: column_number
+	real :: select_range,cat_angle_left,cat_angle_right
+	integer :: column_number,channel_size
 	integer,dimension(*) :: vision(:)
 
-	select_range=(2.*pi)/float(size(vision))
-	do column_number=1,size(vision)
+	!angles come in, in ranges of -pi to pi, -pi to left and pi to right
+	!separate vision into two parts for the two angles
+	!make scalable, so many inputs can be used on teh same vision array
+	
+	!currently, the system is set to see
+	!left: -pi to 0.5*pi
+	!right: 10.5*pi to 2*pi
+	
+	!the range of an input channel
+	channel_size=size(vision)/2
+	select_range=(1.5*pi)/float(channel_size)
+	
+	!the left side assignment
+	do column_number=1,channel_size
 		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
 		!print*,vision
-		if ((select_range*float(column_number)>=(cat_angle+pi)) .and. (select_range*float(column_number-1)<=(cat_angle+pi))) then
+		if ((select_range*float(column_number)>=(cat_angle_left+pi)) .and. &
+		(select_range*float(column_number-1)<=(cat_angle_left+pi))) then
+		
 			vision(column_number)=1
 			!print*,"help"
 		else
 			vision(column_number)=0
 		end if
 	end do
+	
+	!the right side assignment
+	do column_number=channel_size+1,size(vision)
+		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
+		!print*,vision
+		if ((select_range*float(column_number-channel_size)+0.5*pi>=(cat_angle_right+pi)) &
+			.and. (select_range*float(column_number-(1+channel_size))+0.5*pi<=(cat_angle_right+pi))) then
+			
+			vision(column_number)=1
+			!print*,"help"
+		else
+			vision(column_number)=0
+		end if
+	end do	
 
-end subroutine angle_to_vision
+end subroutine input_rules
 
 
 
