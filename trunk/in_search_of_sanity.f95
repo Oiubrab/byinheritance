@@ -13,8 +13,8 @@ logical :: file_exists
 
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
-integer :: movement, vision_place, new_vision_place, vision_centre
-integer :: vision_length=11, response_length=5
+integer :: movement, vision_place, new_vision_place, vision_centre, speed
+integer :: vision_length=11, response_length=7
 integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
@@ -65,7 +65,7 @@ allocate(row_random(rows)) !allocate the row selection randomiser (randomised at
 allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
 allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the brain direction weighting 
 allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
-allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point
+allocate(think%neurochem(2,columns,rows)) !allocate the reward variable, 1 is for origin, 2 is for point, 3 is for chemical_memory
 
 !find vision centre
 vision_centre=(size(vision)/2)+1
@@ -196,14 +196,39 @@ end if
 call read_write(think,epoch,moves,new_vision_place,"write")
 
 !temporary movement output
+movement=0
+speed=0
 do column_number_2=1,response_length
 	if (response(column_number_2)==1) then
 		
-		!vision datum is moved x number of spots depending on the response datum's position off centre
-		movement=-1*((response_length/2+1)-column_number_2) !neg is to the left, pos is to the right
-		print"(I0)",movement
+		!movement alteration
+		if (column_number_2<=response_length-2) then
+		
+			!vision datum is moved x number of spots depending on the response datum's position off centre
+			movement=-1*(((response_length-2)/2+1)-column_number_2) !neg is to the left, pos is to the right
+			!halt the speed
+			speed=0
+		
+		!speed alteration
+		else
+		
+			!speed response is simple, left is neg and right is pos
+			if (column_number_2==response_length-1) then
+				speed=-1
+			else if (column_number_2==response_length) then
+				speed=1
+			end if
+			
+			!halt the movement
+			movement=0
+			
+		end if
+		
+		
 	end if
 end do
+!print the shift
+print*,movement,speed
 
 
 !write an interpreter that takes a response array and outputs data in a format readable by the interface
