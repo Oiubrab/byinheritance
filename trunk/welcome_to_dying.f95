@@ -109,8 +109,8 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 		end if
 		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
 	end do
-	print*,print_row(1:individual_width*columns)
-	print*," "
+	write(1,*)print_row(1:individual_width*columns)
+	write(1,*)" "
 	print_row(:)="  "
 
 	!the main brain printing loop
@@ -139,9 +139,9 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 				end if
 			end if
 		end do
-		print *,print_row
+		write(1,*)print_row
 	end do
-	print*," "
+	write(1,*)" "
 	print_row(:)="  "
 
 	!print the response and equivalent blood arrays last
@@ -172,8 +172,8 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 			end if
 		end if
 	end do
-	print*,print_row
-	print*," "
+	write(1,*)print_row
+	write(1,*)" "
 
 end subroutine print_network
 
@@ -193,7 +193,7 @@ subroutine print_interval(start,finish)
 	t_hr = floor(total_time/3600)
 	t_min = (total_time-t_hr*3600)/60
 	t_sec = total_time-t_hr*3600-t_min*60
-	print'(A14,I2,A5,I2,A7,F5.2,A4)',"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
+	write(1,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
 
 end subroutine print_interval
 
@@ -241,15 +241,15 @@ subroutine read_write(think,epoch,moves,vision,direction)
 	if (direction=="read") then
 	
 		!retrieve previous network
-		open(unit=1,file="will.txt")
-		read(1,*) think%brain_status
-		read(1,*) think%brain_weight
-		read(1,*) think%blood
-		read(1,*) think%neurochem				
-		read(1,*) epoch
-		read(1,*) moves
-		read(1,*) vision
-		close(1)
+		open(unit=3,file="will.txt")
+		read(3,*) think%brain_status
+		read(3,*) think%brain_weight
+		read(3,*) think%blood
+		read(3,*) think%neurochem				
+		read(3,*) epoch
+		read(3,*) moves
+		read(3,*) vision
+		close(3)
 		
 	else if (direction=="write") then
 	
@@ -633,12 +633,12 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 
 
 	if (printer .eqv. .true.) then
-		print*,"Maximum Rungs Value, choice value:"
-		print*,rungs(size(rungs)),fuck*rungs(size(rungs))
-		print*,"Weightings from Direction 1 to 8:"
-		print"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)",idea%brain_weight(:,origin,column,row)
-		print*,"Rungs from Direction 1 to 8:"
-		print"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)",rungs(connection_translation(1)),rungs(connection_translation(2)),&
+		write(1,*)"Maximum Rungs Value, choice value:"
+		write(1,*)rungs(size(rungs)),fuck*rungs(size(rungs))
+		write(1,*)"Weightings from Direction 1 to 8:"
+		write(1,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")idea%brain_weight(:,origin,column,row)
+		write(1,*)"Rungs from Direction 1 to 8:"
+		write(1,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")rungs(connection_translation(1)),rungs(connection_translation(2)),&
 			rungs(connection_translation(3)),rungs(connection_translation(4)),rungs(connection_translation(5)),&
 			rungs(connection_translation(6)),rungs(connection_translation(7)),rungs(connection_translation(8))
 	end if
@@ -658,11 +658,11 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				
 				!moving diagnostic
 				if (printer .eqv. .true.) then
-					print*,"Move from:"
-					print*,column,row
-					print*,"Move to:"
-					print*,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
-					print*," "
+					write(1,*)"Move from:"
+					write(1,*)column,row
+					write(1,*)"Move to:"
+					write(1,*)point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
+					write(1,*)" "
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
