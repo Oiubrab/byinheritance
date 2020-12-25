@@ -953,6 +953,7 @@ subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up
 	!weighting(x,:,x,x) is origin, weighting(:,x,x,x) is point
 	do row=1,size(neurochemical(1,1,:))	
 		do column=1,size(neurochemical(1,:,1))
+			!check if there is any neurochem in the position
 			if (neurochemical(1,column,row)/=0) then	
 				!straight reward - closer to centre, higher the reward
 				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&

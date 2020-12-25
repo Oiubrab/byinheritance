@@ -3,6 +3,8 @@ use welcome_to_dying
 implicit none
 contains
 
+!place input and output subroutines in this module
+
 !this is it. This is the brain kernel. In this where the network is controled from. It is here that data is fed into and data comes out from.
 !this needs
 
@@ -66,12 +68,12 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 		call randomised_list(row_random)
 		 
 		!now I shall send randomly selected neurons to have data moved
-		do row_number=1,rows
+		row_loop: do row_number=1,rows
 
 			!first, randomise column list for each row
 			call randomised_list(column_random)
 		
-			do column_number=1,columns
+			column_loop: do column_number=1,columns
 			
 				!now, assign the random integer positional number to the requisite random number positional number holder number
 				column_random_number=column_random(column_number)
@@ -122,14 +124,15 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 					
 					!response translation into movement
 					!this do loop picks up whether some response ha been fed into 
-					do column_number_2=1,response_length
+					search_loop: do column_number_2=1,response_length
 						if (response(column_number_2)==1) then
 							
 							!stop the main loop
 							proaction=.true.
+							exit row_loop
 
 						end if
-					end do
+					end do search_loop
 					
 				end if
 				
@@ -137,7 +140,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 				!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
 				call weight_reducer(think%brain_weight,column_random_number,row_random_number)
 				
-			end do
+			end do column_loop
 
 			!move the blood on the extra blood row
 			if (row_number==rows) then
@@ -150,7 +153,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 				end do
 			end if
 			
-		end do
+		end do row_loop
 
 
 		!if nothing has happened for epoch_cutoff, exit and output 0
