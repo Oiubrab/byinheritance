@@ -246,8 +246,10 @@ if (here==1) then
 			
 		end if
 	end do
-	!print the shift
-	print*,movement,speed
+	!output the shift
+	open(unit=5,file="shift.txt")
+	write(5,*)movement,speed
+	close(5)
 
 
 	!write an interpreter that takes a response array and outputs data in a format readable by the interface
