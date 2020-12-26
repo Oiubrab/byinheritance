@@ -232,8 +232,9 @@ end subroutine randomised_list
 
 
 !read in the network or write out to a text file
-subroutine read_write(think,epoch,moves,vision,direction)
+subroutine read_write(think,epoch,moves,vision,direction,response_record)
 	type(mind) :: think
+	integer,dimension(*),optional :: response_record(:,:)
 	integer :: epoch,vision
 	character(len=*) :: direction
 	integer :: column,row
@@ -249,6 +250,10 @@ subroutine read_write(think,epoch,moves,vision,direction)
 		read(3,*) epoch
 		read(3,*) moves
 		read(3,*) vision
+		!if in testing, save response counter
+		if (present(response_record)) then
+			read(3,*) response_record	
+		end if		
 		close(3)
 		
 	else if (direction=="write") then
@@ -262,6 +267,10 @@ subroutine read_write(think,epoch,moves,vision,direction)
 		write(2,*) epoch
 		write(2,*) moves
 		write(2,*) vision
+		!if in testing, save response counter
+		if (present(response_record)) then
+			write(2,*) response_record	
+		end if
 		close(2)
 	
 	end if
@@ -812,9 +821,9 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !data is setup to flow to the bottom
-subroutine initialiser(thought,response,volume,response_socket)
+subroutine initialiser(thought,response,volume,response_socket,response_counter)
 
-	integer,dimension(*) :: response(:)
+	integer,dimension(*) :: response(:),response_counter(:,:)
 	integer :: row_number, column_number, path_from, path_to, paths, response_columns
 	integer :: rows, columns, info_ports,blood_rows,response_socket
 	real :: volume
@@ -896,6 +905,9 @@ subroutine initialiser(thought,response,volume,response_socket)
 	
 	!zero out neurochem
 	thought%neurochem=0
+	
+	!zero out response counter
+	response_counter=0
 	
 	!set up empty response array 
 	do column_number=1,size(response)
