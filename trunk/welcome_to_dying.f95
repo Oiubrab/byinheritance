@@ -523,8 +523,11 @@ subroutine input_rules(vision,cat_angle_left,cat_angle_right)
 		end if
 	end do
 	
+	!zero the middle vision entry
+	vision(channel_size+1)=0
+	
 	!the right side assignment
-	do column_number=channel_size+1,size(vision)
+	do column_number=channel_size+2,size(vision)
 		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
 		!print*,vision
 		if ((select_range*float(column_number-channel_size)+0.5*pi>=(cat_angle_right+pi)) &

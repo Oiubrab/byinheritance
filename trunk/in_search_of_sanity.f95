@@ -1,12 +1,15 @@
 program in_search_of_sanity
 use welcome_to_dying
 use spiritechnology
-!note, needs an angle input, from the command line, to run
+
+!this is the main controlling script, where the network is setup and run.
+
+!note, needs two angle inputs, a times_eaten input and a testing boolean, from the command line, to run
 !alternatively, place eudm in the folder and run it
 implicit none
 
 !network setup and reading
-integer,parameter :: directions=8, rows=6, columns=11
+integer,parameter :: directions=8, rows=6, columns=15
 integer :: blood_rows=rows+1
 type(mind) :: think
 logical :: file_exists
@@ -14,8 +17,8 @@ logical :: file_exists
 !sensing and response setup
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 integer :: movement, vision_place, new_vision_place, vision_centre, speed
-integer :: vision_length=11, response_length=7
-integer :: vision_socket=6, response_socket=6 !socket number represents where the middle of the corresponding array meets the brain network
+integer :: vision_length=columns, response_length=7
+integer :: vision_socket=(columns/2)+1, response_socket=8 !socket number represents where the middle of the corresponding array meets the brain network
 
 !selecting and moving
 integer :: row_number, column_number, row_number_2, column_number_2
@@ -49,7 +52,8 @@ real :: start, finish, delay_time=0.0
 character(len=:),allocatable :: column_cha
 
 
-!test - caf image identifier
+!sync all
+!this is it
 here=this_image()
 if (here==1) then
 
