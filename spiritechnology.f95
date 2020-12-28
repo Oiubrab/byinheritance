@@ -6,7 +6,7 @@ contains
 !place input and output subroutines in this module
 
 !this is it. This is the brain kernel. In this where the network is controled from. It is here that data is fed into and data comes out from.
-!this needs
+!run this to evolve the network built outside. This will need a handshake and a neurochem value at some point
 
 subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,epoch_start)
