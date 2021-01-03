@@ -9,7 +9,8 @@ contains
 !run this to evolve the network built outside. This will need a handshake and a neurochem value at some point
 
 subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
-	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,epoch_start)
+	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,&
+	epoch_start,node_use_reward)
 
 	!timing and controlling
 	integer :: moves, epoch, epoch_start,epoch_cutoff

@@ -9,11 +9,13 @@ if [[ -e /usr/share/zsh/manjaro-zsh-prompt ]]; then
   source /usr/share/zsh/manjaro-zsh-prompt
 fi
 
+# Source the opencoarrays package
 source /home/fdhvb783_bdh6-as/thermonuclear/OpenCoarrays-2.9.2/prerequisites/installations//opencoarrays/2.9.2/setup.sh
 
+# Run the damn program
 cafrun -n 16 --use-hwthread-cpus in_search_of_sanity $1 $2 $3 $4
 
-
+# Remind me what we did
 echo $1 $2 $3 $4
 
 exit
