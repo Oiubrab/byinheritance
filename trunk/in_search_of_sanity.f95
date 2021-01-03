@@ -132,7 +132,7 @@ end if
 if (image_number==2) then
 	!dimensions
 	!brain
-	directions[2]=8; rows[2]=6; columns[2]=17
+	directions[2]=8; rows[2]=6; columns[2]=15
 	vision_length[2]=columns[2]
 	vision_socket[2]=(columns[2]/2)+1
 	response_length[2]=7
@@ -213,19 +213,31 @@ if (image_number<=2) then
 	end if
 	
 	!if this is is a continuation of the algorithm, then load the previous cycle
-	!INQUIRE(FILE=will_file, EXIST=file_exists)
-	file_exists=.false.
+	INQUIRE(FILE=will_file, EXIST=file_exists)
+	!file_exists=.false.
 	if (file_exists .eqv. .true.) then
-		response=0
-		!open the test log
-		if (testing .eqv. .true.) then
-			call read_write(think,epoch,moves,"read",response_counter)
-			epoch_start=epoch
-			open(unit=image_number,file=test_file,access="APPEND")
-		else
-			call read_write(think,epoch,moves,"read")
-			epoch_start=epoch
+		!zero out the response first
+		!for think (1)
+		if (image_number==1) then
+			response=0
+			!open the test log
+			if (testing .eqv. .true.) then
+				call read_write(think,epoch,moves,"read",response_counter)
+			else
+				call read_write(think,epoch,moves,"read")
+			end if
+			
+		!for motivate (2)
+		else if (image_number==2) then
+			response_motivate=0
+			!open the test log
+			if (testing .eqv. .true.) then
+				call read_write(motivate,epoch,moves,"read",response_counter_motivate)
+			else
+				call read_write(motivate,epoch,moves,"read")
+			end if
 		end if
+		epoch_start=epoch
 		
 	!Otherwise, if this is the first time this network is activated, it has to be initialised
 	else
