@@ -264,7 +264,7 @@ subroutine read_write(think,epoch,moves,direction,response_record)
 	
 		!retrieve previous network
 		open(unit=imagination+imagine,file=willfull)
-		read(imagine,*) think%brain_status
+		read(imagination+imagine,*) think%brain_status
 		read(imagination+imagine,*) think%brain_weight
 		read(imagination+imagine,*) think%blood
 		read(imagination+imagine,*) think%neurochem				
@@ -575,9 +575,16 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column,response_socket
-	integer :: rung, point, connections, data_pos, origin, tester, rank, rank_size
-	integer :: columnmax, rowmax, counter, second_point, response_length
+	integer :: rung, point, connections, data_pos, origin, rank, rank_size
+	integer :: columnmax, rowmax, counter, second_point, response_length, image
 	logical :: printer
+	character(len=20) :: tester
+	
+	!find the image number
+	image=this_image()
+	write(tester,"(A8,I0,A4)") "test_log",image,".txt"	
+	!print*,image,tester	
+	
 	
 	!brain size
 	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1)); response_length=size(response)
@@ -664,14 +671,16 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 
 	!1 is the test_log.txt
 	if (printer .eqv. .true.) then
-		write(1,*)"Maximum Rungs Value, choice value:"
-		write(1,*)rungs(size(rungs)),fuck*rungs(size(rungs))
-		write(1,*)"Weightings from Direction 1 to 8:"
-		write(1,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")idea%brain_weight(:,origin,column,row)
-		write(1,*)"Rungs from Direction 1 to 8:"
-		write(1,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")rungs(connection_translation(1)),rungs(connection_translation(2)),&
-			rungs(connection_translation(3)),rungs(connection_translation(4)),rungs(connection_translation(5)),&
-			rungs(connection_translation(6)),rungs(connection_translation(7)),rungs(connection_translation(8))
+		open(unit=image,file=tester,access="APPEND")
+		write(image,*)"Maximum Rungs Value, choice value:"
+		write(image,*)rungs(size(rungs)),fuck*rungs(size(rungs))
+		write(image,*)"Weightings from Direction 1 to 8:"
+		write(image,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")idea%brain_weight(:,origin,column,row)
+		write(image,*)"Rungs from Direction 1 to 8:"
+		write(image,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")rungs(connection_translation(1)),&
+			rungs(connection_translation(2)),rungs(connection_translation(3)),rungs(connection_translation(4)),&
+			rungs(connection_translation(5)),rungs(connection_translation(6)),rungs(connection_translation(7)),&
+			rungs(connection_translation(8))
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
@@ -689,11 +698,12 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				
 				!moving diagnostic
 				if (printer .eqv. .true.) then
-					write(1,*)"Move from:"
-					write(1,*)column,row
-					write(1,*)"Move to:"
-					write(1,*)point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
-					write(1,*)" "
+					write(image,*)"Move from:"
+					write(image,*)column,row
+					write(image,*)"Move to:"
+					write(image,*)point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
+					write(image,*)" "
+					close(image)
 				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
