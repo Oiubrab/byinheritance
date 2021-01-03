@@ -78,7 +78,7 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
 	open(unit=imager,file=tester,access="APPEND")
 
-	print*,imager,1,"print_network"
+	!print*,imager,1,"print_network"
 	
 	!establish network dimensions
 	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
@@ -184,7 +184,7 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 	write(imager,*)print_row
 	write(imager,*)" "
 	
-	print*,imager,2,"print_network"
+	!print*,imager,2,"print_network"
 	
 	!close this shit down
 	close(imager)
@@ -258,7 +258,7 @@ subroutine read_write(think,epoch,moves,direction,response_record)
 	write(willfull,"(A4,I0,A4)") "will",imagine,".txt"
 	!find the image number total
 	imagination=num_images()
-	print*,imagine,willfull,"read_write"
+	!print*,imagine,willfull,"read_write"
 	
 	if (direction=="read") then
 	

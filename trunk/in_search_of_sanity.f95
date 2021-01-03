@@ -51,11 +51,12 @@ real :: start, finish, delay_time=0.0
 
 
 !coarray specific
-integer :: image_number
+integer :: image_number,image_total
 character(len=20) :: test_file, will_file
 
 !setup the images
 !note: think-1, motivate-2
+image_total=num_images()
 image_number=this_image()
 write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
 write(will_file,"(A4,I0,A4)") "will",image_number,".txt"
@@ -75,21 +76,22 @@ write(will_file,"(A4,I0,A4)") "will",image_number,".txt"
 !the response interfaces with the outside 
 !socket number represents where the middle of the corresponding array meets the brain network
 
-!dimensions
-!brain
-directions[1]=8; rows[1]=6; columns[1]=15
-vision_length[1]=columns[1]
-vision_socket[1]=(columns[1]/2)+1
-response_length[1]=7
-response_socket[1]=8
-node_use_reward[1]=2.0
-!blood
-blood_rows[1]=rows+1
-blood_rate[1]=20
-blood_volume[1]=8.0
-blood_gradient[1]=0.6
+
 !allocations
 if (image_number==1) then
+	!dimensions
+	!brain
+	directions[1]=8; rows[1]=6; columns[1]=15
+	vision_length[1]=columns[1]
+	vision_socket[1]=(columns[1]/2)+1
+	response_length[1]=7
+	response_socket[1]=8
+	node_use_reward[1]=2.0
+	!blood
+	blood_rows[1]=rows+1
+	blood_rate[1]=20
+	blood_volume[1]=8.0
+	blood_gradient[1]=0.6
 	!main brain
 	allocate(think%brain_status(2,columns[1],rows[1])) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
 	allocate(think%brain_weight(directions[1],directions[1],columns[1],rows[1])) !allocate the brain direction weighting 
@@ -125,21 +127,22 @@ end if
 !the response interfaces with neurochem and with think (1)
 !socket number represents where the middle of the corresponding array meets the brain network
 
-!dimensions
-!brain
-directions[2]=8; rows[2]=6; columns[2]=17
-vision_length[2]=columns[2]
-vision_socket[2]=(columns[2]/2)+1
-response_length[2]=7
-response_socket[2]=8
-node_use_reward[2]=2.0
-!blood
-blood_rows[2]=rows[2]+1
-blood_rate[2]=20
-blood_volume[2]=8.0
-blood_gradient[2]=0.6
+
 !allocations
 if (image_number==2) then
+	!dimensions
+	!brain
+	directions[2]=8; rows[2]=6; columns[2]=17
+	vision_length[2]=columns[2]
+	vision_socket[2]=(columns[2]/2)+1
+	response_length[2]=7
+	response_socket[2]=8
+	node_use_reward[2]=2.0
+	!blood
+	blood_rows[2]=rows[2]+1
+	blood_rate[2]=20
+	blood_volume[2]=8.0
+	blood_gradient[2]=0.6
 	!main brain
 	allocate(motivate%brain_status(2,columns[2],rows[2])) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
 	allocate(motivate%brain_weight(directions[2],directions[2],columns[2],rows[2])) !allocate the brain direction weighting 
@@ -226,7 +229,7 @@ if (image_number<=2) then
 		
 	!Otherwise, if this is the first time this network is activated, it has to be initialised
 	else
-		print*,columns,1,"in_search_of_sanity"
+		
 		
 		!initialise the network
 		!for think (1)
@@ -239,9 +242,9 @@ if (image_number<=2) then
 			!call preprogram(think%brain_weight)
 		end if
 
-		print*,columns,2,"in_search_of_sanity"
+		
 
-
+		!inject data from the vission arrays into the networks
 		do column_number=1,vision_length[image_number]
 			!for think (1)
 			if (image_number==1) then
@@ -258,7 +261,6 @@ if (image_number<=2) then
 			end if
 		end do
 
-		print*,columns,3,"in_search_of_sanity"
 
 		epoch=0
 		epoch_start=0
@@ -273,8 +275,8 @@ if (image_number<=2) then
 			open(unit=image_number,file=test_file)
 			!save the network
 			!print*,test_file,will_file
-			print*,vision,"in_search_of_sanity"
-			print*,vision_motivate,"in_search_of_sanity"
+			!print*,vision,"in_search_of_sanity"
+			!print*,vision_motivate,"in_search_of_sanity"
 			
 			write(image_number,*)"By Inheritance"
 			write(image_number,*)"Brain moves: 0 Epoch: 0"
@@ -310,21 +312,24 @@ if (image_number<=2) then
 	!currently rewards data moving towards middle of vision
 
 
-	
+	!print*,image_number,1,"in_search_of_sanity"
 
 
 	!injection, from vision into brain
+	!inject data from the vission arrays into the networks
 	do column_number=1,vision_length[image_number]
-		if (vision(column_number)==1) then	
-			!for think (1)
-			if (image_number==1) then
+		!for think (1)
+		if (image_number==1) then
+			if (vision(column_number)==1) then	
 				think%brain_status(1,plugin(column_number,vision_socket[1],vision_length[1],"brain"),1)=2
 				think%brain_status(2,plugin(column_number,vision_socket[1],vision_length[1],"brain"),1)=1
-			!for motivate (2)
-			else if (image_number==2) then
+			end if
+		!for motivate (2)
+		else if (image_number==2) then
+			if (vision_motivate(column_number)==1) then
 				motivate%brain_status(1,plugin(column_number,vision_socket[2],vision_length[2],"brain"),1)=2
 				motivate%brain_status(2,plugin(column_number,vision_socket[2],vision_length[2],"brain"),1)=1
-			end if	
+			end if					
 		end if
 	end do
 
@@ -447,18 +452,19 @@ if (image_number<=2) then
 
 
 	!temporary movement output
-	!only run in think (1)
-	if (image_number==1) then
-		movement=0
-		speed=0
-		do column_number_2=1,response_length[1]
+	
+	movement=0
+	speed=0
+	do column_number_2=1,response_length
+		!for think (1)
+		if (image_number==1) then
 			if (response(column_number_2)==1) then
 				
 				!movement alteration
-				if (column_number_2<=response_length[1]-2) then
+				if (column_number_2<=response_length-2) then
 				
 					!vision datum is moved x number of spots depending on the response datum's position off centre
-					movement=-1*(((response_length[1]-2)/2+1)-column_number_2) !neg is to the left, pos is to the right
+					movement=-1*(((response_length-2)/2+1)-column_number_2) !neg is to the left, pos is to the right
 					!halt the speed
 					speed=0
 				
@@ -466,9 +472,9 @@ if (image_number<=2) then
 				else
 				
 					!speed response is simple, left is neg and right is pos
-					if (column_number_2==response_length[1]-1) then
+					if (column_number_2==response_length-1) then
 						speed=-1
-					else if (column_number_2==response_length[1]) then
+					else if (column_number_2==response_length) then
 						speed=1
 					end if
 					
@@ -477,23 +483,57 @@ if (image_number<=2) then
 					
 				end if
 				
+			end if
+		end if
+		
+		!for motivate (2)
+		if (image_number==2) then
+			if (response_motivate(column_number_2)==1) then
+				
+				!movement alteration
+				if (column_number_2<=response_length-2) then
+				
+					!vision datum is moved x number of spots depending on the response datum's position off centre
+					movement=-1*(((response_length-2)/2+1)-column_number_2) !neg is to the left, pos is to the right
+					!halt the speed
+					speed=0
+				
+				!speed alteration
+				else
+				
+					!speed response is simple, left is neg and right is pos
+					if (column_number_2==response_length-1) then
+						speed=-1
+					else if (column_number_2==response_length) then
+						speed=1
+					end if
+					
+					!halt the movement
+					movement=0
+					
+				end if
 				
 			end if
-		end do
-		!output the shift
-		open(unit=19,file="shift.txt")
-		write(19,*)movement,speed
-		close(19)
+		end if
+		
+	end do
+	!output the shift
+	if (image_number==1) then
+		open(unit=image_total*3+1,file="shift.txt")
+	else if (image_number==2) then
+		open(unit=image_total*3+1,file="shift2.txt")			
 	end if
+	write(image_total*3+1,*)movement,speed
+	close(image_total*3+1)
 
 
 	
 
 	!write an interpreter that takes a response array and outputs data in a format readable by the interface
-
+	!print*,image_number,2,"in_search_of_sanity"
 
 end if
 
-
+!print*,image_number,3,"in_search_of_sanity"
 
 end program in_search_of_sanity

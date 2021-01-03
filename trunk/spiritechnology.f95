@@ -8,7 +8,7 @@ contains
 !this is it. This is the brain kernel. In this where the network is controled from. It is here that data is fed into and data comes out from.
 !run this to evolve the network built outside. This will need a handshake and a neurochem value at some point
 
-subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
+subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,&
 	epoch_start,node_use_reward)
 
@@ -22,7 +22,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 	integer :: blood_rate
 	
 	!brain
-	type(mind) :: think
+	type(mind) :: thinking
 	integer :: rows,columns
 	real :: node_use_reward
 	
@@ -45,7 +45,9 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 
 	!this is the new song
 	do while (proaction .eqv. .false.)
-
+	
+		!print*,size(thinking%blood(:,1)),1,"spiritech"
+		
 		!increment epoch
 		epoch=epoch+1
 
@@ -55,14 +57,15 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 		! 00000000
 		! 01111110
 		if (mod(epoch,blood_rate)==1) then
+			!print*,size(thinking%blood(:,1)),3,response_length,response_socket,"spiritech"
 			do column_number=1,response_length
-				think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)=&
-					think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)+blood_volume	
+				thinking%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)=&
+					thinking%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)+blood_volume	
 			end do	
 		end if
 		do column_number=1,vision_length
-			think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
-				think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
+			thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
+				thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
 		end do
 
 		!first, randomise random row list
@@ -81,15 +84,15 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 				row_random_number=row_random(row_number)
 				
 				!move the blood around
-				call blood_mover(think%blood,column_random_number,row_random_number,blood_gradient)
+				call blood_mover(thinking%blood,column_random_number,row_random_number,blood_gradient)
 				
 							
 				!only act on neurons that have data in them
-				if (think%brain_status(2,column_random_number,row_random_number)==1) then
+				if (thinking%brain_status(2,column_random_number,row_random_number)==1) then
 
 					!here is the important subroutine call that moves the data depending on how fat the neuron is 
 					!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-					call selector(think,column_random_number,row_random_number,node_use_reward,response,response_socket,testing)		
+					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,testing)		
 								
 					!lag if necessary
 					if (testing .eqv. .true.) then
@@ -104,9 +107,9 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 						write(1,*)"By Inheritance"
 						write(1,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
 						if (show_blood .eqv. .true.) then
-							call print_network(vision,vision_socket,response,response_socket,think%brain_status,think%blood)
+							call print_network(vision,vision_socket,response,response_socket,thinking%brain_status,thinking%blood)
 						else
-							call print_network(vision,vision_socket,response,response_socket,think%brain_status)
+							call print_network(vision,vision_socket,response,response_socket,thinking%brain_status)
 						end if
 						!keep track of response
 						do column_number_2=1,response_length
@@ -121,7 +124,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 						end do							
 					end if	
 						
-					!print*,think%neurochem
+					!print*,thinking%neurochem
 					
 					!response translation into movement
 					!this do loop picks up whether some response ha been fed into 
@@ -139,7 +142,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 				
 				!the choosing weights reduce by one if they are not used and increase by node_use_reward-1 if they are used
 				!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
-				call weight_reducer(think%brain_weight,column_random_number,row_random_number)
+				call weight_reducer(thinking%brain_weight,column_random_number,row_random_number)
 				
 			end do column_loop
 
@@ -150,7 +153,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 					!now, assign the random integer positional number to the requisite random number positional number holder number
 					column_random_number=column_random(column_number)	
 					!move the blood around
-					call blood_mover(think%blood,column_random_number,blood_rows,blood_gradient)
+					call blood_mover(thinking%blood,column_random_number,blood_rows,blood_gradient)
 				end do
 			end if
 			
@@ -164,6 +167,7 @@ subroutine spiritech(epoch,think,blood_rate,response_socket,response_length,visi
 		
 	end do
 
+	!print*,size(thinking%blood(:,1)),2,"spiritech"
 
 end subroutine
 
