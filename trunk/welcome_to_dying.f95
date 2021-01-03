@@ -5,7 +5,7 @@ type mind
 	integer,allocatable :: brain_status(:,:,:)
 	real,allocatable :: brain_weight(:,:,:,:)
 	real,allocatable :: blood(:,:)
-	integer,allocatable :: neurochem(:,:,:)
+	integer,allocatable :: neurochem(:,:,:,:)
 end type mind
 
 contains
@@ -61,7 +61,7 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
 	real,optional,dimension(*) :: blood(:,:)
-	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns
+	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns,imager
 	integer,intent(in) :: vision_socket,response_socket
 	!printing
 	integer,parameter :: individual_width=2, individual_blood=6, separation_space=10
@@ -69,7 +69,16 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 	character(len=individual_blood) :: blood_cha
 	character(len=12) :: individual_width_cha,separation_cha,individual_blood_cha
 	character(len=17) :: width,blood_width,empty_width
+	character(len=20) :: tester
 	character(len=:),allocatable :: print_row
+	
+	
+	!Who is your sanity-daddy and what does he do?
+	imager=this_image()
+	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
+	open(unit=imager,file=tester,access="APPEND")
+
+	print*,imager,1,"print_network"
 	
 	!establish network dimensions
 	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
@@ -109,8 +118,8 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 		end if
 		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
 	end do
-	write(1,*)print_row(1:individual_width*columns)
-	write(1,*)" "
+	write(imager,*)print_row(1:individual_width*columns)
+	write(imager,*)" "
 	print_row(:)="  "
 
 	!the main brain printing loop
@@ -139,9 +148,9 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 				end if
 			end if
 		end do
-		write(1,*)print_row
+		write(imager,*)print_row
 	end do
-	write(1,*)" "
+	write(imager,*)" "
 	print_row(:)="  "
 
 	!print the response and equivalent blood arrays last
@@ -172,9 +181,14 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 			end if
 		end if
 	end do
-	write(1,*)print_row
-	write(1,*)" "
-
+	write(imager,*)print_row
+	write(imager,*)" "
+	
+	print*,imager,2,"print_network"
+	
+	!close this shit down
+	close(imager)
+	
 end subroutine print_network
 
 
@@ -231,47 +245,52 @@ end subroutine randomised_list
 
 
 
-!read in the network or write out to a text file
-subroutine read_write(think,epoch,moves,vision,direction,response_record)
+!read in the network from a text file or write out to a text file
+subroutine read_write(think,epoch,moves,direction,response_record)
 	type(mind) :: think
 	integer,dimension(*),optional :: response_record(:,:)
-	integer :: epoch,vision
+	integer :: epoch,imagine,imagination
+	character(len=20) :: willfull
 	character(len=*) :: direction
 	integer :: column,row
+	
+	imagine=this_image()
+	write(willfull,"(A4,I0,A4)") "will",imagine,".txt"
+	!find the image number total
+	imagination=num_images()
+	print*,imagine,willfull,"read_write"
 	
 	if (direction=="read") then
 	
 		!retrieve previous network
-		open(unit=3,file="will.txt")
-		read(3,*) think%brain_status
-		read(3,*) think%brain_weight
-		read(3,*) think%blood
-		read(3,*) think%neurochem				
-		read(3,*) epoch
-		read(3,*) moves
-		read(3,*) vision
+		open(unit=imagination+imagine,file=willfull)
+		read(imagine,*) think%brain_status
+		read(imagination+imagine,*) think%brain_weight
+		read(imagination+imagine,*) think%blood
+		read(imagination+imagine,*) think%neurochem				
+		read(imagination+imagine,*) epoch
+		read(imagination+imagine,*) moves
 		!if in testing, save response counter
 		if (present(response_record)) then
-			read(3,*) response_record	
+			read(imagination+imagine,*) response_record	
 		end if		
-		close(3)
+		close(imagination+imagine)
 		
 	else if (direction=="write") then
 	
 		!write the networks to file
-		open(unit=2,file="will.txt")
-		write(2,*) think%brain_status
-		write(2,*) think%brain_weight
-		write(2,*) think%blood
-		write(2,*) think%neurochem		
-		write(2,*) epoch
-		write(2,*) moves
-		write(2,*) vision
+		open(unit=2*imagination+imagine,file=willfull)
+		write(2*imagination+imagine,*) think%brain_status
+		write(2*imagination+imagine,*) think%brain_weight
+		write(2*imagination+imagine,*) think%blood
+		write(2*imagination+imagine,*) think%neurochem		
+		write(2*imagination+imagine,*) epoch
+		write(2*imagination+imagine,*) moves
 		!if in testing, save response counter
 		if (present(response_record)) then
-			write(2,*) response_record	
+			write(2*imagination+imagine,*) response_record	
 		end if
-		close(2)
+		close(2*imagination+imagine)
 	
 	end if
 	
@@ -556,7 +575,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column,response_socket
-	integer :: rung, point, connections, data_pos, origin, tester
+	integer :: rung, point, connections, data_pos, origin, tester, rank, rank_size
 	integer :: columnmax, rowmax, counter, second_point, response_length
 	logical :: printer
 	
@@ -643,7 +662,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 	end do
 
 
-
+	!1 is the test_log.txt
 	if (printer .eqv. .true.) then
 		write(1,*)"Maximum Rungs Value, choice value:"
 		write(1,*)rungs(size(rungs)),fuck*rungs(size(rungs))
@@ -682,9 +701,17 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				!remove data and position indicator from current neuron
 				idea%brain_status(data_pos,column,row)=0
 				idea%brain_status(data_pos-1,column,row)=0
+				
 				!add data to neurochem
-				idea%neurochem(1,column,row)=origin
-				idea%neurochem(2,column,row)=point				
+				!first, move each rank down one rung and push the last rank off the ladder
+				rank_size=size(idea%neurochem(1,:,1,1))
+				do rank=1,rank_size-1
+					idea%neurochem(1,rank_size-rank+1,column,row)=idea%neurochem(1,rank_size-rank,column,row)
+					idea%neurochem(2,rank_size-rank+1,column,row)=idea%neurochem(2,rank_size-rank,column,row)									
+				end do
+				!now, move the current activation to the top rung
+				idea%neurochem(1,1,column,row)=origin
+				idea%neurochem(2,1,column,row)=point				
 				
 				!if data is moving off the brain, direct it into the response array	
 				if (point_to_neuron(column,row,point,"row")==rowmax+1) then
@@ -940,77 +967,7 @@ end subroutine initialiser
 !!!!!!!!!!!!!!!!!!!
 
 
-!this subroutine controls how the neurochem modifies weights to reward certain behaviour
-subroutine motivation(neurochemical,weighting,old_look,new_look,centre,effect_up,effect_down,effect_all_around,grad)
 
-	integer,dimension(*) :: neurochemical(:,:,:)
-	real,dimension(*) :: weighting(:,:,:,:)
-	integer :: column,row,path,effect_plus,effect_minus
-	integer :: difference_to_centre,new_difference,old_difference
-	real,intent(in) :: effect_up,effect_down,effect_all_around,grad
-	integer,intent(in) :: old_look,new_look,centre !note, grad must be less than (centre-1)/2
-	
-	!zero out all free variables just in case
-	difference_to_centre=0
-	new_difference=0
-	old_difference=0
-	
-	!calculate the difference from the centrepoint before and after movement
-	old_difference=abs(centre-old_look)
-	new_difference=abs(centre-new_look)
-	difference_to_centre=old_difference-new_difference !pos if closer to centre, neg if further away
-	
-	!update effects with difference_to_centre values
-	effect_plus=effect_up*abs(difference_to_centre)
-	effect_minus=effect_down*abs(difference_to_centre)
-	
-	!note: neurochem(1,:,:) is origin, neurochem(2,:,:) is point
-	!weighting(x,:,x,x) is origin, weighting(:,x,x,x) is point
-	do row=1,size(neurochemical(1,1,:))	
-		do column=1,size(neurochemical(1,:,1))
-			!check if there is any neurochem in the position
-			if (neurochemical(1,column,row)/=0) then	
-				!straight reward - closer to centre, higher the reward
-				weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+effect_all_around*&
-					((float(centre)-(grad*float(new_difference)))/float(centre))	
-				!straight punishment - further from centre, higher the punishment
-				!ensure connection is not zeroed
-				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_all_around*&
-					(((grad*float(new_difference))+1.0)/float(centre))>1.0) then
-					
-					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_all_around*&
-						(((grad*float(new_difference))+1.0)/float(centre))
-						
-				else
-					weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
-				end if
-				!pleasure and pain: if the response moves vision away from centre (pain), drive the weights closer to unity
-				!if the response moves vision towards the centre (pleasure), increase the weight disparity
-				!don't act on closed paths
-				if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)/=0.0) then
-					!pleasure: the vision datum is being driven closer to centre
-					if (difference_to_centre>=1) then
-						weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)+effect_plus
-					!pain: the vision datum is being driven away from the centre
-					else if (difference_to_centre<=-1) then
-						!subtracting from errant path
-						if (weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus<1.0) then
-							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=1.0
-						else
-							weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)=&
-								weighting(neurochemical(2,column,row),neurochemical(1,column,row),column,row)-effect_minus
-						end if
-					end if
-				end if
-					
-			end if
-		end do
-	end do
-
-end subroutine motivation
 
 
 
