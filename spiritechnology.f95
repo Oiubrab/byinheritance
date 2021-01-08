@@ -104,12 +104,10 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 				
 					!print each step
 					if (testing .eqv. .true.) then
-						write(1,*)"By Inheritance"
-						write(1,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
 						if (show_blood .eqv. .true.) then
-							call print_network(vision,vision_socket,response,response_socket,thinking%brain_status,thinking%blood)
+							call print_network(moves,epoch,vision,vision_socket,response,response_socket,thinking%brain_status,thinking%blood)
 						else
-							call print_network(vision,vision_socket,response,response_socket,thinking%brain_status)
+							call print_network(moves,epoch,vision,vision_socket,response,response_socket,thinking%brain_status)
 						end if
 						!keep track of response
 						do column_number_2=1,response_length

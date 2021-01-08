@@ -297,16 +297,17 @@ if (image_number<=2) then
 			!for think (1)
 			if (image_number==1) then
 				if (show_blood .eqv. .true.) then
-					call print_network(vision,vision_socket[1],response,response_socket[1],think%brain_status,think%blood)
+					call print_network(moves,epoch,vision,vision_socket[1],response,response_socket[1],think%brain_status,think%blood)
 				else
-					call print_network(vision,vision_socket[1],response,response_socket[1],think%brain_status)
+					call print_network(moves,epoch,vision,vision_socket[1],response,response_socket[1],think%brain_status)
 				end if
 			!for motivate (2)
 			else if (image_number==2) then
 				if (show_blood .eqv. .true.) then
-					call print_network(vision_motivate,vision_socket[2],response_motivate,response_socket[2],motivate%brain_status,motivate%blood)
+					call print_network(moves,epoch,vision_motivate,vision_socket[2],response_motivate,response_socket[2],&
+						motivate%brain_status,motivate%blood)
 				else
-					call print_network(vision_motivate,vision_socket[2],response_motivate,response_socket[2],motivate%brain_status)
+					call print_network(moves,epoch,vision_motivate,vision_socket[2],response_motivate,response_socket[2],motivate%brain_status)
 				end if
 			end if
 
@@ -421,7 +422,7 @@ if (image_number<=2) then
 
 		!print time elapsed
 		write(image_number,*)" "
-		call print_interval(start,finish)
+		call print_interval_multiple(start,finish)
 
 		!finally, close the file
 		close(image_number)

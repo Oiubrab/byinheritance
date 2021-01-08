@@ -57,12 +57,12 @@ end subroutine delay
 
 
 
-subroutine print_network(vision,vision_socket,response,response_socket,brain,blood)
+subroutine print_network(moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
 	real,optional,dimension(*) :: blood(:,:)
 	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns,imager
-	integer,intent(in) :: vision_socket,response_socket
+	integer,intent(in) :: vision_socket,response_socket,moves,epoch
 	!printing
 	integer,parameter :: individual_width=2, individual_blood=6, separation_space=10
 	character(len=individual_width) :: data_cha
@@ -77,6 +77,9 @@ subroutine print_network(vision,vision_socket,response,response_socket,brain,blo
 	imager=this_image()
 	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
 	open(unit=imager,file=tester,access="APPEND")
+
+	write(imager,*)"By Inheritance"
+	write(imager,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
 
 	!print*,imager,1,"print_network"
 	
@@ -198,18 +201,25 @@ end subroutine print_network
 
 
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
-subroutine print_interval(start,finish)
+subroutine print_interval_multiple(start,finish)
 	real,intent(in) :: start, finish
 	real :: t_sec, total_time
-	integer :: t_hr, t_min
+	integer :: t_hr, t_min, image_number
+	character(len=100) :: test_file
 	
 	total_time=finish-start
 	t_hr = floor(total_time/3600)
 	t_min = (total_time-t_hr*3600)/60
 	t_sec = total_time-t_hr*3600-t_min*60
-	write(1,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
+	
+	!write to one of multiple files
+	image_number=this_image()
+	write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
+	open(unit=image_number,file=test_file,access="APPEND")
+	write(image_number,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
+	close(image_number)
 
-end subroutine print_interval
+end subroutine print_interval_multiple
 
 
 
