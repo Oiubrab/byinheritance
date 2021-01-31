@@ -41,7 +41,7 @@ real,codimension[*] :: blood_volume, blood_gradient
 
 !testing
 real :: random_see
-logical :: testing=.false., show_blood=.true.
+logical :: testing=.false., show_blood=.false.
 character(len=:),allocatable :: column_think_cha,column_motivate_cha
 
 !timing
@@ -81,19 +81,19 @@ write(will_file,"(A4,I0,A4)") "will",image_number,".txt"
 if (image_number==1) then
 	!dimensions
 	!brain
-	directions[1]=8; rows[1]=6; columns[1]=15
+	directions[1]=8; rows[1]=30; columns[1]=35
 	vision_length[1]=columns[1]
 	vision_socket[1]=(columns[1]/2)+1
 	response_length[1]=7
-	response_socket[1]=8
-	node_use_reward[1]=2.0
+	response_socket[1]=(columns[1]/2)+1
+	node_use_reward[1]=10.0
 	!blood
 	blood_rows[1]=rows+1
 	blood_rate[1]=20
 	blood_volume[1]=8.0
 	blood_gradient[1]=0.6
 	!main brain
-	allocate(think%brain_status(2,columns[1],rows[1])) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
+	allocate(think%brain_status(2,columns[1],rows[1])) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
 	allocate(think%brain_weight(directions[1],directions[1],columns[1],rows[1])) !allocate the brain direction weighting 
 	allocate(think%blood(columns[1],blood_rows[1])) !allocate the gradient variable, extra row for response array
 	allocate(think%neurochem(2,10,columns[1],rows[1])) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the timer
@@ -123,7 +123,7 @@ end if
 !!!Setup 2 (motivate)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!
 !this setup is for the motivate network [image 2]
-!this network takes in vital information - times eaten
+!this network takes in vital information
 !the response interfaces with neurochem and with think (1)
 !socket number represents where the middle of the corresponding array meets the brain network
 
@@ -144,7 +144,7 @@ if (image_number==2) then
 	blood_volume[2]=8.0
 	blood_gradient[2]=0.6
 	!main brain
-	allocate(motivate%brain_status(2,columns[2],rows[2])) !allocate the brain data and direction status, 1 is for direction, 2 is for data status
+	allocate(motivate%brain_status(2,columns[2],rows[2])) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
 	allocate(motivate%brain_weight(directions[2],directions[2],columns[2],rows[2])) !allocate the brain direction weighting 
 	allocate(motivate%blood(columns[2],blood_rows[2])) !allocate the gradient variable, extra row for response array
 	allocate(motivate%neurochem(2,10,columns[2],rows[2])) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the timer

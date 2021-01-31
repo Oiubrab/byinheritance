@@ -679,7 +679,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 	end do
 
 
-	!1 is the test_log.txt
+	!print test_log data
 	if (printer .eqv. .true.) then
 		open(unit=image,file=tester,access="APPEND")
 		write(image,*)"Maximum Rungs Value, choice value:"
