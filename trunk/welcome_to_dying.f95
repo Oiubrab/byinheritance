@@ -2,10 +2,10 @@ module welcome_to_dying
 
 !define type for brain
 type mind
-	integer,allocatable :: brain_status(:,:,:)
-	real,allocatable :: brain_weight(:,:,:,:)
-	real,allocatable :: blood(:,:)
-	integer,allocatable :: neurochem(:,:,:,:)
+	integer,allocatable :: brain_status(:,:,:) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
+	real,allocatable :: brain_weight(:,:,:,:) !allocate the brain direction weighting. 8,:,:,: holds the weights from origin :,x,:,: to point x,:,:,:
+	real,allocatable :: blood(:,:) !allocate the gradient variable, extra row for response array
+	integer,allocatable :: neurochem(:,:,:,:) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the weight ladder
 end type mind
 
 contains
@@ -518,59 +518,6 @@ end function plugin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-!this subroutine controls the input from external sources and arranges it in a format on the vision array
-subroutine input_rules(vision,cat_angle_left,cat_angle_right)
-
-	real,parameter :: pi=4.*asin(1./sqrt(2.))
-	real :: select_range,cat_angle_left,cat_angle_right
-	integer :: column_number,channel_size
-	integer,dimension(*) :: vision(:)
-
-	!angles come in, in ranges of -pi to pi, -pi to left and pi to right
-	!separate vision into two parts for the two angles
-	!make scalable, so many inputs can be used on teh same vision array
-	
-	!currently, the system is set to see
-	!left: -pi to 0.5*pi
-	!right: 10.5*pi to 2*pi
-	
-	!the range of an input channel
-	channel_size=size(vision)/2
-	select_range=(1.5*pi)/float(channel_size)
-	
-	!the left side assignment
-	do column_number=1,channel_size
-		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
-		!print*,vision
-		if ((select_range*float(column_number)>=(cat_angle_left+pi)) .and. &
-		(select_range*float(column_number-1)<=(cat_angle_left+pi))) then
-		
-			vision(column_number)=1
-			!print*,"help"
-		else
-			vision(column_number)=0
-		end if
-	end do
-	
-	!zero the middle vision entry
-	vision(channel_size+1)=0
-	
-	!the right side assignment
-	do column_number=channel_size+2,size(vision)
-		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
-		!print*,vision
-		if ((select_range*float(column_number-channel_size)+0.5*pi>=(cat_angle_right+pi)) &
-			.and. (select_range*float(column_number-(1+channel_size))+0.5*pi<=(cat_angle_right+pi))) then
-			
-			vision(column_number)=1
-			!print*,"help"
-		else
-			vision(column_number)=0
-		end if
-	end do	
-
-end subroutine input_rules
-
 
 
 
@@ -734,6 +681,8 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				idea%neurochem(2,1,column,row)=point				
 				
 				!if data is moving off the brain, direct it into the response array	
+				!can add more response options here if I want to add more response directions
+				!for instance, something off of the left or right sides of the network
 				if (point_to_neuron(column,row,point,"row")==rowmax+1) then
 					
 					response(plugin(point_to_neuron(column,row,point,"column"),response_socket,response_length,"array"))=1
@@ -975,16 +924,40 @@ end subroutine initialiser
 
 
 
-
-
-
-
-
 	
 
 !!!!!!!!!!!!!!!!!!!
 !!weight handling!!
 !!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+!This subroutine takes the neurochem matricies saved in each network and the output of the motivate network and applies a scaling factor to the weights of each network
+subroutine animus(think,motivate,oddyseus)
+
+	type(mind) :: think, motivate
+	integer :: oddyseus, row, column, to, from, ladder
+	
+	!add to weights based on the neurochem at that node and the scaling 
+	do row=1,size(think%brain_weight(1,1,1,:))
+		do column=1,size(think%brain_weight(1,1,:,1))
+			do ladder=1,size(think%neurochem(1,:,1,1))
+				
+				!for each rung in the neurochem ladder, establish which weight is to be altered
+				from=think%neurochem(1,ladder,column,row)
+				to=think%neurochem(2,ladder,column,row)
+				!add the weight
+				think%brain_weight(to,from,column,row)=think%brain_weight(to,from,column,row)+(size(think%neurochem(1,:,1,1))+1-ladder)*oddyseus
+					
+			end do
+		end do
+	end do
+
+end subroutine
+
 
 
 
