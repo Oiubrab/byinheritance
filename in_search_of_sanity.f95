@@ -4,13 +4,13 @@ use spiritechnology
 
 !this is the main controlling script, where the network is setup and run.
 
-!note, needs two angle inputs, a times_eaten input and a testing boolean, from the command line, to run
-!alternatively, place eudm in the folder and run it
+!note, need a saved array in txt format to read and input into the vision array
+
 implicit none
 
 !network setup and reading
 integer,codimension[*] :: directions, rows, columns
-type(mind) :: think,motivate !think is the vision and response, motivate is the food eaten and neurochem controller
+type(mind) :: think,motivate !think is the vision and response, motivate is the cash flow and neurochem controller
 logical :: file_exists
 real,codimension[*] :: node_use_reward
 
@@ -19,6 +19,7 @@ real,codimension[*] :: node_use_reward
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 !motivate array interfaces
 integer, allocatable :: vision_motivate(:), response_motivate(:), response_counter_motivate(:,:)
+integer :: oddsey
 !ubiquitous
 integer :: movement, speed
 integer,codimension[*] :: vision_length, response_length
@@ -29,9 +30,7 @@ integer :: column_number, column_number_2
 integer,codimension[*] :: moves, epoch, epoch_start
 
 !from the outside
-!note: cat angle left is 1st argument and cat angle right is 2nd argument
-real :: cat_angle_left,cat_angle_right,food
-character(len=1000) :: angle_from_cat_left_cha,angle_from_cat_right_cha,food_cha,testing_cha
+character(len=1000) :: show_blood_cha,testing_cha
 integer :: epoch_cutoff=100 !ubiqutous
 
 !blood
@@ -54,6 +53,11 @@ real :: start, finish, delay_time=0.0
 integer :: image_number,image_total
 character(len=20) :: test_file, will_file
 
+
+
+
+
+
 !setup the images
 !note: think-1, motivate-2
 image_total=num_images()
@@ -61,7 +65,21 @@ image_number=this_image()
 write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
 write(will_file,"(A4,I0,A4)") "will",image_number,".txt"
 
-
+!testing switches
+!switch for turning on/off the test logs
+CALL GET_COMMAND_ARGUMENT(1,testing_cha)
+if (testing_cha=="true") then
+	testing=.true.
+else if (testing_cha=="false") then
+	testing=.false.
+ENDIF
+!switch for turning on/off blood printing
+CALL GET_COMMAND_ARGUMENT(2,show_blood_cha)
+if (show_blood_cha=="true") then
+	show_blood=.true.
+else if (show_blood_cha=="false") then
+	show_blood=.false.
+ENDIF
 
 
 
@@ -81,8 +99,8 @@ write(will_file,"(A4,I0,A4)") "will",image_number,".txt"
 if (image_number==1) then
 	!dimensions
 	!brain
-	directions[1]=8; rows[1]=30; columns[1]=35
-	vision_length[1]=columns[1]
+	directions[1]=8; rows[1]=50; columns[1]=50
+	vision_length[1]=35
 	vision_socket[1]=(columns[1]/2)+1
 	response_length[1]=7
 	response_socket[1]=(columns[1]/2)+1
@@ -94,9 +112,9 @@ if (image_number==1) then
 	blood_gradient[1]=0.6
 	!main brain
 	allocate(think%brain_status(2,columns[1],rows[1])) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
-	allocate(think%brain_weight(directions[1],directions[1],columns[1],rows[1])) !allocate the brain direction weighting 
+	allocate(think%brain_weight(directions[1],directions[1],columns[1],rows[1])) !allocate the brain direction weighting. 8,:,:,: holds the weights from origin :,x,:,: to point x,:,:,:
 	allocate(think%blood(columns[1],blood_rows[1])) !allocate the gradient variable, extra row for response array
-	allocate(think%neurochem(2,10,columns[1],rows[1])) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the timer
+	allocate(think%neurochem(2,10,columns[1],rows[1])) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the weight ladder
 	!input-output
 	allocate(vision(vision_length[1])) !allocate the array for input into the network, currently on top
 	allocate(response(response_length[1])) !allocate the array for output from the network, currently on bottom
@@ -145,7 +163,7 @@ if (image_number==2) then
 	blood_gradient[2]=0.6
 	!main brain
 	allocate(motivate%brain_status(2,columns[2],rows[2])) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
-	allocate(motivate%brain_weight(directions[2],directions[2],columns[2],rows[2])) !allocate the brain direction weighting 
+	allocate(motivate%brain_weight(directions[2],directions[2],columns[2],rows[2])) !allocate the brain direction weighting. 8,:,:,: holds the weights from origin :,x,:,: to point x,:,:,:
 	allocate(motivate%blood(columns[2],blood_rows[2])) !allocate the gradient variable, extra row for response array
 	allocate(motivate%neurochem(2,10,columns[2],rows[2])) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the timer
 	!input-output
@@ -183,33 +201,14 @@ if (image_number<=2) then
 
 	!fuck you
 	call random_seed()
-
-
 	
-	!switch for turning on/off the test logs
-	CALL GET_COMMAND_ARGUMENT(4,testing_cha)
-	if (testing_cha=="true") then
-		testing=.true.
-	else if (testing_cha=="false") then
-		testing=.false.
-	ENDIF
-
-	
-
-	!read in the angle to the food
-	CALL GET_COMMAND_ARGUMENT(1,angle_from_cat_left_cha)
-	CALL GET_COMMAND_ARGUMENT(2,angle_from_cat_right_cha)	
-	CALL GET_COMMAND_ARGUMENT(3,food_cha)	
-	READ(angle_from_cat_left_cha,*)cat_angle_left
-	READ(angle_from_cat_right_cha,*)cat_angle_right
-	READ(food_cha,*)food
-	
-	
-	!translate angle to all the foods into vision node
+	!think(1) opens outside_data and puts it into it's vision
 	if (image_number==1) then
-		call input_rules(vision,cat_angle_left,cat_angle_right)
+		open(unit=1,file="outside_data.csv")
+		read(1,*) vision
 	else if (image_number==2) then
-		call input_rules(vision_motivate,cat_angle_left,cat_angle_right)
+		open(unit=1,file="inside_data.csv")
+		read(1,*) vision_motivate	
 	end if
 	
 	!if this is is a continuation of the algorithm, then load the previous cycle
@@ -322,10 +321,9 @@ if (image_number<=2) then
 	!!!!!!!!!!!!
 	!!!reward!!!
 	!!!!!!!!!!!!
-	!currently rewards data moving towards middle of vision
+	
 
 
-	!print*,image_number,1,"in_search_of_sanity"
 
 
 	!injection, from vision into brain
@@ -372,8 +370,9 @@ if (image_number<=2) then
 
 	
 
-
-
+	!!!!!!!!!!!!!!!!!!!!!!!
+	!!! Testing Summary !!!
+	!!!!!!!!!!!!!!!!!!!!!!!
 
 
 	!print all the run data
@@ -448,105 +447,22 @@ if (image_number<=2) then
 		end if
 
 	end if
-
-
-
-
-
-
 	
 
-
-
-
-
-
-
-
-
-	!temporary movement output
+	!!!!!!!!!!!!!!!!!!!!!!
+	!!! Motivation Act !!!
+	!!!!!!!!!!!!!!!!!!!!!!
 	
-	movement=0
-	speed=0
-	do column_number_2=1,response_length
-		!for think (1)
-		if (image_number==1) then
-			if (response(column_number_2)==1) then
-				
-				!movement alteration
-				if (column_number_2<=response_length-2) then
-				
-					!vision datum is moved x number of spots depending on the response datum's position off centre
-					movement=-1*(((response_length-2)/2+1)-column_number_2) !neg is to the left, pos is to the right
-					!halt the speed
-					speed=0
-				
-				!speed alteration
-				else
-				
-					!speed response is simple, left is neg and right is pos
-					if (column_number_2==response_length-1) then
-						speed=-1
-					else if (column_number_2==response_length) then
-						speed=1
-					end if
-					
-					!halt the movement
-					movement=0
-					
-				end if
-				
-			end if
-		end if
-		
-		!for motivate (2)
-		if (image_number==2) then
-			if (response_motivate(column_number_2)==1) then
-				
-				!movement alteration
-				if (column_number_2<=response_length-2) then
-				
-					!vision datum is moved x number of spots depending on the response datum's position off centre
-					movement=-1*(((response_length-2)/2+1)-column_number_2) !neg is to the left, pos is to the right
-					!halt the speed
-					speed=0
-				
-				!speed alteration
-				else
-				
-					!speed response is simple, left is neg and right is pos
-					if (column_number_2==response_length-1) then
-						speed=-1
-					else if (column_number_2==response_length) then
-						speed=1
-					end if
-					
-					!halt the movement
-					movement=0
-					
-				end if
-				
-			end if
-		end if
-		
-	end do
-	!output the shift
-	if (image_number==1) then
-		open(unit=image_total*3+1,file="shift.txt")
-	else if (image_number==2) then
-		open(unit=image_total*3+1,file="shift2.txt")			
-	end if
-	write(image_total*3+1,*)movement,speed
-	close(image_total*3+1)
-
-
+	sync all
 	
-
-	!write an interpreter that takes a response array and outputs data in a format readable by the interface
-	!print*,image_number,2,"in_search_of_sanity"
+	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
+	!oddsey=motivate%
+	
+	!this makes the system yearn for happiness
+	!call animus(think,motivate,oddsey)
+	
 
 end if
 
-!print*,image_number,3,"in_search_of_sanity"
 
 end program in_search_of_sanity
