@@ -19,7 +19,7 @@ real,codimension[*] :: node_use_reward
 integer, allocatable :: vision(:), response(:), response_counter(:,:)
 !motivate array interfaces
 integer, allocatable :: vision_motivate(:), response_motivate(:), response_counter_motivate(:,:)
-integer :: oddsey
+integer :: oddsey[*]
 !ubiquitous
 integer :: movement, speed
 integer,codimension[*] :: vision_length, response_length
@@ -99,8 +99,8 @@ ENDIF
 if (image_number==1) then
 	!dimensions
 	!brain
-	directions[1]=8; rows[1]=50; columns[1]=50
-	vision_length[1]=35
+	directions[1]=8; rows[1]=20; columns[1]=35
+	vision_length[1]=25
 	vision_socket[1]=(columns[1]/2)+1
 	response_length[1]=7
 	response_socket[1]=(columns[1]/2)+1
@@ -204,10 +204,10 @@ if (image_number<=2) then
 	
 	!think(1) opens outside_data and puts it into it's vision
 	if (image_number==1) then
-		open(unit=1,file="outside_data.csv")
+		open(unit=1,file="sight.csv")
 		read(1,*) vision
 	else if (image_number==2) then
-		open(unit=1,file="inside_data.csv")
+		open(unit=1,file="feel.csv")
 		read(1,*) vision_motivate	
 	end if
 	
@@ -368,11 +368,44 @@ if (image_number<=2) then
 	end if
 
 
+
+
+	!!!!!!!!!!!!!!!!!!!!!!
+	!!! Motivation Act !!!
+	!!!!!!!!!!!!!!!!!!!!!!
+	
+	
+	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
+	!oddsey is defined only in the motivate image
+
+	if (image_number==2) then
+		oddsey=findloc(response_motivate,1,dim=1)
+		!if no data comes through, don't change the weights
+		if (oddsey==0) then
+			oddsey=(size(response_motivate)/2)
+		end if
+		!right is higher motivation, left is lower motivation
+		oddsey=oddsey-(size(response_motivate)/2)	
+	end if
+
+	sync all
+	!print*,oddsey[2],this_image()
+	!this makes the system yearn for happiness
+	!must be run for each network
+	if (image_number==1) then
+		call animus(think,oddsey[2])
+	else if (image_number==2) then
+		call animus(motivate,oddsey[2])
+	end if
+
 	
 
-	!!!!!!!!!!!!!!!!!!!!!!!
-	!!! Testing Summary !!!
-	!!!!!!!!!!!!!!!!!!!!!!!
+
+	
+
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	!!! Testing Summary and/or network save !!!
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 	!print all the run data
@@ -447,19 +480,6 @@ if (image_number<=2) then
 		end if
 
 	end if
-	
-
-	!!!!!!!!!!!!!!!!!!!!!!
-	!!! Motivation Act !!!
-	!!!!!!!!!!!!!!!!!!!!!!
-	
-	sync all
-	
-	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
-	!oddsey=motivate%
-	
-	!this makes the system yearn for happiness
-	!call animus(think,motivate,oddsey)
 	
 
 end if
