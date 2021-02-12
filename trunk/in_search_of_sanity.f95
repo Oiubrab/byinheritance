@@ -1,6 +1,7 @@
 program in_search_of_sanity
 use welcome_to_dying
 use spiritechnology
+use csv_module
 
 !this is the main controlling script, where the network is setup and run.
 
