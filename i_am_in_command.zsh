@@ -8,12 +8,12 @@
 
 #first, setup the binary
 reset
-rm in_search_of_sanity
+rm in_search_of_sanity spiritechnology.mod welcome_to_dying.mod
+# this option cleans out the brain, ready for a new run
 if [[ $3 = "clean" ]]
 then
 	rm *.txt
-	rm *.mod
 fi
-caf -fbounds-check welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 -o in_search_of_sanity
+caf -fbounds-check libcsv.a welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 -o in_search_of_sanity
 cafrun -n 2 --use-hwthread-cpus ./in_search_of_sanity $1 $2
 
