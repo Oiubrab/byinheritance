@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/sh
 
 #this runner runs the finance version of the brain
 # three arguments: 
