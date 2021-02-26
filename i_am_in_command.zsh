@@ -14,6 +14,15 @@ if [[ $3 = "clean" ]]
 then
 	rm *.txt
 fi
-caf -fbounds-check libcsv.a welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 -o in_search_of_sanity
-cafrun -n 2 --use-hwthread-cpus ./in_search_of_sanity $1 $2
+
+#compile
+caf -fbounds-check welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 -o in_search_of_sanity
+
+#run the network $4 times
+for i in {1..$4..1}
+do
+	
+	cafrun -n 2 --use-hwthread-cpus ./in_search_of_sanity $1 $2
+	
+done
 
