@@ -1,9 +1,17 @@
 program in_search_of_sanity
 use welcome_to_dying
 use spiritechnology
-use csv_module
 
 !this is the main controlling script, where the network is setup and run.
+!This code has been written to fit with the opencoarrays 2.9.2 software package
+!this can be found at http://www.opencoarrays.org/ and is actually very good
+
+!I take no responsibility for the death and destruction of humankind
+!but I do take responsibility for everything else
+!I'm sorry. I'm trying to fix it
+
+!Anyway, this is the opencoarrays version. 
+!To go see the cuda monster, go checkout the_years_of_decay.f95
 
 !note, need a saved array in txt format to read and input into the vision array
 
@@ -11,7 +19,7 @@ implicit none
 
 !network setup and reading
 integer,codimension[*] :: directions, rows, columns
-type(mind) :: think,motivate !think is the vision and response, motivate is the cash flow and neurochem controller
+type(mind) :: think,motivate,lobe[*] !think is the vision and response, motivate is the cash flow and neurochem controller
 logical :: file_exists
 real,codimension[*] :: node_use_reward
 
@@ -47,8 +55,9 @@ character(len=:),allocatable :: column_think_cha,column_motivate_cha
 !timing
 real :: start, finish, delay_time=0.0
 
-!printing
-
+!output
+character(len=:),allocatable :: csv_outputter
+integer :: response_report
 
 !coarray specific
 integer :: image_number,image_total
@@ -188,14 +197,14 @@ end if
 
 
 
-
+!this is it
 
 !cutoff unused coarrays
 if (image_number<=2) then 
 
 		
 	sync all
-	!this is it
+	
 	
 	!start timer
 	call CPU_Time(start)
@@ -203,14 +212,22 @@ if (image_number<=2) then
 	!fuck you
 	call random_seed()
 	
-	!think(1) opens outside_data and puts it into it's vision
-	if (image_number==1) then
-		open(unit=1,file="sight.csv")
-		read(1,*) vision
-	else if (image_number==2) then
-		open(unit=1,file="feel.csv")
+
+	!motivate(2) opens feel and puts it into it's vision
+	if (image_number==2) then
+		open(unit=1,file="world_in_a_world/feel.csv")
 		read(1,*) vision_motivate	
+		close(1)
+	!think(1) opens sight and puts it into it's vision
+	else if (image_number==1) then
+		open(unit=1,file="world_in_a_world/sight.csv")
+		open(unit=2,file="world_in_a_world/feel_response.csv")
+		read(1,*) vision(1:18)
+		read(2,*) vision(19:25)		
+		close(1)
+		close(2)
 	end if
+	
 	
 	!if this is is a continuation of the algorithm, then load the previous cycle
 	INQUIRE(FILE=will_file, EXIST=file_exists)
@@ -401,6 +418,25 @@ if (image_number<=2) then
 
 	
 
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	!!! Output and inter-put !!!
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	!place response motivate array into a csv file (feel_response.csv)
+	if (image_number==2) then
+		open(unit=1,file="world_in_a_world/feel_response.csv")
+		allocate(character(2*response_length) :: csv_outputter)
+		!write each element of the csv file independantly
+		do column_number=1,response_length[2]-1
+			write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') response_motivate(column_number),','
+		end do
+		write(csv_outputter((response_length*2)-1:response_length*2),'(I1)') response_motivate(response_length)
+		write(1,*) csv_outputter
+		!print*,response_motivate, response_length
+		close(1)
+		
+	end if
+
 
 	
 
@@ -484,6 +520,7 @@ if (image_number<=2) then
 	
 
 end if
+
 
 
 end program in_search_of_sanity
