@@ -5,7 +5,7 @@ This is a readme to explain the madness you see in the file system before you. I
 
 ## Branch
 
-This is the main trunk and is currently being developed to work with stock market data so that data can be fed in and the system will learn to develop investment strategies that will maximise cash flow.
+This is the main trunk and is currently being developed to work with stock market data so that data can be fed in and the system will learn to develop investment strategies that will maximise 2nd derivitive cash flow.
 
 **Note:** Setting it to maximise total cash is not the way to go as the network will eventually learn to lock the user out of the account
 
@@ -37,4 +37,26 @@ As the **Random Number** falls between 0.2 and 0.3, it lies in the **Second Buck
 | 6 | 7 | 8 |
 
 The table above shows the mapping for each node's routes. The x representes the node in question - the *home* node - and the numbered positions represent nodes adjacent to the home node. For instance, if route 1 is selected, the bit in the home node will move left one space and up one space in the network
+
+### Network
+
+#### Example:
+
+|0|0|1|0|0|1|0|
+|-|-|-|-|-|-|-|
+||||||||
+|0|0|0|0|0|0|0|
+|0|0|0|0|0|1|0|
+|0|0|0|0|0|0|0|
+|0|1|0|0|0|0|0|
+|0|0|0|0|0|0|0|
+|0|0|0|0|0|0|0|
+||||||
+||1|0|0|0|0||
+
+#### Description
+
+As above, the x represents a node. The first layer is an input layer (top) that is a representation of whatever data is being fed into the network. The data is immediately fed into the network proper (middle), where it propogates through the system thusly. Eventually it ends up in the output layer (bottom), where it is sent off (removed) and interpreted by another application. The fact that the output layer is smaller than the network is an arbitrary choice, as is the input layer being the same size as the network, or that the input and output layers need be on the top and bottom. Any configuration of size and position will produce full fidelity results as long as the input/output arrays are not outside the network. 
+
+
 

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #this runner runs the finance version of the brain
 # three arguments: 
@@ -18,11 +18,20 @@ fi
 #compile
 caf -fbounds-check welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 -o in_search_of_sanity
 
+#reset the market
+cd world_in_a_world
+python3 test_market.py3 reset
+cd ..
+
 #run the network $4 times
-for i in {1..$4..1}
+for i in $(seq 1 $4)
 do
 	
 	cafrun -n 2 --use-hwthread-cpus ./in_search_of_sanity $1 $2
+	cd world_in_a_world
+	python3 test_market.py3 carryon
+	cd ..
+	echo $i
 	
 done
 

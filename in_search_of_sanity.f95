@@ -109,8 +109,8 @@ ENDIF
 if (image_number==1) then
 	!dimensions
 	!brain
-	directions[1]=8; rows[1]=20; columns[1]=35
-	vision_length[1]=25
+	directions[1]=8; rows[1]=20; columns[1]=50
+	vision_length[1]=44
 	vision_socket[1]=(columns[1]/2)+1
 	response_length[1]=7
 	response_socket[1]=(columns[1]/2)+1
@@ -218,12 +218,13 @@ if (image_number<=2) then
 		open(unit=1,file="world_in_a_world/feel.csv")
 		read(1,*) vision_motivate	
 		close(1)
-	!think(1) opens sight and puts it into it's vision
+	!think(1) opens sight and feel_response and puts them into it's vision
 	else if (image_number==1) then
 		open(unit=1,file="world_in_a_world/sight.csv")
 		open(unit=2,file="world_in_a_world/feel_response.csv")
-		read(1,*) vision(1:18)
-		read(2,*) vision(19:25)		
+		!print*,vision_length-response_length[2]-1,vision_length-response_length[2]
+		read(1,*) vision(1:vision_length-response_length[2])
+		read(2,*) vision(vision_length-response_length[2]+1:vision_length)		
 		close(1)
 		close(2)
 	end if
@@ -403,6 +404,7 @@ if (image_number<=2) then
 			oddsey=(size(response_motivate)/2)
 		end if
 		!right is higher motivation, left is lower motivation
+		!midpoint is zero motivation and anything to the left is negative
 		oddsey=oddsey-(size(response_motivate)/2)	
 	end if
 
@@ -431,6 +433,21 @@ if (image_number<=2) then
 			write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') response_motivate(column_number),','
 		end do
 		write(csv_outputter((response_length*2)-1:response_length*2),'(I1)') response_motivate(response_length)
+		write(1,*) csv_outputter
+		!print*,response_motivate, response_length
+		close(1)
+		
+	end if
+	
+	!place response array into a csv file (sight_response.csv)
+	if (image_number==1) then
+		open(unit=1,file="world_in_a_world/sight_response.csv")
+		allocate(character(2*response_length) :: csv_outputter)
+		!write each element of the csv file independantly
+		do column_number=1,response_length[2]-1
+			write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') response(column_number),','
+		end do
+		write(csv_outputter((response_length*2)-1:response_length*2),'(I1)') response(response_length)
 		write(1,*) csv_outputter
 		!print*,response_motivate, response_length
 		close(1)
