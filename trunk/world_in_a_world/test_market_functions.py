@@ -1,6 +1,9 @@
 import csv
 
+
+
 #csv reader and outputter
+
 
 #the reader
 #if a string representing a filename is inputted into filename_tup, that csv file will be read and returned as a list
@@ -20,6 +23,13 @@ def read_csv_dic(filename_tup):
 			reader_out += [dic_list]
 	return reader_out
 	
+	
+	
+	
+	
+	
+	
+	
 #the writer, writing out to a csv file with dics where the order of filenames must match the order of dics
 def write_csv_dic(filename_tup,dic_tup):
 	if type(filename_tup)==str:
@@ -35,3 +45,57 @@ def write_csv_dic(filename_tup,dic_tup):
 				read_survey_out.writeheader()
 				for dic_insert in dic:
 					read_survey_out.writerow(dic_insert)	
+
+
+
+
+
+
+
+					
+#this function converts an integer to a binary list, surprising
+#note; the binary array is outputted in format left:smallest to right:highest
+#the last bit represents pos (1) or neg (0) (a zero is positive)
+def integer_to_binary(integer):
+	binary=[]
+	#special case for 0 and 1
+	if integer==0:
+		binary=[0]
+	elif integer==1:
+		binary=[1]
+	#otherwise, compute the binary
+	else:
+		while integer>1:
+			remainder=int(integer%2)
+			integer=integer/2
+			binary = binary + [remainder] 
+			
+	#add the pos/neg bit
+	if integer<0:
+		binary = binary + [0]
+	else:
+		binary = binary + [1]
+		
+	return binary
+	
+	
+	
+	
+	
+#this function converts the binary array above into an integer
+def binary_to_integer(binary_array):
+
+	#make the integer
+	integer=0
+	#add up the parts of the binary to make the integer
+	for binary,order in zip(binary_array,range(len(binary_array))):
+		if order<len(binary_array)-1:
+			integer = integer + binary*(2**order)
+	
+	#use the last part of the binary array as the pos/neg label
+	if binary_array[-1] == 0:
+		integer = integer*(-1)
+	
+	return integer
+		
+
