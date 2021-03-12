@@ -8,14 +8,12 @@ import time
 import sys
 from test_market_functions import *
 
+#this is where the size of the feel array is entered
+feel_size=15
+#this is where the amplitudes of the market pricing shifts are entered
+amplitude_1st=100.0
+amplitude_2nd=10.0
 
-
-#open the sight_response.csv array and prepare it to affect it's position in the market
-deicide = open("sight_response.csv","r")
-deicide_array=csv.reader(deicide)
-deicide_array_list=list(deicide_array)
-deicide_array_list_numbers=[int(number) for number in deicide_array_list[0]]
-#print(deicide_array_list_numbers)
 
 
 
@@ -25,18 +23,26 @@ if len(sys.argv)==2 and (str(sys.argv[1])=='reset' or str(sys.argv[1])=='carryon
 	if str(sys.argv[1])=='reset':
 		markets = read_csv_dic("market_reset.csv")
 		account = read_csv_dic("account_reset.csv")
+		deicide = open("sight_response_reset.csv","r")
 	elif str(sys.argv[1])=='carryon':
 		markets = read_csv_dic("market.csv")
 		account = read_csv_dic("account.csv")
+		deicide = open("sight_response.csv","r")
 else:
 	print("run application with python3 test_market.py3 start_choice")
 	print("Where:")
 	print("Start_choice=reset - resets the market")
 	print("start_choice=carryon - carries on the market")
 	sys.exit()
+
+#open the sight_response.csv array and prepare it to affect it's position in the market
+deicide_array=csv.reader(deicide)
+deicide_array_list=list(deicide_array)
+deicide_array_list_numbers=[int(number) for number in deicide_array_list[0]]
+#print(deicide_array_list_numbers)
 	
-print(markets)
-print(account)
+#print(markets)
+#print(account)
 
 
 
@@ -75,9 +81,9 @@ for entry in account:
 stock_selection = binary_to_integer(deicide_array_list_numbers[0:3] + [1])
 #interpret the number of units and buy/sell choice
 units = binary_to_integer(deicide_array_list_numbers[3:7])
-print(deicide_array_list_numbers,deicide_array_list_numbers[0:3],deicide_array_list_numbers[3:7])
-print(stock_selection)
-print(units)
+#print(deicide_array_list_numbers,deicide_array_list_numbers[0:3],deicide_array_list_numbers[3:8])
+#print(stock_selection)
+#print(units)
 
 
 #buy/sell controller
@@ -90,8 +96,11 @@ for entry in account:
 		
 #buy/sell algorithm
 #increase/decrease units owned of the selected stock by the number of units selected
+#initialisation of cost at 0 ensures invalid choices by the network are ignored 
+cost=0
 for stock in markets:
-	if stock["stock_number"]==stock_selection:
+	# second condition (stock+units>-1) ensures network cannot sell more than it has
+	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1:
 		#buying (positive cost) and selling (negative cost)
 		stock["units_owned"] += units
 		cost = units*stock["stock_price"]
@@ -99,14 +108,38 @@ for stock in markets:
 		
 #subtract from account
 #add a new entry to the account that has this subtracted value
-this_entry = last_entry
-this_entry["account_value"] -= cost
-this_entry["time"] = t_end
+this_entry = {"account":"test","account_value":last_entry["account_value"]-cost,"time":t_end}
+#this_entry["account_value"] -= cost
+#this_entry["time"] = t_end
 account = account + [this_entry]
 
+#write this dic to a csv file
+write_csv_dic("account.csv",account)
+
 #compute weighted gradient of earnings and place it in a binary array
-weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/this_entry["account_value"])*100)
+#print(int(((this_entry["account_value"] - last_entry["account_value"])/this_entry["account_value"])*100.0))
+#print(this_entry["account_value"] - last_entry["account_value"],this_entry["account_value"])
+weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/this_entry["account_value"])*100.0)
+#limit growth/decay to the last account volume for now
+if weighted_gradient_percentage>100.0:
+	weighted_gradient_percentage=100.0
+elif weighted_gradient_percentage<-100.0:
+	weighted_gradient_percentage=-100.0
+	
+#prepare binary array 
 weighted_gradient_percentage_binary = integer_to_binary(weighted_gradient_percentage)
+#if the binary array is smaller than the feel array it's going to, resize the array
+if len(weighted_gradient_percentage_binary)<feel_size:
+	last_digit=weighted_gradient_percentage_binary[-1]
+	weighted_gradient_percentage_binary[-1]=0
+	difference_lengths=feel_size-len(weighted_gradient_percentage_binary)
+	#pad out thelist with zeros
+	for x in range(difference_lengths-1):
+		weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [0]
+	#restore the pos/neg trigger at the end
+	weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [last_digit]
+		
+	
 
 #and this is where the resulting array is written into feel.csv
 feel = numpy.array(weighted_gradient_percentage_binary)
@@ -121,9 +154,9 @@ wtr.writerow(feel)
 
 #alter the stock to replicate a changing market
 for stock in markets:
-	change = float(stock["stock_price"])*numpy.sin(timer)
+	change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))+(amplitude_2nd*numpy.sin(t_end*0.01))
 	#print(change)
-	stock["stock_price"] = change+stock["stock_price"]
+	stock["stock_price"] = change
 	if stock["stock_price"]<10.0:
 		stock["stock_price"]=10.0
 	
@@ -184,4 +217,4 @@ wtr.writerow(sight)
 
 
 print(markets)
-print(account)
+print(this_entry)
