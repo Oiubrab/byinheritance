@@ -112,7 +112,7 @@ if (image_number==1) then
 	directions[1]=8; rows[1]=20; columns[1]=50
 	vision_length[1]=44
 	vision_socket[1]=(columns[1]/2)+1
-	response_length[1]=7
+	response_length[1]=9
 	response_socket[1]=(columns[1]/2)+1
 	node_use_reward[1]=10.0
 	!blood
@@ -378,12 +378,12 @@ if (image_number<=2) then
 	if (image_number==1) then
 		call spiritech(epoch[1],think,blood_rate[1],response_socket[1],response_length[1],vision_length[1],&
 			vision_socket[1],blood_rows[1],epoch_cutoff,blood_gradient[1],blood_volume[1],vision,response,response_counter,&
-			rows[1],columns[1],moves[1],testing,show_blood,delay_time,epoch_start[1],node_use_reward[1])
+			rows[1],columns[1],moves[1],testing,show_blood,delay_time,epoch_start[1],node_use_reward[1],"normal")
 	!for motivate (2)
 	else if (image_number==2) then
 		call spiritech(epoch[2],motivate,blood_rate[2],response_socket[2],response_length[2],vision_length[2],&
 			vision_socket[2],blood_rows[2],epoch_cutoff,blood_gradient[2],blood_volume[2],vision_motivate,response_motivate,&
-			response_counter_motivate,rows[2],columns[2],moves[2],testing,show_blood,delay_time,epoch_start[2],node_use_reward[2])
+			response_counter_motivate,rows[2],columns[2],moves[2],testing,show_blood,delay_time,epoch_start[2],node_use_reward[2],"motive")
 	end if
 
 
@@ -429,7 +429,7 @@ if (image_number<=2) then
 		open(unit=1,file="world_in_a_world/feel_response.csv")
 		allocate(character(2*response_length) :: csv_outputter)
 		!write each element of the csv file independantly
-		do column_number=1,response_length[2]-1
+		do column_number=1,response_length-1
 			write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') response_motivate(column_number),','
 		end do
 		write(csv_outputter((response_length*2)-1:response_length*2),'(I1)') response_motivate(response_length)
@@ -444,7 +444,7 @@ if (image_number<=2) then
 		open(unit=1,file="world_in_a_world/sight_response.csv")
 		allocate(character(2*response_length) :: csv_outputter)
 		!write each element of the csv file independantly
-		do column_number=1,response_length[2]-1
+		do column_number=1,response_length-1
 			write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') response(column_number),','
 		end do
 		write(csv_outputter((response_length*2)-1:response_length*2),'(I1)') response(response_length)
@@ -454,7 +454,9 @@ if (image_number<=2) then
 		
 	end if
 
-
+	!if (image_number==1) then
+	!	print*,response
+	!end if
 	
 
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

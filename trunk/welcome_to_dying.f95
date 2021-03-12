@@ -616,14 +616,14 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 		!inside the network
 		else if ((point_to_neuron(column,row,point,"column")>=1) .and. (point_to_neuron(column,row,point,"row")>=1) .and. &
 			(point_to_neuron(column,row,point,"column")<=columnmax) .and. (point_to_neuron(column,row,point,"row")<=rowmax)) then
-			!data in node
+			!if data is in the pointed-to node, zero the probability
 			if (idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
 				if (rung==1) then
 					rungs(rung)=0.0
 				else
 					rungs(rung)=rungs(rung-1)
 				end if		
-			!open node in network
+			!otherwise, for an open node in network, add the weight and the blood modifier
 			else
 				if (rung==1) then
 					rungs(rung)=increment+idea%brain_weight(point,origin,column,row)*&

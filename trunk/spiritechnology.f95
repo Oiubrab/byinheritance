@@ -10,11 +10,12 @@ contains
 
 subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,&
-	epoch_start,node_use_reward)
+	epoch_start,node_use_reward,motivate_nomotivate)
 
 	!timing and controlling
 	integer :: moves, epoch, epoch_start,epoch_cutoff
 	logical :: proaction
+	character(len=6) :: motivate_nomotivate
 	
 	!blood
 	integer :: blood_rows
@@ -39,6 +40,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	integer :: row_number,row_number_2,row_random_number
 	integer,dimension(columns) :: column_random
 	integer,dimension(rows) :: row_random
+	
 	
 
 	proaction=.false.
@@ -124,17 +126,34 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 						
 					!print*,thinking%neurochem
 					
+					
 					!response translation into movement
-					!this do loop picks up whether some response ha been fed into 
-					search_loop: do column_number_2=1,response_length
-						if (response(column_number_2)==1) then
-							
+					!different rules for motivate and non motivate networks
+					if (motivate_nomotivate=="normal") then
+					
+						!this condition picks up whether some response has been fed into the stop position (last position in the array)
+						if (response(response_length)==1) then
 							!stop the main loop
 							proaction=.true.
 							exit row_loop
-
 						end if
-					end do search_loop
+					
+					else if (motivate_nomotivate=="motive") then
+					
+						!response translation into movement
+						!this do loop picks up whether some response has been fed into 
+						search_loop: do column_number_2=1,response_length
+							if (response(column_number_2)==1) then
+								
+								!stop the main loop
+								proaction=.true.
+								exit row_loop
+
+							end if
+						end do search_loop
+						
+					end if
+					
 					
 				end if
 				
