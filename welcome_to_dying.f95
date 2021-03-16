@@ -1003,7 +1003,7 @@ end subroutine
 
 !this subroutine applies a special weight to the motivate network based on the size of the binary number represented in it's input
 !bigger inputs should make the data move to the right of the output and smaller inputs, to the left
-subroutine hunger(outputter,inputter)
+subroutine hunger(outputter,inputter,all_or_nothing)
 
 	integer,dimension(*) :: outputter,inputter
 	integer :: weighted_gradient
