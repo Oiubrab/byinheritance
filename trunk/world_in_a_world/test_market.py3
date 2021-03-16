@@ -100,7 +100,8 @@ for entry in account:
 cost=0
 for stock in markets:
 	# second condition (stock+units>-1) ensures network cannot sell more than it has
-	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1:
+	print(last_entry["account_value"],units*stock["stock_price"])
+	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1:# and last_entry["account_value"]-(units*stock["stock_price"])>0.0:
 		#buying (positive cost) and selling (negative cost)
 		stock["units_owned"] += units
 		cost = units*stock["stock_price"]
@@ -112,6 +113,10 @@ this_entry = {"account":"test","account_value":last_entry["account_value"]-cost,
 #this_entry["account_value"] -= cost
 #this_entry["time"] = t_end
 account = account + [this_entry]
+
+
+
+
 
 #write this dic to a csv file
 write_csv_dic("account.csv",account)
@@ -154,7 +159,7 @@ wtr.writerow(feel)
 
 #alter the stock to replicate a changing market
 for stock in markets:
-	change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))+(amplitude_2nd*numpy.sin(t_end*0.01))
+	change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))#+(amplitude_2nd*numpy.sin(t_end*0.01))
 	#print(change)
 	stock["stock_price"] = change
 	if stock["stock_price"]<10.0:
