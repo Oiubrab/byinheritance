@@ -256,18 +256,16 @@ end subroutine randomised_list
 
 
 !read in the network from a text file or write out to a text file
-subroutine read_write(think,epoch,moves,direction,response_record)
+subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_record,illiad)
 	type(mind) :: think
 	integer,dimension(*),optional :: response_record(:,:)
+	integer,optional :: illiad
 	integer :: epoch,imagine,imagination
 	character(len=20) :: willfull
 	character(len=*) :: direction
 	integer :: column,row
 	
-	imagine=this_image()
 	write(willfull,"(A4,I0,A4)") "will",imagine,".txt"
-	!find the image number total
-	imagination=num_images()
 	!print*,imagine,willfull,"read_write"
 	
 	if (direction=="read") then
@@ -280,6 +278,10 @@ subroutine read_write(think,epoch,moves,direction,response_record)
 		read(imagination+imagine,*) think%neurochem				
 		read(imagination+imagine,*) epoch
 		read(imagination+imagine,*) moves
+		!if a motivate network, save the oddsey (illiad)
+		if (present(illiad)) then
+			read(imagination+imagine,*) illiad	
+		end if
 		!if in testing, save response counter
 		if (present(response_record)) then
 			read(imagination+imagine,*) response_record	
@@ -296,6 +298,10 @@ subroutine read_write(think,epoch,moves,direction,response_record)
 		write(2*imagination+imagine,*) think%neurochem		
 		write(2*imagination+imagine,*) epoch
 		write(2*imagination+imagine,*) moves
+		!if in a motivation network, write the oddsey (illiad)
+		if (present(illiad)) then
+			write(2*imagination+imagine,*) illiad	
+		end if
 		!if in testing, save response counter
 		if (present(response_record)) then
 			write(2*imagination+imagine,*) response_record	
@@ -549,10 +555,11 @@ end function plugin
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(idea,column,row,reward,response,response_socket,printer)
+subroutine selector(idea,column,row,reward,response,response_socket,printer,image)
 
 	type(mind) :: idea
-	integer,allocatable :: response(:),connection_translation(:)
+	integer,allocatable :: connection_translation(:)
+	integer,dimension(*) :: response(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column,response_socket
@@ -562,7 +569,6 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 	character(len=20) :: tester
 	
 	!find the image number
-	image=this_image()
 	write(tester,"(A8,I0,A4)") "test_log",image,".txt"	
 	!print*,image,tester	
 	
@@ -662,6 +668,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 			rungs(connection_translation(2)),rungs(connection_translation(3)),rungs(connection_translation(4)),&
 			rungs(connection_translation(5)),rungs(connection_translation(6)),rungs(connection_translation(7)),&
 			rungs(connection_translation(8))
+		close(image)
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
@@ -679,6 +686,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				
 				!moving diagnostic
 				if (printer .eqv. .true.) then
+					open(unit=image,file=tester,access="APPEND")
 					write(image,*)"Move from:"
 					write(image,*)column,row
 					write(image,*)"Move to:"

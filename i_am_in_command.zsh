@@ -1,15 +1,16 @@
-#!/bin/bash
+#!/bin/zsh
 
 #this runner runs the finance version of the brain
-# three arguments: 
+# four arguments: 
 #first argument: turns the testing output on (true) or off (false)
 #second argument: turns blood printing in test output on (true) or off (false)
-#optional third argument: cleans prior runs
+#third argument: cleans prior runs
+#fourth argument: runs the system this many times
 
-#first, setup the binary
+#first, remove the old binary and module files
 reset
-rm in_search_of_sanity spiritechnology.mod welcome_to_dying.mod
-# this option cleans out the brain, ready for a new run
+rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod
+# this option removes all prior brain and market data, allowing a brand new run to take place
 if [[ $3 = "clean" ]]
 then
 
@@ -22,13 +23,13 @@ then
 fi
 
 #compile
-caf -fbounds-check welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 -o in_search_of_sanity
+caf -fbounds-check welcome_to_dying.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
 
 #run the network $4 times
 for i in $(seq 1 $4)
 do
 	
-	cafrun -n 2 --use-hwthread-cpus ./in_search_of_sanity $1 $2
+	cafrun -n 2 --use-hwthread-cpus ./lack_of_comprehension $1 $2
 	cd world_in_a_world
 	python3 test_market.py3 carryon
 	cd ..

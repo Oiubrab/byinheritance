@@ -10,7 +10,7 @@ contains
 
 subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,&
-	epoch_start,node_use_reward,motivate_nomotivate)
+	epoch_start,node_use_reward,image_number,motivate_nomotivate)
 
 	!timing and controlling
 	integer :: moves, epoch, epoch_start,epoch_cutoff
@@ -29,7 +29,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	
 	!sense and response
 	integer :: response_socket,response_length,vision_length,vision_socket
-	integer,allocatable :: vision(:),response(:),response_counter(:,:)
+	integer,dimension(*) :: vision(:),response(:),response_counter(:,:)
 	
 	!test log
 	logical :: testing,show_blood
@@ -40,6 +40,9 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	integer :: row_number,row_number_2,row_random_number
 	integer,dimension(columns) :: column_random
 	integer,dimension(rows) :: row_random
+	
+	!parallelisation
+	integer :: image_number
 	
 	
 
@@ -94,7 +97,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 
 					!here is the important subroutine call that moves the data depending on how fat the neuron is 
 					!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,testing)		
+					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,testing,image_number)		
 								
 					!lag if necessary
 					if (testing .eqv. .true.) then
