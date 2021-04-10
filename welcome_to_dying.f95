@@ -373,10 +373,10 @@ function binary_to_decimal(binary_array) result(decimal)
 	binary_size=size(binary_array)
 	decimal=0
 	
-	!if binary position is 1, add 2^order to the integer untill all the positions (except last) have been taken
+	!conversion algorithm: if binary position is 1, add 2^order to the integer untill all the positions (except last) have been taken
 	do order=0, binary_size-2
 		decimal = decimal + binary_array(order+1)*(2**order)
-		print*,decimal,binary_array(order+1),((binary_array(order+1))*2)
+		!print*,decimal,binary_array(order+1),((binary_array(order+1))*2)
 	end do
 	
 	!make negative integer if the negative trigger is set
@@ -964,61 +964,6 @@ end subroutine initialiser
 
 
 
-
-
-
-!This subroutine takes the neurochem matricies saved in each network and the output of the motivate network and applies a scaling factor to the weights of each network
-subroutine animus(meaning,oddyseus)
-
-	type(mind) :: meaning
-	integer :: oddyseus, row, column, to, from, ladder
-
-	!add to weights based on the neurochem at that node and the scaling 
-	do row=1,size(meaning%brain_weight(1,1,1,:))
-		do column=1,size(meaning%brain_weight(1,1,:,1))
-			do ladder=1,size(meaning%neurochem(1,:,1,1))
-			
-				!for each rung in the neurochem ladder, establish which weight is to be altered
-				from=meaning%neurochem(1,ladder,column,row)
-				to=meaning%neurochem(2,ladder,column,row)
-				
-				!exclude ladder rungs that haven't been set yet
-				if ((to/=0) .and. (from/=0)) then 
-					!exclude intentionally zeroed out weights
-					if (meaning%brain_weight(to,from,column,row)/=0.0) then
-					
-						!add the weight
-						!the lower the weight is on the ladder, the smaller the modulation
-						meaning%brain_weight(to,from,column,row)=meaning%brain_weight(to,from,column,row)+&
-							(size(meaning%neurochem(1,:,1,1))+1-ladder)*oddyseus
-							
-						!if weight manipulation reduces weight below 1.0, make it 1.0
-						if (meaning%brain_weight(to,from,column,row)<1.0) then
-							meaning%brain_weight(to,from,column,row)=1.0
-						end if
-						 
-					end if
-				end if	
-				
-			end do
-		end do
-	end do
-
-end subroutine
-
-
-
-
-!this subroutine applies a special weight to the motivate network based on the size of the binary number represented in it's input
-!bigger inputs should make the data move to the right of the output and smaller inputs, to the left
-subroutine hunger(outputter,inputter,all_or_nothing)
-
-	integer,dimension(*) :: outputter,inputter
-	integer :: weighted_gradient
-
-
-
-end subroutine hunger
 
 
 

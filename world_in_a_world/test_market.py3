@@ -100,7 +100,7 @@ for entry in account:
 cost=0
 for stock in markets:
 	# second condition (stock+units>-1) ensures network cannot sell more than it has
-	print(last_entry["account_value"],units*stock["stock_price"])
+	#print(last_entry["account_value"],units*stock["stock_price"])
 	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1:# and last_entry["account_value"]-(units*stock["stock_price"])>0.0:
 		#buying (positive cost) and selling (negative cost)
 		stock["units_owned"] += units
@@ -124,15 +124,18 @@ write_csv_dic("account.csv",account)
 #compute weighted gradient of earnings and place it in a binary array
 #print(int(((this_entry["account_value"] - last_entry["account_value"])/this_entry["account_value"])*100.0))
 #print(this_entry["account_value"] - last_entry["account_value"],this_entry["account_value"])
-weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/this_entry["account_value"])*100.0)
+weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/abs(this_entry["account_value"]))*100.0)
 #limit growth/decay to the last account volume for now
 if weighted_gradient_percentage>100.0:
 	weighted_gradient_percentage=100.0
 elif weighted_gradient_percentage<-100.0:
 	weighted_gradient_percentage=-100.0
 	
+
+	
 #prepare binary array 
 weighted_gradient_percentage_binary = integer_to_binary(weighted_gradient_percentage)
+
 #if the binary array is smaller than the feel array it's going to, resize the array
 if len(weighted_gradient_percentage_binary)<feel_size:
 	last_digit=weighted_gradient_percentage_binary[-1]
@@ -159,11 +162,18 @@ wtr.writerow(feel)
 
 #alter the stock to replicate a changing market
 for stock in markets:
-	change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))#+(amplitude_2nd*numpy.sin(t_end*0.01))
+	#some stocks will rise, some will fall
+	if stock["stock_number"]%2==1:
+		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))#+(amplitude_2nd*numpy.sin(t_end*0.01))
+	else:
+		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))-(amplitude_2nd*numpy.sin(t_end*0.01))
 	#print(change)
+	#give stocks a floor and a ceiling
 	stock["stock_price"] = change
 	if stock["stock_price"]<10.0:
 		stock["stock_price"]=10.0
+	elif stock["stock_price"]>1000.0:
+		stock["stock_price"]=1000.0
 	
 write_csv_dic("market.csv",markets)
 
