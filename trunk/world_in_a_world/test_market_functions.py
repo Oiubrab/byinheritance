@@ -65,10 +65,14 @@ def integer_to_binary(integer):
 		binary=[1]
 	#otherwise, compute the binary
 	else:
-		while integer>1:
-			remainder=int(integer%2)
+		while abs(integer)>1:
+			remainder=int(abs(integer)%2)
 			integer=integer/2
 			binary = binary + [remainder] 
+	
+	#if number is a power of two, need to add the last binary
+	if len(binary)>1 and sum(binary)==0:
+		binary = binary + [1]
 			
 	#add the pos/neg bit
 	if integer<0:

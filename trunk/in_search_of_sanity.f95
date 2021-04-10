@@ -1,6 +1,7 @@
 module in_search_of_sanity
 use welcome_to_dying
 use spiritechnology
+use reign_in_blood
 contains
 
 !this subroutine is the main kernalised routine for brain creation and action
@@ -119,6 +120,9 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 				
 			!this makes the system yearn for happiness
 			!must be run for each network
+			if (output_switcher=="motive") then
+				call raining_blood(think,vision,oddsey,image_number)
+			end if
 			call animus(think,oddsey)
 
 			epoch_start=epoch

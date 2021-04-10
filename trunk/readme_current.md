@@ -59,4 +59,9 @@ The table above shows the mapping for each node's routes. The x representes the 
 As above, the x represents a node. The first layer is an input layer (top) that is a representation of whatever data is being fed into the network. The data is immediately fed into the network proper (middle), where it propogates through the system thusly. Eventually it ends up in the output layer (bottom), where it is sent off (removed) and interpreted by another application. The fact that the output layer is smaller than the network is an arbitrary choice, as is the input layer being the same size as the network, or that the input and output layers need be on the top and bottom. Any configuration of size and position will produce full fidelity results as long as the input/output arrays are not outside the network. 
 
 
+#### Current issues
+
+1. The neurochem back-motivation (last ten steps, reducing from most recent to least recent) does not match up with the reporting from the test market (this moment and last moment)
+2. There is confusion, the difference between paths with respect to binary input and individual bits causes cancelling out of weights 
+
 
