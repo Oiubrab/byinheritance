@@ -169,9 +169,9 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 				
 				!either print the network with the corresponding blood network, or don't
 				if (show_blood .eqv. .true.) then
-					call print_network(moves,epoch,vision,vision_socket,response,response_socket,think%brain_status,think%blood)
+					call print_network(image_number,moves,epoch,vision,vision_socket,response,response_socket,think%brain_status,think%blood)
 				else
-					call print_network(moves,epoch,vision,vision_socket,response,response_socket,think%brain_status)
+					call print_network(image_number,moves,epoch,vision,vision_socket,response,response_socket,think%brain_status)
 				end if
 
 
@@ -274,7 +274,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 
 			!print time elapsed
 			write(image_number,*)" "
-			call print_interval_multiple(start,finish)
+			call print_interval_multiple(start,finish,image_number)
 
 			!finally, close the file
 			close(image_number)

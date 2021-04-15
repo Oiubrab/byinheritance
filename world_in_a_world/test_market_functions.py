@@ -58,11 +58,13 @@ def write_csv_dic(filename_tup,dic_tup):
 #the last bit represents pos (1) or neg (0) (a zero is positive)
 def integer_to_binary(integer):
 	binary=[]
-	#special case for 0 and 1
+	#special case for 0, 1 and 2
 	if integer==0:
 		binary=[0]
 	elif integer==1:
 		binary=[1]
+	elif integer==2:
+		binary=[0,1]
 	#otherwise, compute the binary
 	else:
 		while abs(integer)>1:
