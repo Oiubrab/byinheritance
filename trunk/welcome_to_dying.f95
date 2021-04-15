@@ -57,7 +57,7 @@ end subroutine delay
 
 
 
-subroutine print_network(moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
+subroutine print_network(imager,moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
 	real,optional,dimension(*) :: blood(:,:)
@@ -74,14 +74,11 @@ subroutine print_network(moves,epoch,vision,vision_socket,response,response_sock
 	
 	
 	!Who is your sanity-daddy and what does he do?
-	imager=this_image()
 	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
 	open(unit=imager,file=tester,access="APPEND")
 
 	write(imager,*)"By Inheritance"
 	write(imager,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
-
-	!print*,imager,1,"print_network"
 	
 	!establish network dimensions
 	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
@@ -187,8 +184,6 @@ subroutine print_network(moves,epoch,vision,vision_socket,response,response_sock
 	write(imager,*)print_row
 	write(imager,*)" "
 	
-	!print*,imager,2,"print_network"
-	
 	!close this shit down
 	close(imager)
 	
@@ -201,7 +196,7 @@ end subroutine print_network
 
 
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
-subroutine print_interval_multiple(start,finish)
+subroutine print_interval_multiple(start,finish,image_number)
 	real,intent(in) :: start, finish
 	real :: t_sec, total_time
 	integer :: t_hr, t_min, image_number
@@ -213,7 +208,6 @@ subroutine print_interval_multiple(start,finish)
 	t_sec = total_time-t_hr*3600-t_min*60
 	
 	!write to one of multiple files
-	image_number=this_image()
 	write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
 	open(unit=image_number,file=test_file,access="APPEND")
 	write(image_number,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'

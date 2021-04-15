@@ -31,7 +31,7 @@ do
 	
 	cafrun -n 2 --use-hwthread-cpus ./lack_of_comprehension $1 $2
 	cd world_in_a_world
-	python3 test_market.py3 carryon | tee -a "test_log.txt"
+	python3 test_market.py3 carryon | tee -a "../test_log.txt"
 	cd ..
 	echo "run: " $i | tee -a "test_log.txt"
 	

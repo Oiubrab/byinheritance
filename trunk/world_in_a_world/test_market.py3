@@ -186,48 +186,41 @@ write_csv_dic("market.csv",markets)
 
 #this is where the market is interpreted and folded into the sight of the network
 #make a numerical list for the stocks
-stock_list=range(len(markets))
-sight_list=[]
 #place binary representation, followed by listing number, into the pit
-for exam,stock_number in zip(markets,stock_list):
+for exam in markets:
 
 	#make binary lists out of the stock and stock_number
 	stock_binary = integer_to_binary(int(exam["stock_price"]))
-	stock_number_binary = integer_to_binary(stock_number)
+	stock_number_binary = integer_to_binary(exam['stock_number'])
 	
 	# ensure stocks binaries are deposited in 15 bit chunks by padding
+	#place pos neg label at the end
 	stock_height=15
-	if len(stock_binary)<stock_height:
-		stock_binary = [0 for num in range(stock_height-len(stock_binary))] + stock_binary
+	if len(stock_binary)==2:
+		stock_binary = [stock_binary[0]] + [0 for num in range(stock_height-len(stock_binary))] + [stock_binary[-1]]
+	elif len(stock_binary)<stock_height:
+		stock_binary = stock_binary[0:-1] + [0 for num in range(stock_height-len(stock_binary))] + [stock_binary[-1]]
 
 		
 	# ensure stock_number_binary is deposited in 3 bit chunks by padding 
 	stock_number_height=3
-	if len(stock_number_binary)<stock_number_height:
-		stock_number_binary = [0 for num in range(stock_number_height-len(stock_number_binary))] + stock_number_binary
-
-		
-	sight_list = sight_list + stock_number_binary + stock_binary
-	#exam["stock_identifier"]
-
-
-
-
-
-
-#add a 0 for buffer for even lists
-if int(len(sight_list)%2)==0:
-	sight_list = sight_list +[0]
+	if len(stock_number_binary)==2:
+		stock_number_binary = [stock_number_binary[0]] + [0 for num in range(stock_number_height-len(stock_number_binary))] + [stock_number_binary[-1]]
+	elif len(stock_number_binary)<stock_number_height:
+		stock_number_binary = stock_number_binary[0:-1] + [0 for num in range(stock_number_height-len(stock_number_binary))] + [stock_number_binary[-1]]
+	
+	#and this is where the resulting array is written into sight.csv
+	#add an extra zero to make list length an odd number
+	sight = numpy.array(stock_number_binary + stock_binary + [0])
+	#print(len(sight))
+	#print(stock_number_binary[0:-2] , [0 for num in range(stock_number_height-len(stock_number_binary))] , [stock_number_binary[-1]])
+	#print(sight,stock_binary,stock_number_binary,exam['stock_identifier'],int(exam["stock_price"]),exam['stock_number'])
+	wtr = csv.writer(open ('sight_'+exam['stock_identifier']+'.csv', 'w'), delimiter=',', lineterminator='\n')
+	wtr.writerow(sight)
 
 
 
-
-
-
-#and this is where the resulting array is written into sight.csv
-sight = numpy.array(sight_list)
-wtr = csv.writer(open ('sight.csv', 'w'), delimiter=',', lineterminator='\n')
-wtr.writerow(sight)
+	
 
 
 
