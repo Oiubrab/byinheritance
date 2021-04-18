@@ -16,6 +16,7 @@ then
 
 	#reset the market
 	cd world_in_a_world
+	echo 0.0 > holding_sum.txt
 	python3 test_market.py3 reset
 	cd ..
 	#remove the previous network and logs
