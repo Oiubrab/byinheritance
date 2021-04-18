@@ -137,18 +137,25 @@ elif weighted_gradient_percentage<-100.0:
 
 	
 #prepare binary array 
-weighted_gradient_percentage_binary = integer_to_binary(weighted_gradient_percentage)
 
-#if the binary array is smaller than the feel array it's going to, resize the array
-if len(weighted_gradient_percentage_binary)<feel_size:
-	last_digit=weighted_gradient_percentage_binary[-1]
-	weighted_gradient_percentage_binary[-1]=0
-	difference_lengths=feel_size-len(weighted_gradient_percentage_binary)
-	#pad out thelist with zeros
-	for x in range(difference_lengths-1):
-		weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [0]
-	#restore the pos/neg trigger at the end
-	weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [last_digit]
+#this controls the type of interpreting done and must be set in aggreeance with the same setting in the reign_in_blood fortran script
+interpreter_type="positional"
+
+if interpreter_type=="positional":
+	weighted_gradient_percentage_binary = percentage_to_position(weighted_gradient_percentage,feel_size)
+elif interpreter_type=="binary":
+	weighted_gradient_percentage_binary = integer_to_binary(weighted_gradient_percentage)
+
+	#if the binary array is smaller than the feel array it's going to, resize the array
+	if len(weighted_gradient_percentage_binary)<feel_size:
+		last_digit=weighted_gradient_percentage_binary[-1]
+		weighted_gradient_percentage_binary[-1]=0
+		difference_lengths=feel_size-len(weighted_gradient_percentage_binary)
+		#pad out thelist with zeros
+		for x in range(difference_lengths-1):
+			weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [0]
+		#restore the pos/neg trigger at the end
+		weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [last_digit]
 		
 	
 

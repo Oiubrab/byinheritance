@@ -62,6 +62,17 @@ As above, the x represents a node. The first layer is an input layer (top) that 
 #### Current issues
 
 1. The neurochem back-motivation (last ten steps, reducing from most recent to least recent) does not match up with the reporting from the test market (this moment and last moment)
-2. There is confusion, the difference between paths with respect to binary input and individual bits causes cancelling out of weights 
+2. random actioning of data movement of data through the network means that interaction between data is random or, at least, happens at random points, which makes set structure difficult to emerge.
 
+#### Current settings
+
+1. i_am_in_command.zsh has three necessary arguments:
+      1. the first argument (true/false) determines whether a log of data movement throught the network is
+      2. the second argument (true/false) determines whether the blood network is printed in the log (needs true in first argument
+      3. the third argument is a numerical (integer) argument that determines how many cycles the network and test market will run for
+2. In network creation, there are two types of network:
+      1. Motive: designed for simple motivation determination of the greater network, this network determines the motivation factor for the larger network. It has two modes, that need to be set in reign_in_blood and in test_market:
+         1. positional: translates motive reporting into a positional array, where the position of a bit in the array approximates the value from (-100,100)
+         2. Binary: translates motive reporting into a binary array, representing the exact value
+      2. Normal: the network takes in the motive factor from the motive network and vision data and computes as normal
 

@@ -15,11 +15,27 @@ subroutine raining_blood(thinker,stinker,blinker,tinker)
 	type(mind) :: thinker
 	integer,dimension(*) :: stinker(:)
 	integer :: blinker,tinker
+	character(len=10) :: interpreter_type
 	
-	if (binary_to_decimal(stinker)<0) then 
-		blinker=binary_to_decimal(stinker)/10
-	else
-		blinker=binary_to_decimal(stinker)/2
+	!this controls the type of interpreting done and must be set in aggreeance with the same setting in the test_market python script
+	interpreter_type="positional"
+	
+	if (interpreter_type=="binary") then
+	
+		if (binary_to_decimal(stinker)<0) then 
+			blinker=binary_to_decimal(stinker)/10
+		else
+			blinker=binary_to_decimal(stinker)/2
+		end if
+	
+	else if (interpreter_type=="positional") then
+	
+		if (position_to_percentage(stinker)<0) then 
+			blinker=position_to_percentage(stinker)/10
+		else
+			blinker=position_to_percentage(stinker)/2
+		end if
+		
 	end if
 	
 end subroutine

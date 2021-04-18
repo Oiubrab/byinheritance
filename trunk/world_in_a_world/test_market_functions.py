@@ -105,3 +105,20 @@ def binary_to_integer(binary_array):
 	return integer
 		
 
+
+#this function converts an integer percentage number into a position on a binary array
+def percentage_to_position(percent,size):
+
+	#make the binary list
+	binary_list=[0]*size
+	
+	#find the increment
+	increment=200/size
+	
+	#find the representative position
+	for element in range(size):
+		if percent<(element+1)*increment-100:
+			binary_list[element]=1
+			break
+			
+	return binary_list
