@@ -355,6 +355,36 @@ end function sigmoid
 
 
 
+
+
+!!!!!!!!!!!!!!!!
+!!!conversion!!!
+!!!!!!!!!!!!!!!!
+
+
+!this function takes a positional binary array that represents a percentage (-100,100) and returns an approximation of that percentage
+function position_to_percentage(positional) result(percent)
+
+	integer,dimension(*),intent(in) :: positional(:)
+	integer :: percent,pos
+	real :: data_width
+	
+	!find the width between each binary position
+	!note, total width is (-100,100)
+	data_width=200.0/float(size(positional))
+	
+	!find the data position and convert into percentage approximation
+	do pos=1,size(positional)
+		if (positional(pos)==1) then
+			percent=-100+int((float(pos-1)*data_width)+(((float(pos)*data_width)-(float(pos-1)*data_width))/2.0))
+		end if
+	end do
+			
+end function
+
+
+
+
 !this function takes a binary array and outputs an integer
 !the last bit represents pos (1) or neg (0)
 !note; the binary array must be inputted in format left:smallest to right:highest
