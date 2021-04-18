@@ -80,10 +80,8 @@ for entry in account:
 #find the stock numerical identifier
 stock_selection = binary_to_integer(deicide_array_list_numbers[0:3] + [1])
 #interpret the number of units and buy/sell choice
-units = binary_to_integer(deicide_array_list_numbers[3:7])
-#print(deicide_array_list_numbers,deicide_array_list_numbers[0:3],deicide_array_list_numbers[3:8])
-#print(stock_selection)
-#print(units)
+deicide_length = len(deicide_array_list_numbers)
+units = binary_to_integer(deicide_array_list_numbers[3:deicide_length-1])
 
 
 #buy/sell controller
@@ -100,8 +98,8 @@ for entry in account:
 cost=0
 for stock in markets:
 	# second condition (stock+units>-1) ensures network cannot sell more than it has
-	#print(last_entry["account_value"],units*stock["stock_price"])
-	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1:# and last_entry["account_value"]-(units*stock["stock_price"])>0.0:
+	#third condition (last_entry-units*stock>0.0) ensures network cannot go into debt 
+	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1 and last_entry["account_value"]-units*stock["stock_price"]>0.0:
 		#buying (positive cost) and selling (negative cost)
 		stock["units_owned"] += units
 		cost = units*stock["stock_price"]
@@ -110,20 +108,25 @@ for stock in markets:
 #subtract from account
 #add a new entry to the account that has this subtracted value
 this_entry = {"account":"test","account_value":last_entry["account_value"]-cost,"time":t_end}
-#this_entry["account_value"] -= cost
-#this_entry["time"] = t_end
 account = account + [this_entry]
 
 
-
-
+#temporary account drain - pass drained funds to a holding account
+trigger=True
+if trigger==True and account[-1]["account_value"]>23000.0:
+	to_add = account[-1]["account_value"]-3000.0
+	account[-1]["account_value"]=3000.0
+	summer = open("holding_sum.txt")
+	the_sum=float(summer.read())
+	the_sum+=to_add
+	winter = open("holding_sum.txt","w")
+	winter.write(str(the_sum))
+	
 
 #write this dic to a csv file
 write_csv_dic("account.csv",account)
 
 #compute weighted gradient of earnings and place it in a binary array
-#print(int(((this_entry["account_value"] - last_entry["account_value"])/this_entry["account_value"])*100.0))
-#print(this_entry["account_value"] - last_entry["account_value"],this_entry["account_value"])
 weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/abs(this_entry["account_value"]))*100.0)
 #limit growth/decay to the last account volume for now
 if weighted_gradient_percentage>100.0:
