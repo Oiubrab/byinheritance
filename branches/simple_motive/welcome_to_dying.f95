@@ -2,10 +2,10 @@ module welcome_to_dying
 
 !define type for brain
 type mind
-	integer,allocatable :: brain_status(:,:,:)
-	real,allocatable :: brain_weight(:,:,:,:)
-	real,allocatable :: blood(:,:)
-	integer,allocatable :: neurochem(:,:,:,:)
+	integer,allocatable :: brain_status(:,:,:) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
+	real,allocatable :: brain_weight(:,:,:,:) !allocate the brain direction weighting. 8,:,:,: holds the weights from origin :,x,:,: to point x,:,:,:
+	real,allocatable :: blood(:,:) !allocate the gradient variable, extra row for response array
+	integer,allocatable :: neurochem(:,:,:,:) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the weight ladder
 end type mind
 
 contains
@@ -57,7 +57,7 @@ end subroutine delay
 
 
 
-subroutine print_network(moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
+subroutine print_network(imager,moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
 	real,optional,dimension(*) :: blood(:,:)
@@ -74,14 +74,11 @@ subroutine print_network(moves,epoch,vision,vision_socket,response,response_sock
 	
 	
 	!Who is your sanity-daddy and what does he do?
-	imager=this_image()
 	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
 	open(unit=imager,file=tester,access="APPEND")
 
 	write(imager,*)"By Inheritance"
 	write(imager,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
-
-	!print*,imager,1,"print_network"
 	
 	!establish network dimensions
 	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
@@ -187,8 +184,6 @@ subroutine print_network(moves,epoch,vision,vision_socket,response,response_sock
 	write(imager,*)print_row
 	write(imager,*)" "
 	
-	!print*,imager,2,"print_network"
-	
 	!close this shit down
 	close(imager)
 	
@@ -201,7 +196,7 @@ end subroutine print_network
 
 
 !feed in a start and finish time for a time interval printout in hrs, mins, sec
-subroutine print_interval_multiple(start,finish)
+subroutine print_interval_multiple(start,finish,image_number)
 	real,intent(in) :: start, finish
 	real :: t_sec, total_time
 	integer :: t_hr, t_min, image_number
@@ -213,7 +208,6 @@ subroutine print_interval_multiple(start,finish)
 	t_sec = total_time-t_hr*3600-t_min*60
 	
 	!write to one of multiple files
-	image_number=this_image()
 	write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
 	open(unit=image_number,file=test_file,access="APPEND")
 	write(image_number,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
@@ -256,18 +250,16 @@ end subroutine randomised_list
 
 
 !read in the network from a text file or write out to a text file
-subroutine read_write(think,epoch,moves,direction,response_record)
+subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_record,illiad)
 	type(mind) :: think
 	integer,dimension(*),optional :: response_record(:,:)
+	integer,optional :: illiad
 	integer :: epoch,imagine,imagination
 	character(len=20) :: willfull
 	character(len=*) :: direction
 	integer :: column,row
 	
-	imagine=this_image()
 	write(willfull,"(A4,I0,A4)") "will",imagine,".txt"
-	!find the image number total
-	imagination=num_images()
 	!print*,imagine,willfull,"read_write"
 	
 	if (direction=="read") then
@@ -280,6 +272,10 @@ subroutine read_write(think,epoch,moves,direction,response_record)
 		read(imagination+imagine,*) think%neurochem				
 		read(imagination+imagine,*) epoch
 		read(imagination+imagine,*) moves
+		!if a motivate network, save the oddsey (illiad)
+		if (present(illiad)) then
+			read(imagination+imagine,*) illiad	
+		end if
 		!if in testing, save response counter
 		if (present(response_record)) then
 			read(imagination+imagine,*) response_record	
@@ -296,6 +292,10 @@ subroutine read_write(think,epoch,moves,direction,response_record)
 		write(2*imagination+imagine,*) think%neurochem		
 		write(2*imagination+imagine,*) epoch
 		write(2*imagination+imagine,*) moves
+		!if in a motivation network, write the oddsey (illiad)
+		if (present(illiad)) then
+			write(2*imagination+imagine,*) illiad	
+		end if
 		!if in testing, save response counter
 		if (present(response_record)) then
 			write(2*imagination+imagine,*) response_record	
@@ -356,6 +356,60 @@ end function sigmoid
 
 
 
+
+!!!!!!!!!!!!!!!!
+!!!conversion!!!
+!!!!!!!!!!!!!!!!
+
+
+!this function takes a positional binary array that represents a percentage (-100,100) and returns an approximation of that percentage
+function position_to_percentage(positional) result(percent)
+
+	integer,dimension(*),intent(in) :: positional(:)
+	integer :: percent,pos
+	real :: data_width
+	
+	!find the width between each binary position
+	!note, total width is (-100,100)
+	data_width=200.0/float(size(positional))
+	
+	!find the data position and convert into percentage approximation
+	do pos=1,size(positional)
+		if (positional(pos)==1) then
+			percent=-100+int((float(pos-1)*data_width)+(((float(pos)*data_width)-(float(pos-1)*data_width))/2.0))
+		end if
+	end do
+			
+end function
+
+
+
+
+!this function takes a binary array and outputs an integer
+!the last bit represents pos (1) or neg (0)
+!note; the binary array must be inputted in format left:smallest to right:highest
+function binary_to_decimal(binary_array) result(decimal)
+
+	integer,dimension(*),intent(in) :: binary_array(:)
+	integer :: order, decimal, binary_size
+	
+	!size the array and zero the integer
+	binary_size=size(binary_array)
+	decimal=0
+	
+	!conversion algorithm: if binary position is 1, add 2^order to the integer untill all the positions (except last) have been taken
+	do order=0, binary_size-2
+		decimal = decimal + binary_array(order+1)*(2**order)
+		!print*,decimal,binary_array(order+1),((binary_array(order+1))*2)
+	end do
+	
+	!make negative integer if the negative trigger is set
+	if (binary_array(binary_size)==0) then
+		decimal=decimal*(-1)
+	end if
+	
+end function
+		
 
 
 
@@ -518,59 +572,6 @@ end function plugin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-!this subroutine controls the input from external sources and arranges it in a format on the vision array
-subroutine input_rules(vision,cat_angle_left,cat_angle_right)
-
-	real,parameter :: pi=4.*asin(1./sqrt(2.))
-	real :: select_range,cat_angle_left,cat_angle_right
-	integer :: column_number,channel_size
-	integer,dimension(*) :: vision(:)
-
-	!angles come in, in ranges of -pi to pi, -pi to left and pi to right
-	!separate vision into two parts for the two angles
-	!make scalable, so many inputs can be used on teh same vision array
-	
-	!currently, the system is set to see
-	!left: -pi to 0.5*pi
-	!right: 10.5*pi to 2*pi
-	
-	!the range of an input channel
-	channel_size=size(vision)/2
-	select_range=(1.5*pi)/float(channel_size)
-	
-	!the left side assignment
-	do column_number=1,channel_size
-		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
-		!print*,vision
-		if ((select_range*float(column_number)>=(cat_angle_left+pi)) .and. &
-		(select_range*float(column_number-1)<=(cat_angle_left+pi))) then
-		
-			vision(column_number)=1
-			!print*,"help"
-		else
-			vision(column_number)=0
-		end if
-	end do
-	
-	!zero the middle vision entry
-	vision(channel_size+1)=0
-	
-	!the right side assignment
-	do column_number=channel_size+2,size(vision)
-		!print*,cat_angle,select_range,select_range*float(column_number),select_range*float(column_number-1),cat_angle+pi
-		!print*,vision
-		if ((select_range*float(column_number-channel_size)+0.5*pi>=(cat_angle_right+pi)) &
-			.and. (select_range*float(column_number-(1+channel_size))+0.5*pi<=(cat_angle_right+pi))) then
-			
-			vision(column_number)=1
-			!print*,"help"
-		else
-			vision(column_number)=0
-		end if
-	end do	
-
-end subroutine input_rules
-
 
 
 
@@ -578,10 +579,11 @@ end subroutine input_rules
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(idea,column,row,reward,response,response_socket,printer)
+subroutine selector(idea,column,row,reward,response,response_socket,printer,image)
 
 	type(mind) :: idea
-	integer,allocatable :: response(:),connection_translation(:)
+	integer,allocatable :: connection_translation(:)
+	integer,dimension(*) :: response(:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column,response_socket
@@ -591,7 +593,6 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 	character(len=20) :: tester
 	
 	!find the image number
-	image=this_image()
 	write(tester,"(A8,I0,A4)") "test_log",image,".txt"	
 	!print*,image,tester	
 	
@@ -645,14 +646,14 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 		!inside the network
 		else if ((point_to_neuron(column,row,point,"column")>=1) .and. (point_to_neuron(column,row,point,"row")>=1) .and. &
 			(point_to_neuron(column,row,point,"column")<=columnmax) .and. (point_to_neuron(column,row,point,"row")<=rowmax)) then
-			!data in node
+			!if data is in the pointed-to node, zero the probability
 			if (idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))==1) then
 				if (rung==1) then
 					rungs(rung)=0.0
 				else
 					rungs(rung)=rungs(rung-1)
 				end if		
-			!open node in network
+			!otherwise, for an open node in network, add the weight and the blood modifier
 			else
 				if (rung==1) then
 					rungs(rung)=increment+idea%brain_weight(point,origin,column,row)*&
@@ -691,6 +692,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 			rungs(connection_translation(2)),rungs(connection_translation(3)),rungs(connection_translation(4)),&
 			rungs(connection_translation(5)),rungs(connection_translation(6)),rungs(connection_translation(7)),&
 			rungs(connection_translation(8))
+		close(image)
 	end if
 
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
@@ -708,6 +710,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				
 				!moving diagnostic
 				if (printer .eqv. .true.) then
+					open(unit=image,file=tester,access="APPEND")
 					write(image,*)"Move from:"
 					write(image,*)column,row
 					write(image,*)"Move to:"
@@ -734,6 +737,8 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer)
 				idea%neurochem(2,1,column,row)=point				
 				
 				!if data is moving off the brain, direct it into the response array	
+				!can add more response options here if I want to add more response directions
+				!for instance, something off of the left or right sides of the network
 				if (point_to_neuron(column,row,point,"row")==rowmax+1) then
 					
 					response(plugin(point_to_neuron(column,row,point,"column"),response_socket,response_length,"array"))=1
@@ -975,16 +980,55 @@ end subroutine initialiser
 
 
 
-
-
-
-
-
 	
 
 !!!!!!!!!!!!!!!!!!!
 !!weight handling!!
 !!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+!This subroutine takes the neurochem matricies saved in each network and the output of the motivate network and applies a scaling factor to the weights of each network
+!first argument must be the network and the second argument must be the multiplier from the motive network (oddsey)
+subroutine animus(meaning,oddyseus)
+
+	type(mind) :: meaning
+	integer :: oddyseus, row, column, to, from, ladder
+
+	!add to weights based on the neurochem at that node and the scaling 
+	do row=1,size(meaning%brain_weight(1,1,1,:))
+		do column=1,size(meaning%brain_weight(1,1,:,1))
+			do ladder=1,size(meaning%neurochem(1,:,1,1))
+			
+				!for each rung in the neurochem ladder, establish which weight is to be altered
+				from=meaning%neurochem(1,ladder,column,row)
+				to=meaning%neurochem(2,ladder,column,row)
+				
+				!exclude ladder rungs that haven't been set yet
+				if ((to/=0) .and. (from/=0)) then 
+					!exclude intentionally zeroed out weights
+					if (meaning%brain_weight(to,from,column,row)/=0.0) then
+					
+						!add the weight
+						!the lower the weight is on the ladder, the smaller the modulation
+						meaning%brain_weight(to,from,column,row)=meaning%brain_weight(to,from,column,row)+&
+							(size(meaning%neurochem(1,:,1,1))+1-ladder)*oddyseus
+							
+						!if weight manipulation reduces weight below 1.0, make it 1.0
+						if (meaning%brain_weight(to,from,column,row)<1.0) then
+							meaning%brain_weight(to,from,column,row)=1.0
+						end if
+						 
+					end if
+				end if	
+				
+			end do
+		end do
+	end do
+
+end subroutine
 
 
 

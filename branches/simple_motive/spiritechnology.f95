@@ -10,11 +10,12 @@ contains
 
 subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,&
-	epoch_start,node_use_reward)
+	epoch_start,node_use_reward,image_number,motivate_nomotivate)
 
 	!timing and controlling
 	integer :: moves, epoch, epoch_start,epoch_cutoff
 	logical :: proaction
+	character(len=6) :: motivate_nomotivate
 	
 	!blood
 	integer :: blood_rows
@@ -28,7 +29,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	
 	!sense and response
 	integer :: response_socket,response_length,vision_length,vision_socket
-	integer,allocatable :: vision(:),response(:),response_counter(:,:)
+	integer,dimension(*) :: vision(:),response(:),response_counter(:,:)
 	
 	!test log
 	logical :: testing,show_blood
@@ -39,6 +40,10 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	integer :: row_number,row_number_2,row_random_number
 	integer,dimension(columns) :: column_random
 	integer,dimension(rows) :: row_random
+	
+	!parallelisation
+	integer :: image_number
+	
 	
 
 	proaction=.false.
@@ -92,7 +97,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 
 					!here is the important subroutine call that moves the data depending on how fat the neuron is 
 					!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,testing)		
+					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,testing,image_number)		
 								
 					!lag if necessary
 					if (testing .eqv. .true.) then
@@ -105,9 +110,10 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 					!print each step
 					if (testing .eqv. .true.) then
 						if (show_blood .eqv. .true.) then
-							call print_network(moves,epoch,vision,vision_socket,response,response_socket,thinking%brain_status,thinking%blood)
+							call print_network(image_number,moves,epoch,vision,vision_socket,response,response_socket,&
+								thinking%brain_status,thinking%blood)
 						else
-							call print_network(moves,epoch,vision,vision_socket,response,response_socket,thinking%brain_status)
+							call print_network(image_number,moves,epoch,vision,vision_socket,response,response_socket,thinking%brain_status)
 						end if
 						!keep track of response
 						do column_number_2=1,response_length
@@ -124,17 +130,34 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 						
 					!print*,thinking%neurochem
 					
+					
 					!response translation into movement
-					!this do loop picks up whether some response ha been fed into 
-					search_loop: do column_number_2=1,response_length
-						if (response(column_number_2)==1) then
-							
+					!different rules for motivate and non motivate networks
+					if (motivate_nomotivate=="normal") then
+					
+						!this condition picks up whether some response has been fed into the stop position (last position in the array)
+						if (response(response_length)==1) then
 							!stop the main loop
 							proaction=.true.
 							exit row_loop
-
 						end if
-					end do search_loop
+					
+					else if (motivate_nomotivate=="motive") then
+					
+						!response translation into movement
+						!this do loop picks up whether some response has been fed into 
+						search_loop: do column_number_2=1,response_length
+							if (response(column_number_2)==1) then
+								
+								!stop the main loop
+								proaction=.true.
+								exit row_loop
+
+							end if
+						end do search_loop
+						
+					end if
+					
 					
 				end if
 				
