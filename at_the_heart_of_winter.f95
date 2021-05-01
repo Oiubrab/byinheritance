@@ -15,9 +15,7 @@ implicit none
 !I'm sorry. I'm trying to fix it
 
 !Anyway, this is the opencoarrays version. 
-!To go see the cuda monster, go checkout the_years_of_decay.f95
-
-!note, need a saved array in txt format to read and input into the vision arrays
+!To go see the cuda monster, go checkout the gpu branch
 
 
 
@@ -68,7 +66,7 @@ integer,allocatable :: response_motivate(:)
 image_total=num_images()
 image_number=this_image()
 !setup the identity total
-ident_total=4
+ident_total=5
 
 !!!!!!!!!!!!!!!!!!!!!!!!
 !!!end variable setup!!!
@@ -133,10 +131,29 @@ ENDIF
 
 
 
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!
+!!!Motivation Step!!!
+!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!
 !!!Setup 1 (motivate)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the motivate network [image 2]
+!this setup is for the motivate network [image 1, ident 1]
 !this network takes in vital information
 !the response interfaces with neurochem and with think (1)
 !socket number represents where the middle of the corresponding array meets the brain network
@@ -149,8 +166,8 @@ if (image_number==1) then
 	ident_number=1
 	!dimensions
 	!brain
-	directions=8; rows=6; columns=15
-	vision_length=columns
+	directions=8; rows=6; columns=17
+	vision_length=15
 	vision_socket=(columns/2)+1
 	response_length=7
 	response_socket=8
@@ -237,11 +254,56 @@ end if
 
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!End Motivation Step!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!
+!!!Sight Step!!!
+!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!
+
+
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!Setup 1 (sight lust)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the input lust [image 3]
+!this setup is for the input lust [image 1, ident 2]
 !this network takes in information, through direct outside interfaces 
 !the response interfaces with the think network
 !socket number represents where the middle of the corresponding array meets the brain network
@@ -254,8 +316,8 @@ if (image_number==1) then
 	ident_number=2
 	!dimensions
 	!brain
-	directions=8; rows=18; columns=31
-	vision_length=19
+	directions=8; rows=21; columns=37
+	vision_length=27
 	vision_socket=(columns/2)+1
 	response_length=11
 	response_socket=(columns/2)+1
@@ -280,7 +342,7 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!
 !!!Setup 2 (sight joy)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the input joy [image 4]
+!this setup is for the input joy [image 2, ident 3]
 !this network takes in information, through direct outside interfaces
 !the response interfaces with the think network
 !socket number represents where the middle of the corresponding array meets the brain network
@@ -293,8 +355,8 @@ if (image_number==2) then
 	ident_number=3
 	!dimensions
 	!brain
-	directions=8; rows=18; columns=31
-	vision_length=19
+	directions=8; rows=21; columns=37
+	vision_length=27
 	vision_socket=(columns/2)+1
 	response_length=11
 	response_socket=(columns/2)+1
@@ -312,6 +374,44 @@ end if
 
 
 
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 3 (sight account)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the input of account data [image 3, ident 4]
+!this network takes in information, through direct outside interfaces
+!the response interfaces with the think network
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==3) then
+	!status
+	output_switch="normal"
+	ident_number=4
+	!dimensions
+	!brain
+	directions=8; rows=18; columns=31
+	vision_length=19
+	vision_socket=(columns/2)+1
+	response_length=11
+	response_socket=(columns/2)+1
+	node_use_reward=10.0
+	!blood
+	blood_rows=rows+1
+	blood_rate=20
+	blood_volume=8.0
+	blood_gradient=0.6
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 3 (sight joy)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -349,6 +449,13 @@ else if (image_number==2) then
 
 	!place the sight joys array into vision for the sight joys network
 	open(unit=1,file="world_in_a_world/sight_joys.csv")
+	read(1,*) vision
+	
+!sight joys(3) opens the sight joys csv and puts it into it's vision
+else if (image_number==3) then
+
+	!place the sight joys array into vision for the sight joys network
+	open(unit=1,file="world_in_a_world/sight_account.csv")
 	read(1,*) vision
 	
 end if
@@ -391,6 +498,45 @@ deallocate(vision)
 
 
 
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!End Sight Step!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!
+!!!Think Step!!!
+!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!
+
+
 
 
 
@@ -412,11 +558,11 @@ deallocate(vision)
 if (image_number==1) then
 	!status
 	output_switch="normal"
-	ident_number=4
+	ident_number=5
 	!dimensions
 	!brain
-	directions=8; rows=21; columns=41
-	vision_length=29
+	directions=8; rows=25; columns=51
+	vision_length=40
 	vision_socket=(columns/2)+1
 	response_length=11
 	response_socket=(columns/2)+1
@@ -459,8 +605,10 @@ if (image_number==1) then
 	vision(1:size(response(:)[1]))=response(:)[1]
 	!add response from sight joys
 	vision(size(response(:)[1])+1:size(response(:)[1])+size(response(:)[2]))=response(:)[2]
+	!add response from sight account
+	vision(size(response(:)[1])+size(response(:)[2])+1:size(response(:)[1])+size(response(:)[2])+size(response(:)[3]))=response(:)[3]
 	!add response from motivate
-	vision(size(response(:)[1])+size(response(:)[2])+1:)=response_motivate
+	vision(size(response(:)[1])+size(response(:)[2])+size(response(:)[3])+1:)=response_motivate
 
 end if
 
@@ -494,6 +642,36 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!end run think network!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!End Think Step!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

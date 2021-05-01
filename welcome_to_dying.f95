@@ -8,6 +8,13 @@ type mind
 	integer,allocatable :: neurochem(:,:,:,:) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the weight ladder
 end type mind
 
+!define input output type
+type see_say
+	integer,allocatable :: vision_motive(:),response_motive(:) !motivate arrays
+	integer,allocatable :: vision_sight(:),response_sight(:) !data input arrays
+	integer,allocatable :: vision_think(:),response_think(:) !thinking and output arrays
+end type see_say	
+
 contains
 
 !this is where the magic happens
@@ -250,10 +257,8 @@ end subroutine randomised_list
 
 
 !read in the network from a text file or write out to a text file
-subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_record,illiad)
+subroutine read_write(imagine,imagination,think,epoch,moves,direction)
 	type(mind) :: think
-	integer,dimension(*),optional :: response_record(:,:)
-	integer,optional :: illiad
 	integer :: epoch,imagine,imagination
 	character(len=20) :: willfull
 	character(len=*) :: direction
@@ -272,14 +277,6 @@ subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_r
 		read(imagination+imagine,*) think%neurochem				
 		read(imagination+imagine,*) epoch
 		read(imagination+imagine,*) moves
-		!if a motivate network, save the oddsey (illiad)
-		if (present(illiad)) then
-			read(imagination+imagine,*) illiad	
-		end if
-		!if in testing, save response counter
-		if (present(response_record)) then
-			read(imagination+imagine,*) response_record	
-		end if		
 		close(imagination+imagine)
 		
 	else if (direction=="write") then
@@ -292,14 +289,6 @@ subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_r
 		write(2*imagination+imagine,*) think%neurochem		
 		write(2*imagination+imagine,*) epoch
 		write(2*imagination+imagine,*) moves
-		!if in a motivation network, write the oddsey (illiad)
-		if (present(illiad)) then
-			write(2*imagination+imagine,*) illiad	
-		end if
-		!if in testing, save response counter
-		if (present(response_record)) then
-			write(2*imagination+imagine,*) response_record	
-		end if
 		close(2*imagination+imagine)
 	
 	end if
