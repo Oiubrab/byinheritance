@@ -23,43 +23,39 @@ implicit none
 !!!variable setup!!!
 !!!!!!!!!!!!!!!!!!!!
 
+
+!network dimensions
+!stage 1 is motivation, stage 2 is sight and stage 3 is thinking and response
+integer,parameter :: directions=8,stages=3
+integer,dimension(stages) :: rows,columns
+
 !switches and controls
-character(len=6) :: output_switch !'motive' for the motivate method and 'normal' for the think method
-character(len=5) :: testing_cha,show_blood_cha
-logical :: testing=.false., show_blood=.false.,file_exists
+character(len=6),dimension(stages) :: output_switch !'motive' for the motivate method and 'normal' for the think method
 
 !coarray image
 integer :: image_total,image_number
 
 !identity image
-integer :: ident_number,ident_total
+integer,dimension(stages) :: ident_number
+integer :: ident_total
 
-!network dimensions
-integer :: rows,columns,directions
-
-!input dimension and position
-integer :: vision_length,vision_socket
-integer,allocatable :: vision(:)
-
-!output dimension and position
-integer :: response_length,response_socket
+!input/output dimension and position
+type(see_saw),dimension(stages) :: trans[*]
+integer,dimension(stages),codimension[*] :: vision_length=2,response_length=2
+integer,dimension(stages) :: vision_socket,response_socket
 character(len=:),allocatable :: csv_outputter
-integer,allocatable :: response(:)[:]
 
 !reward control
-real :: node_use_reward
+real,dimension(stages) :: node_use_reward
 integer,codimension[*] :: oddsey
-character(len=20) :: willy
+integer,parameter :: neurodepth=10
 
 !blood setup
-integer :: blood_rows,blood_rate
-real :: blood_volume,blood_gradient
+integer,parameter :: blood_rate=20
+real,parameter :: blood_volume=0.8,blood_gradient=0.6
 
 !do loop counters
-integer :: count_count,column_number
-
-!motive specific
-integer,allocatable :: response_motivate(:)
+integer :: count_count,column_number,stage_count
 
 
 !setup the images
@@ -84,32 +80,139 @@ ident_total=5
 
 
 
+
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!
+!!!Network setup!!!
+!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!
-!!!testing switches!!!
+!!!Motivation setup!!!
 !!!!!!!!!!!!!!!!!!!!!!
 
-!testing switches
-!switch for turning on/off the test logs
-CALL GET_COMMAND_ARGUMENT(1,testing_cha)
-if (testing_cha=="true") then
-	testing=.true.
-else if (testing_cha=="false") then
-	testing=.false.
-ENDIF
-!switch for turning on/off blood printing
-CALL GET_COMMAND_ARGUMENT(2,show_blood_cha)
-if (show_blood_cha=="true") then
-	show_blood=.true.
-else if (show_blood_cha=="false") then
-	show_blood=.false.
-ENDIF
+count_count=1
+
+!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 1 (motivate)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the motivate network [image 1, ident 1]
+!this network takes in vital information
+!the response interfaces with neurochem and with think (1)
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==1) then
+	!status
+	output_switch(count_count)="motive"
+	ident_number(count_count)=1
+	!dimensions
+	!brain
+	rows(count_count)=6; columns(count_count)=17
+	vision_length(count_count)=15
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=7
+	response_socket(count_count)=8
+	node_use_reward(count_count)=2.0
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 1 (motivate)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end testing switches!!!
+!!!End motivation setup!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
+sync all
+
+
+!!!!!!!!!!!!!!!!!
+!!!sight setup!!!
+!!!!!!!!!!!!!!!!!
+
+
+count_count=2
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 1 (sight lust)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the input lust [image 1, ident 2]
+!this network takes in information, through direct outside interfaces 
+!the response interfaces with the think network
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==1) then
+	!status
+	output_switch(count_count)="normal"
+	ident_number(count_count)=2
+	!dimensions
+	!brain
+	rows(count_count)=21; columns(count_count)=37
+	vision_length(count_count)=27
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=11
+	response_socket(count_count)=(columns(count_count)/2)+1
+	node_use_reward(count_count)=10.0
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 1 (sight lust)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 2 (sight joy)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the input joy [image 2, ident 3]
+!this network takes in information, through direct outside interfaces
+!the response interfaces with the think network
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==2) then
+	!status
+	output_switch(count_count)="normal"
+	ident_number(count_count)=3
+	!dimensions
+	!brain
+	rows(count_count)=21; columns(count_count)=37
+	vision_length(count_count)=27
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=11
+	response_socket(count_count)=(columns(count_count)/2)+1
+	node_use_reward(count_count)=10.0
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 2 (sight joy)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -119,7 +222,110 @@ ENDIF
 
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 3 (sight account)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the input of account data [image 3, ident 4]
+!this network takes in information, through direct outside interfaces
+!the response interfaces with the think network
+!socket number represents where the middle of the corresponding array meets the brain network
 
+
+!allocations
+if (image_number==3) then
+	!status
+	output_switch(count_count)="normal"
+	ident_number(count_count)=4
+	!dimensions
+	!brain
+	rows(count_count)=18; columns(count_count)=31
+	vision_length(count_count)=19
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=11
+	response_socket(count_count)=(columns(count_count)/2)+1
+	node_use_reward(count_count)=10.0
+!	!allocate the vision and response
+!	allocate(trans(count_count)%vision(vision_length(count_count)))
+!	allocate(trans(count_count)%response(response_length(count_count)))
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 3 (sight joy)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!
+!!!end sight setup!!!
+!!!!!!!!!!!!!!!!!!!!!
+
+
+
+sync all
+
+
+!!!!!!!!!!!!!!!!!
+!!!think setup!!!
+!!!!!!!!!!!!!!!!!
+
+count_count=3
+
+!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 1 (think)!!!
+!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the main brain [image 1]
+!this network takes in information, from other networks, and compiles a response
+!the response interfaces with the outside 
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==1) then
+	!status
+	output_switch(count_count)="normal"
+	ident_number(count_count)=5
+	!dimensions
+	!brain
+	rows(count_count)=25; columns(count_count)=51
+	vision_length(count_count)=40
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=11
+	response_socket(count_count)=(columns(count_count)/2)+1
+	node_use_reward(count_count)=10.0
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 1 (think)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!
+!!!end think setup!!!
+!!!!!!!!!!!!!!!!!!!!!
+
+
+sync all
+
+do count_count=1,stages
+	!allocate the vision and response
+	allocate(trans(count_count)%vision(vision_length(count_count)))
+	allocate(trans(count_count)%response(response_length(count_count)))
+	sync all
+end do
+
+sync all
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!
+!!!End Network setup!!!
+!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -142,59 +348,7 @@ ENDIF
 !!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!
 
-
-
-
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 1 (motivate)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the motivate network [image 1, ident 1]
-!this network takes in vital information
-!the response interfaces with neurochem and with think (1)
-!socket number represents where the middle of the corresponding array meets the brain network
-
-
-!allocations
-if (image_number==1) then
-	!status
-	output_switch="motive"
-	ident_number=1
-	!dimensions
-	!brain
-	directions=8; rows=6; columns=17
-	vision_length=15
-	vision_socket=(columns/2)+1
-	response_length=7
-	response_socket=8
-	node_use_reward=2.0
-	!blood
-	blood_rows=rows+1
-	blood_rate=20
-	blood_volume=8.0
-	blood_gradient=0.6
-end if
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 1 (motivate)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
+stage_count=1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!motivate communication structure construct!!!
@@ -203,14 +357,10 @@ end if
 
 !motivate(1) opens feel and puts it into it's vision
 if (image_number==1) then
-
-	!allocate the input and output arrays to the dimension fed in to the subroutine
-	allocate(vision(vision_length)) !allocate the array for input into the network, currently on top
-	allocate(response_motivate(response_length)) !allocate the array for output from the network, currently on bottom
 	
 	!put the array from feel into the vision array
 	open(unit=1,file="world_in_a_world/feel.csv")
-	read(1,*) vision	
+	read(1,*) trans(stage_count)%vision
 	close(1)
 	
 end if
@@ -228,10 +378,12 @@ end if
 !!!run motivate networks!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-if (output_switch=="motive") then
-	call insanitorium_deluxe(oddsey,ident_number,ident_total,rows,columns,directions,node_use_reward,&
-		vision,response_motivate,vision_socket,response_socket,show_blood,testing,blood_rate,blood_rows,&
-		blood_volume,blood_gradient,output_switch)
+if (output_switch(stage_count)=="motive") then
+	call insanitorium_deluxe(oddsey,ident_number(stage_count),&
+		ident_total,rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
+		trans(stage_count)%vision,trans(stage_count)%response,&
+		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
+		blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
 end if
 	
 !send the oddsey number to the other networks
@@ -239,10 +391,6 @@ end if
 sync all
 oddsey=oddsey[1]
 
-!deallocate the motive vision array
-if (image_number==1) then
-	deallocate(vision)
-end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!end run motivate networks!!!
@@ -300,124 +448,12 @@ end if
 
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 1 (sight lust)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the input lust [image 1, ident 2]
-!this network takes in information, through direct outside interfaces 
-!the response interfaces with the think network
-!socket number represents where the middle of the corresponding array meets the brain network
-
-
-!allocations
-if (image_number==1) then
-	!status
-	output_switch="normal"
-	ident_number=2
-	!dimensions
-	!brain
-	directions=8; rows=21; columns=37
-	vision_length=27
-	vision_socket=(columns/2)+1
-	response_length=11
-	response_socket=(columns/2)+1
-	node_use_reward=10.0
-	!blood
-	blood_rows=rows+1
-	blood_rate=20
-	blood_volume=8.0
-	blood_gradient=0.6
-end if
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 1 (sight lust)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
 
 
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 2 (sight joy)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the input joy [image 2, ident 3]
-!this network takes in information, through direct outside interfaces
-!the response interfaces with the think network
-!socket number represents where the middle of the corresponding array meets the brain network
-
-
-!allocations
-if (image_number==2) then
-	!status
-	output_switch="normal"
-	ident_number=3
-	!dimensions
-	!brain
-	directions=8; rows=21; columns=37
-	vision_length=27
-	vision_socket=(columns/2)+1
-	response_length=11
-	response_socket=(columns/2)+1
-	node_use_reward=10.0
-	!blood
-	blood_rows=rows+1
-	blood_rate=20
-	blood_volume=8.0
-	blood_gradient=0.6
-end if
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 2 (sight joy)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 3 (sight account)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the input of account data [image 3, ident 4]
-!this network takes in information, through direct outside interfaces
-!the response interfaces with the think network
-!socket number represents where the middle of the corresponding array meets the brain network
-
-
-!allocations
-if (image_number==3) then
-	!status
-	output_switch="normal"
-	ident_number=4
-	!dimensions
-	!brain
-	directions=8; rows=18; columns=31
-	vision_length=19
-	vision_socket=(columns/2)+1
-	response_length=11
-	response_socket=(columns/2)+1
-	node_use_reward=10.0
-	!blood
-	blood_rows=rows+1
-	blood_rate=20
-	blood_volume=8.0
-	blood_gradient=0.6
-end if
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 3 (sight joy)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
+stage_count=2
 
 
 
@@ -432,31 +468,27 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-!allocate the input and output arrays to the dimension fed in to the subroutine
-allocate(vision(vision_length)) !allocate the array for input into the network, currently on top
-allocate(response(response_length)[*]) !allocate the array for output from the network, currently on bottom
-
 
 !sight lust(2) opens the sight lust csv and puts it into it's vision
 if (image_number==1) then
 
 	!place the sight lust array into vision for the sight lust network
 	open(unit=1,file="world_in_a_world/sight_lust.csv")
-	read(1,*) vision
+	read(1,*) trans(stage_count)%vision
 	
 !sight joys(3) opens the sight joys csv and puts it into it's vision
 else if (image_number==2) then
 
 	!place the sight joys array into vision for the sight joys network
 	open(unit=1,file="world_in_a_world/sight_joys.csv")
-	read(1,*) vision
+	read(1,*) trans(stage_count)%vision
 	
 !sight joys(3) opens the sight joys csv and puts it into it's vision
 else if (image_number==3) then
 
 	!place the sight joys array into vision for the sight joys network
 	open(unit=1,file="world_in_a_world/sight_account.csv")
-	read(1,*) vision
+	read(1,*) trans(stage_count)%vision
 	
 end if
 
@@ -483,13 +515,13 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!
 
 
-call insanitorium_deluxe(oddsey,ident_number,ident_total,rows,columns,directions,node_use_reward,&
-	vision,response,vision_socket,response_socket,show_blood,testing,blood_rate,blood_rows,&
-	blood_volume,blood_gradient,output_switch)
+call insanitorium_deluxe(oddsey,ident_number(stage_count),ident_total,&
+	rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
+	trans(stage_count)%vision,trans(stage_count)%response,&
+	vision_socket(stage_count),response_socket(stage_count),blood_rate,&
+	blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
 	
-
-!deallocate the vision array
-deallocate(vision)
+sync all
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!end run sight networks!!!
@@ -542,44 +574,10 @@ deallocate(vision)
 
 
 
+stage_count=3
 
 
 
-!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 1 (think)!!!
-!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the main brain [image 1]
-!this network takes in information, from other networks, and compiles a response
-!the response interfaces with the outside 
-!socket number represents where the middle of the corresponding array meets the brain network
-
-
-!allocations
-if (image_number==1) then
-	!status
-	output_switch="normal"
-	ident_number=5
-	!dimensions
-	!brain
-	directions=8; rows=25; columns=51
-	vision_length=40
-	vision_socket=(columns/2)+1
-	response_length=11
-	response_socket=(columns/2)+1
-	node_use_reward=10.0
-	!blood
-	blood_rows=rows+1
-	blood_rate=20
-	blood_volume=8.0
-	blood_gradient=0.6
-	!allocate the input and output arrays to the dimension fed in to the subroutine
-	
-	!allocate the array for output from the network, currently on bottom
-end if
-
-!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 1 (think)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -595,27 +593,37 @@ end if
 !!!place out put from sight networks and motivate network into think!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+sync all
+
+
 !think(1) opens sight and feel_response and puts them into it's vision
 if (image_number==1) then
+	
+	
 
-	!allocate the array for input into the network, currently on top
-	allocate(vision(vision_length)) 
+	
 
-	!add response from sight lust
-	vision(1:size(response(:)[1]))=response(:)[1]
-	!add response from sight joys
-	vision(size(response(:)[1])+1:size(response(:)[1])+size(response(:)[2]))=response(:)[2]
-	!add response from sight account
-	vision(size(response(:)[1])+size(response(:)[2])+1:size(response(:)[1])+size(response(:)[2])+size(response(:)[3]))=response(:)[3]
-	!add response from motivate
-	vision(size(response(:)[1])+size(response(:)[2])+size(response(:)[3])+1:)=response_motivate
+	!add response from all four networks
+	do count_count=1,response_length(3)
+		!add response from sight lust
+		if (count_count<=response_length(2)[1]) then
+			trans(stage_count)%vision(count_count)=trans(2)[1]%response(count_count)
+		!add response from sight joys
+		else if (count_count<=response_length(2)[1]+response_length(2)[2]) then
+			trans(stage_count)%vision(count_count)=trans(2)[2]%response(count_count)
+		!add response from sight account
+		else if (count_count<=response_length(2)[1]+response_length(2)[2]+response_length(2)[3]) then
+			trans(stage_count)%vision(count_count)=trans(2)[3]%response(count_count)
+		!add response from motivate
+		else
+			trans(stage_count)%vision(count_count)=trans(1)[1]%response(count_count)
+		end if
+	end do
+
 
 end if
 
 
-!deallocate the response array to be used for think and allocate to think specs
-deallocate(response)
-allocate(response(response_length)[*]) 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!end place out put from sight networks and motivate network into think!!!
@@ -634,42 +642,16 @@ allocate(response(response_length)[*])
 !note: here, the think network is run on image one but is given the label of image 4 (image total)
 !this is done in order to reuse images, freeing up computing spaces for future activities
 if (image_number==1) then
-	call insanitorium_deluxe(oddsey,ident_number,ident_total,rows,columns,directions,node_use_reward,&
-		vision,response,vision_socket,response_socket,show_blood,testing,blood_rate,blood_rows,&
-		blood_volume,blood_gradient,output_switch)
+	call insanitorium_deluxe(oddsey,ident_number(stage_count),&
+		ident_total,rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
+		trans(stage_count)%vision,trans(stage_count)%response,&
+		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
+		blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
 end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!end run think network!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!
-!!!End Think Step!!!
-!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -692,14 +674,14 @@ if (image_number==1) then
 	open(unit=1,file="world_in_a_world/sight_response.csv")
 
 	!take the arrays and put them into the csv file
-	allocate(character(2*response_length) :: csv_outputter)
+	allocate(character(2*response_length(stage_count)) :: csv_outputter)
 	!write each element of the csv file independantly
-	do column_number=1,response_length-1
-		write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') response(column_number)[image_number],','
+	do column_number=1,response_length(stage_count)-1
+		write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') trans(stage_count)%response(column_number),','
 	end do
-	write(csv_outputter((response_length*2)-1:response_length*2),'(I1)') response(response_length)[image_number]
+	write(csv_outputter((response_length(stage_count)*2)-1:response_length(stage_count)*2),'(I1)') &
+		trans(stage_count)%response(response_length(stage_count))
 	write(1,*) csv_outputter
-	!print*,response_motivate, response_length
 	close(1)
 	
 end if
@@ -715,6 +697,14 @@ end if
 
 
 
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!End Think Step!!!
+!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!
+
+
+!print*,"three end",image_number
 
 sync all
 

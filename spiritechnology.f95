@@ -8,12 +8,12 @@ contains
 !this is it. This is the brain kernel. In this where the network is controled from. It is here that data is fed into and data comes out from.
 !run this to evolve the network built outside. This will need a handshake and a neurochem value at some point
 
-subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
-	blood_gradient,blood_volume,vision,response,response_counter,rows,columns,moves,testing,show_blood,delay_time,&
-	epoch_start,node_use_reward,image_number,motivate_nomotivate)
+subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
+	blood_gradient,blood_volume,vision,response,rows,columns,&
+	node_use_reward,image_number,motivate_nomotivate)
 
 	!timing and controlling
-	integer :: moves, epoch, epoch_start,epoch_cutoff
+	integer :: epoch=0,epoch_cutoff
 	logical :: proaction
 	character(len=6) :: motivate_nomotivate
 	
@@ -29,7 +29,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	
 	!sense and response
 	integer :: response_socket,response_length,vision_length,vision_socket
-	integer,dimension(*) :: vision(:),response(:),response_counter(:,:)
+	integer,dimension(*) :: vision(:),response(:)
 	
 	!test log
 	logical :: testing,show_blood
@@ -44,7 +44,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 	!parallelisation
 	integer :: image_number
 	
-	
+	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 
 	proaction=.false.
 
@@ -72,7 +72,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 			thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
 				thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
 		end do
-
+		!print*,"made it",this_image()
 		!first, randomise random row list
 		call randomised_list(row_random)
 		 
@@ -97,39 +97,8 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 
 					!here is the important subroutine call that moves the data depending on how fat the neuron is 
 					!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,testing,image_number)		
-								
-					!lag if necessary
-					if (testing .eqv. .true.) then
-						call delay(delay_time)
-					end if
-					
-					!increase the moves count
-					moves=moves+1
-				
-					!print each step
-					if (testing .eqv. .true.) then
-						if (show_blood .eqv. .true.) then
-							call print_network(image_number,moves,epoch,vision,vision_socket,response,response_socket,&
-								thinking%brain_status,thinking%blood)
-						else
-							call print_network(image_number,moves,epoch,vision,vision_socket,response,response_socket,thinking%brain_status)
-						end if
-						!keep track of response
-						do column_number_2=1,response_length
-							if (response(column_number_2)==1) then
-								do column_number_3=1,vision_length
-									if (vision(column_number_3)==1) then
-										response_counter(column_number_2,column_number_3)=&
-											response_counter(column_number_2,column_number_3)+1
-									end if
-								end do
-							end if
-						end do							
-					end if	
-						
-					!print*,thinking%neurochem
-					
+					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket)		
+
 					
 					!response translation into movement
 					!different rules for motivate and non motivate networks
@@ -182,7 +151,7 @@ subroutine spiritech(epoch,thinking,blood_rate,response_socket,response_length,v
 
 
 		!if nothing has happened for epoch_cutoff, exit and output 0
-		if ((epoch-epoch_start)>epoch_cutoff) then
+		if (epoch>epoch_cutoff) then
 			proaction=.true.
 		end if
 		
