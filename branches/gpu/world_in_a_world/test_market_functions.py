@@ -104,10 +104,7 @@ def binary_to_integer(binary_array):
 	
 	return integer
 		
-		
-		
-		
-		
+
 
 #this function converts an integer percentage number into a position on a binary array
 def percentage_to_position(percent,size):
@@ -125,23 +122,3 @@ def percentage_to_position(percent,size):
 			break
 			
 	return binary_list
-	
-		 
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-

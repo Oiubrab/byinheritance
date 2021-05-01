@@ -9,11 +9,9 @@ type mind
 end type mind
 
 !define input output type
-type see_say
-	integer,allocatable :: vision_motive(:),response_motive(:) !motivate arrays
-	integer,allocatable :: vision_sight(:),response_sight(:) !data input arrays
-	integer,allocatable :: vision_think(:),response_think(:) !thinking and output arrays
-end type see_say	
+type see_saw
+	integer,allocatable :: vision(:),response(:)
+end type see_saw	
 
 contains
 
@@ -42,185 +40,6 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-!delays in microsecond precision
-subroutine delay(time)
-
-	real :: time, starter,finisher
-	logical :: past=.false.
-	
-	call cpu_time(starter)
-	do while (past .eqv. .false.)
-		call cpu_time(finisher)
-		if (finisher>starter+time) then
-			past=.true.
-		end if
-	end do
-	
-	past=.false.
-	
-end subroutine delay
-
-
-
-
-
-subroutine print_network(imager,moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
-
-	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
-	real,optional,dimension(*) :: blood(:,:)
-	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns,imager
-	integer,intent(in) :: vision_socket,response_socket,moves,epoch
-	!printing
-	integer,parameter :: individual_width=2, individual_blood=6, separation_space=10
-	character(len=individual_width) :: data_cha
-	character(len=individual_blood) :: blood_cha
-	character(len=12) :: individual_width_cha,separation_cha,individual_blood_cha
-	character(len=17) :: width,blood_width,empty_width
-	character(len=20) :: tester
-	character(len=:),allocatable :: print_row
-	
-	
-	!Who is your sanity-daddy and what does he do?
-	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
-	open(unit=imager,file=tester,access="APPEND")
-
-	write(imager,*)"By Inheritance"
-	write(imager,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
-	
-	!establish network dimensions
-	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
-	!if blood is present, set ther size, otherwise the size is zero
-	if (present(blood)) then
-		blood_rows=size(blood(1,:)); blood_columns=size(blood(:,1))
-	else 
-		blood_rows=0; blood_columns=0
-	end if	
-	!and set the com arrays
-	vision_columns=size(vision); response_columns=size(response)
-	
-	!allocate the printing row with enough space to fit both brain and blood if blood is present
-	if (present(blood)) then
-		allocate(character((columns*individual_width)+(blood_columns*individual_blood)+2+separation_space) :: print_row) !allocate the printing variable
-	else
-		allocate(character((columns*individual_width)+2) :: print_row) !allocate the printing variable	
-	end if
-	
-	!set the width to print for each datum
-	write(individual_width_cha,*)individual_width
-	write(individual_blood_cha,*)individual_blood
-	!width for brain/blood
-	width="(I"//trim(individual_width_cha)//")"
-	empty_width="(A"//trim(individual_width_cha)//")"
-	blood_width="(F"//trim(individual_blood_cha)//".2)"
-
-	!print the vision array first
-	do column_counter=1,columns
-		!print*,plugin(column_counter,vision_socket,vision_columns,"array"),column_counter
-		!set up printer to print vision array in the correct columns
-		if ((column_counter>=plugin(1,vision_socket,vision_columns,"brain")) .and. &
-			(column_counter<=plugin(vision_columns,vision_socket,vision_columns,"brain"))) then
-			write(data_cha,width)vision(plugin(column_counter,vision_socket,vision_columns,"array"))
-		else
-			write(data_cha,empty_width)"  "
-		end if
-		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-	end do
-	write(imager,*)print_row(1:individual_width*columns)
-	write(imager,*)" "
-	print_row(:)="  "
-
-	!the main brain printing loop
-	do row_counter=1,rows
-		!this loop now handles printing both the brain and the blood networks, hence the columns*2
-		!the columns+1 position is empty and creates a space between the two networks
-		do column_counter=1,columns+blood_columns+1
-			!add brain numbers to the first half of the row
-			if (column_counter<=columns) then
-				write(data_cha,width)brain(info_ports,column_counter,row_counter)
-				print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-			!print the brain and blood networks beside eachother if blood is passed in
-			else if (present(blood)) then
-				!create a break for the two networks
-				if (column_counter==columns+1) then
-					print_row(column_counter*individual_width-(individual_width-1):&
-						column_counter*individual_width-(individual_width-1)+separation_space)="  "
-				!and blood numbers to the second half
-				else
-					write(blood_cha,blood_width)blood(column_counter-(columns+1),row_counter)
-					!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
-					!to: brain columns + separation + blood column number * blood column width
-					print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
-						individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
-						(column_counter-(columns+1))*individual_blood)=blood_cha
-				end if
-			end if
-		end do
-		write(imager,*)print_row
-	end do
-	write(imager,*)" "
-	print_row(:)="  "
-
-	!print the response and equivalent blood arrays last
-	do column_counter=1,columns+blood_columns+1
-		!add response numbers to the first half of the row
-		if (column_counter<=columns) then
-			!place them where the socket is
-			if ((column_counter>=plugin(1,response_socket,response_columns,"brain")) .and. &
-				(column_counter<=plugin(response_columns,response_socket,response_columns,"brain"))) then
-				write(data_cha,width)response(plugin(column_counter,response_socket,response_columns,"array"))
-			else
-				write(data_cha,empty_width)"  "
-			end if
-		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-		!print the brain and blood networks beside eachother if blood is passed in
-		else if (present(blood)) then
-			if (column_counter==columns+1) then
-				print_row(column_counter*individual_width-(individual_width-1):&
-					column_counter*individual_width-(individual_width-1)+separation_space)="  "
-			!and blood numbers to the second half
-			else
-				write(blood_cha,blood_width)blood(column_counter-(columns+1),blood_rows)
-				!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
-				!to: brain columns + separation + blood column number * blood column width
-				print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
-					individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
-					(column_counter-(columns+1))*individual_blood)=blood_cha
-			end if
-		end if
-	end do
-	write(imager,*)print_row
-	write(imager,*)" "
-	
-	!close this shit down
-	close(imager)
-	
-end subroutine print_network
-
-
-
-
-
-
-
-!feed in a start and finish time for a time interval printout in hrs, mins, sec
-subroutine print_interval_multiple(start,finish,image_number)
-	real,intent(in) :: start, finish
-	real :: t_sec, total_time
-	integer :: t_hr, t_min, image_number
-	character(len=100) :: test_file
-	
-	total_time=finish-start
-	t_hr = floor(total_time/3600)
-	t_min = (total_time-t_hr*3600)/60
-	t_sec = total_time-t_hr*3600-t_min*60
-	
-	!write to one of multiple files
-	write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
-	open(unit=image_number,file=test_file,access="APPEND")
-	write(image_number,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
-	close(image_number)
-
-end subroutine print_interval_multiple
 
 
 
@@ -257,7 +76,7 @@ end subroutine randomised_list
 
 
 !read in the network from a text file or write out to a text file
-subroutine read_write(imagine,imagination,think,epoch,moves,direction)
+subroutine read_write(imagine,imagination,think,direction)
 	type(mind) :: think
 	integer :: epoch,imagine,imagination
 	character(len=20) :: willfull
@@ -275,8 +94,6 @@ subroutine read_write(imagine,imagination,think,epoch,moves,direction)
 		read(imagination+imagine,*) think%brain_weight
 		read(imagination+imagine,*) think%blood
 		read(imagination+imagine,*) think%neurochem				
-		read(imagination+imagine,*) epoch
-		read(imagination+imagine,*) moves
 		close(imagination+imagine)
 		
 	else if (direction=="write") then
@@ -287,8 +104,6 @@ subroutine read_write(imagine,imagination,think,epoch,moves,direction)
 		write(2*imagination+imagine,*) think%brain_weight
 		write(2*imagination+imagine,*) think%blood
 		write(2*imagination+imagine,*) think%neurochem		
-		write(2*imagination+imagine,*) epoch
-		write(2*imagination+imagine,*) moves
 		close(2*imagination+imagine)
 	
 	end if
@@ -568,7 +383,7 @@ end function plugin
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(idea,column,row,reward,response,response_socket,printer,image)
+subroutine selector(idea,column,row,reward,response,response_socket)
 
 	type(mind) :: idea
 	integer,allocatable :: connection_translation(:)
@@ -578,12 +393,8 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 	integer,intent(in) :: row,column,response_socket
 	integer :: rung, point, connections, data_pos, origin, rank, rank_size
 	integer :: columnmax, rowmax, counter, second_point, response_length, image
-	logical :: printer
-	character(len=20) :: tester
-	
-	!find the image number
-	write(tester,"(A8,I0,A4)") "test_log",image,".txt"	
-	!print*,image,tester	
+
+
 	
 	
 	!brain size
@@ -603,7 +414,7 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 	!base incrementation of the rungs must be monotonic
 	increment=1.0/float(connections)
 
-	call random_number(fuck)
+	call RANDOM_NUMBER(fuck)
 
 	!setup connection_translation, a randomising position for the rungs - weights selector
 	allocate(connection_translation(connections))
@@ -669,21 +480,6 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 	end do
 
 
-	!print test_log data
-	if (printer .eqv. .true.) then
-		open(unit=image,file=tester,access="APPEND")
-		write(image,*)"Maximum Rungs Value, choice value:"
-		write(image,*)rungs(size(rungs)),fuck*rungs(size(rungs))
-		write(image,*)"Weightings from Direction 1 to 8:"
-		write(image,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")idea%brain_weight(:,origin,column,row)
-		write(image,*)"Rungs from Direction 1 to 8:"
-		write(image,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")rungs(connection_translation(1)),&
-			rungs(connection_translation(2)),rungs(connection_translation(3)),rungs(connection_translation(4)),&
-			rungs(connection_translation(5)),rungs(connection_translation(6)),rungs(connection_translation(7)),&
-			rungs(connection_translation(8))
-		close(image)
-	end if
-
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
 	if (rungs(size(rungs))/=0.0) then
 			
@@ -696,17 +492,6 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 				
 				!translate rung into corresponding weight
 				point=connection_translation(rung)
-				
-				!moving diagnostic
-				if (printer .eqv. .true.) then
-					open(unit=image,file=tester,access="APPEND")
-					write(image,*)"Move from:"
-					write(image,*)column,row
-					write(image,*)"Move to:"
-					write(image,*)point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
-					write(image,*)" "
-					close(image)
-				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
 				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+reward
@@ -865,9 +650,9 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !data is setup to flow to the bottom
-subroutine initialiser(thought,response,volume,response_socket,response_counter)
+subroutine initialiser(thought,response,volume,response_socket)
 
-	integer,dimension(*) :: response(:),response_counter(:,:)
+	integer,dimension(*) :: response(:)
 	integer :: row_number, column_number, path_from, path_to, paths, response_columns
 	integer :: rows, columns, info_ports,blood_rows,response_socket
 	real :: volume
@@ -949,9 +734,6 @@ subroutine initialiser(thought,response,volume,response_socket,response_counter)
 	
 	!zero out neurochem
 	thought%neurochem=0
-	
-	!zero out response counter
-	response_counter=0
 	
 	!set up empty response array 
 	do column_number=1,size(response)

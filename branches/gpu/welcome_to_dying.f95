@@ -8,6 +8,11 @@ type mind
 	integer,allocatable :: neurochem(:,:,:,:) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the weight ladder
 end type mind
 
+!define input output type
+type see_say
+	integer,allocatable :: vision(:),response(:)
+end type see_say	
+
 contains
 
 !this is where the magic happens
@@ -35,187 +40,6 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-!delays in microsecond precision
-subroutine delay(time)
-
-	real :: time, starter,finisher
-	logical :: past=.false.
-	
-	call cpu_time(starter)
-	do while (past .eqv. .false.)
-		call cpu_time(finisher)
-		if (finisher>starter+time) then
-			past=.true.
-		end if
-	end do
-	
-	past=.false.
-	
-end subroutine delay
-
-
-
-
-
-subroutine print_network(imager,moves,epoch,vision,vision_socket,response,response_socket,brain,blood)
-
-	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
-	real,optional,dimension(*) :: blood(:,:)
-	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns,imager
-	integer,intent(in) :: vision_socket,response_socket,moves,epoch
-	!printing
-	integer,parameter :: individual_width=2, individual_blood=6, separation_space=10
-	character(len=individual_width) :: data_cha
-	character(len=individual_blood) :: blood_cha
-	character(len=12) :: individual_width_cha,separation_cha,individual_blood_cha
-	character(len=17) :: width,blood_width,empty_width
-	character(len=20) :: tester
-	character(len=:),allocatable :: print_row
-	
-	
-	!Who is your sanity-daddy and what does he do?
-	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
-	open(unit=imager,file=tester,access="APPEND")
-
-	write(imager,*)"By Inheritance"
-	write(imager,'(A15,I0,A8,I0)')"Brain moves: ",moves,"Epoch: ",epoch
-	
-	!establish network dimensions
-	rows=size(brain(1,1,:)); columns=size(brain(1,:,1)); info_ports=size(brain(:,1,1))
-	!if blood is present, set ther size, otherwise the size is zero
-	if (present(blood)) then
-		blood_rows=size(blood(1,:)); blood_columns=size(blood(:,1))
-	else 
-		blood_rows=0; blood_columns=0
-	end if	
-	!and set the com arrays
-	vision_columns=size(vision); response_columns=size(response)
-	
-	!allocate the printing row with enough space to fit both brain and blood if blood is present
-	if (present(blood)) then
-		allocate(character((columns*individual_width)+(blood_columns*individual_blood)+2+separation_space) :: print_row) !allocate the printing variable
-	else
-		allocate(character((columns*individual_width)+2) :: print_row) !allocate the printing variable	
-	end if
-	
-	!set the width to print for each datum
-	write(individual_width_cha,*)individual_width
-	write(individual_blood_cha,*)individual_blood
-	!width for brain/blood
-	width="(I"//trim(individual_width_cha)//")"
-	empty_width="(A"//trim(individual_width_cha)//")"
-	blood_width="(F"//trim(individual_blood_cha)//".2)"
-
-	!print the vision array first
-	do column_counter=1,columns
-		!print*,plugin(column_counter,vision_socket,vision_columns,"array"),column_counter
-		!set up printer to print vision array in the correct columns
-		if ((column_counter>=plugin(1,vision_socket,vision_columns,"brain")) .and. &
-			(column_counter<=plugin(vision_columns,vision_socket,vision_columns,"brain"))) then
-			write(data_cha,width)vision(plugin(column_counter,vision_socket,vision_columns,"array"))
-		else
-			write(data_cha,empty_width)"  "
-		end if
-		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-	end do
-	write(imager,*)print_row(1:individual_width*columns)
-	write(imager,*)" "
-	print_row(:)="  "
-
-	!the main brain printing loop
-	do row_counter=1,rows
-		!this loop now handles printing both the brain and the blood networks, hence the columns*2
-		!the columns+1 position is empty and creates a space between the two networks
-		do column_counter=1,columns+blood_columns+1
-			!add brain numbers to the first half of the row
-			if (column_counter<=columns) then
-				write(data_cha,width)brain(info_ports,column_counter,row_counter)
-				print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-			!print the brain and blood networks beside eachother if blood is passed in
-			else if (present(blood)) then
-				!create a break for the two networks
-				if (column_counter==columns+1) then
-					print_row(column_counter*individual_width-(individual_width-1):&
-						column_counter*individual_width-(individual_width-1)+separation_space)="  "
-				!and blood numbers to the second half
-				else
-					write(blood_cha,blood_width)blood(column_counter-(columns+1),row_counter)
-					!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
-					!to: brain columns + separation + blood column number * blood column width
-					print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
-						individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
-						(column_counter-(columns+1))*individual_blood)=blood_cha
-				end if
-			end if
-		end do
-		write(imager,*)print_row
-	end do
-	write(imager,*)" "
-	print_row(:)="  "
-
-	!print the response and equivalent blood arrays last
-	do column_counter=1,columns+blood_columns+1
-		!add response numbers to the first half of the row
-		if (column_counter<=columns) then
-			!place them where the socket is
-			if ((column_counter>=plugin(1,response_socket,response_columns,"brain")) .and. &
-				(column_counter<=plugin(response_columns,response_socket,response_columns,"brain"))) then
-				write(data_cha,width)response(plugin(column_counter,response_socket,response_columns,"array"))
-			else
-				write(data_cha,empty_width)"  "
-			end if
-		print_row(column_counter*individual_width-(individual_width-1):column_counter*individual_width)=data_cha
-		!print the brain and blood networks beside eachother if blood is passed in
-		else if (present(blood)) then
-			if (column_counter==columns+1) then
-				print_row(column_counter*individual_width-(individual_width-1):&
-					column_counter*individual_width-(individual_width-1)+separation_space)="  "
-			!and blood numbers to the second half
-			else
-				write(blood_cha,blood_width)blood(column_counter-(columns+1),blood_rows)
-				!from: brain columns + separation + blood column number * blood column width - (blood column width + 1)
-				!to: brain columns + separation + blood column number * blood column width
-				print_row(columns*individual_width+separation_space+(column_counter-(columns+1))*&
-					individual_blood-(individual_blood-1):columns*individual_width+separation_space+&
-					(column_counter-(columns+1))*individual_blood)=blood_cha
-			end if
-		end if
-	end do
-	write(imager,*)print_row
-	write(imager,*)" "
-	
-	!close this shit down
-	close(imager)
-	
-end subroutine print_network
-
-
-
-
-
-
-
-!feed in a start and finish time for a time interval printout in hrs, mins, sec
-subroutine print_interval_multiple(start,finish,image_number)
-	real,intent(in) :: start, finish
-	real :: t_sec, total_time
-	integer :: t_hr, t_min, image_number
-	character(len=100) :: test_file
-	
-	total_time=finish-start
-	t_hr = floor(total_time/3600)
-	t_min = (total_time-t_hr*3600)/60
-	t_sec = total_time-t_hr*3600-t_min*60
-	
-	!write to one of multiple files
-	write(test_file,"(A8,I0,A4)") "test_log",image_number,".txt"
-	open(unit=image_number,file=test_file,access="APPEND")
-	write(image_number,"(A14,I2,A5,I2,A7,F5.2,A4)")"time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
-	close(image_number)
-
-end subroutine print_interval_multiple
-
-
 
 
 
@@ -224,11 +48,13 @@ end subroutine print_interval_multiple
 
 !returns a list of sequential numbers up to a length defined by the array input, in a list where the order of the numbers has been randomised
 !master_killer is the allocatable array argument
-subroutine randomised_list(master_killer)
-
+pure subroutine randomised_list(master_killer,ran_dom)
+ 	!$acc routine seq
 	integer,dimension(*),intent(inout) :: master_killer(:)
 	integer :: roger_explosion, length, pos_hold
+	integer,intent(inout) :: ran_dom
 	real :: despair
+	!$acc routine(random_something) seq
 
 		length=size(master_killer)
 
@@ -239,7 +65,7 @@ subroutine randomised_list(master_killer)
 	
 		!swap elements until the list is randomized
 		do roger_explosion=1,length
-			call RANDOM_NUMBER(despair)
+			call random_something(despair,ran_dom)
 			pos_hold=master_killer(roger_explosion)
 			master_killer(roger_explosion)=master_killer(int(length*despair)+1)
 			master_killer(int(length*despair)+1)=pos_hold
@@ -250,10 +76,8 @@ end subroutine randomised_list
 
 
 !read in the network from a text file or write out to a text file
-subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_record,illiad)
+subroutine read_write(imagine,imagination,think,direction)
 	type(mind) :: think
-	integer,dimension(*),optional :: response_record(:,:)
-	integer,optional :: illiad
 	integer :: epoch,imagine,imagination
 	character(len=20) :: willfull
 	character(len=*) :: direction
@@ -270,16 +94,6 @@ subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_r
 		read(imagination+imagine,*) think%brain_weight
 		read(imagination+imagine,*) think%blood
 		read(imagination+imagine,*) think%neurochem				
-		read(imagination+imagine,*) epoch
-		read(imagination+imagine,*) moves
-		!if a motivate network, save the oddsey (illiad)
-		if (present(illiad)) then
-			read(imagination+imagine,*) illiad	
-		end if
-		!if in testing, save response counter
-		if (present(response_record)) then
-			read(imagination+imagine,*) response_record	
-		end if		
 		close(imagination+imagine)
 		
 	else if (direction=="write") then
@@ -290,16 +104,6 @@ subroutine read_write(imagine,imagination,think,epoch,moves,direction,response_r
 		write(2*imagination+imagine,*) think%brain_weight
 		write(2*imagination+imagine,*) think%blood
 		write(2*imagination+imagine,*) think%neurochem		
-		write(2*imagination+imagine,*) epoch
-		write(2*imagination+imagine,*) moves
-		!if in a motivation network, write the oddsey (illiad)
-		if (present(illiad)) then
-			write(2*imagination+imagine,*) illiad	
-		end if
-		!if in testing, save response counter
-		if (present(response_record)) then
-			write(2*imagination+imagine,*) response_record	
-		end if
 		close(2*imagination+imagine)
 	
 	end if
@@ -309,6 +113,63 @@ end subroutine read_write
 
 
 
+
+
+!this subroutine uses a seed to start a random number generation pattern
+!this subroutine is a replacement for fortran's random number generator, that does not
+!work with concurrent loops
+!why is the number to be randomised and seeder is the seed number (passed out for the next call)
+pure subroutine random_something(why,eye)
+ 	!$acc routine seq
+	real,parameter :: pi=asin(1.0)*2.0,stretch=1000.0,knockout=10000.0
+	integer,parameter :: width=100,algo_num=3,periods=10,turns=1000
+	real,intent(inout) :: why
+	real :: ex,de_ex_1,de_ex_4
+	integer,intent(inout) :: eye
+	integer :: see,turn_count
+
+	!establish the domain
+	ex=float(eye)/float(width)
+	!Rather than continue along the chain, start subdividing the domain
+	if (ex>float(periods)) then
+		turn_count=0
+		do while (ex>float(periods))
+			ex=ex-float(periods)
+			turn_count=turn_count+1
+		end do
+		ex=ex+((float(eye)+float(turn_count))/(float(width)*float(turns)))
+	end if
+	!simple sinusoid
+	if (mod(eye,algo_num)==0) then
+		!apply the function
+		why=abs(sin(exp(ex)))
+	!superimposed sinusoids x and 2x, normalised to range (0,1)
+	else if (mod(eye,algo_num)==1) then
+		!the derivitive domain zero (first n)
+		de_ex_1=2.0*pi-2.0*atan(sqrt(6.0-sqrt(33.0)))
+		!the derivitive domain zero (fourth n)
+		de_ex_4=8.0*pi-2.0*atan(sqrt(6.0-sqrt(33.0)))
+		!apply the function
+		why=(sin(ex)+sin(2.0*ex)-(sin(de_ex_4)+sin(2.0*de_ex_4)))/(-2.0*(sin(de_ex_1)+sin(2.0*de_ex_1)))
+	!superimposed sinusoids pi*x and 3x, normalised to range (0,1)
+	else if (mod(eye,algo_num)==2) then
+		!the derivitive domain zero (first n) (approximate)
+		de_ex_1=0.511255495232408
+		!apply the function
+		why=(sin(pi*ex)+sin(3.0*ex)+sin(pi*de_ex_1)+sin(3.0*de_ex_1))/(2.0*(sin(pi*de_ex_1)+sin(3.0*de_ex_1)))
+	end if
+	
+	!grow why, negate, then return to original range through division
+	why=((stretch*why)-why)/stretch
+	!grow why, floor why, then return to original size and subtract from original why, killing width*stretch orders of magnitude. Re-expand as width*stretch for original range
+	why=(why-float(int(why*(knockout)))/(knockout))*(knockout) 
+	if (why==0.0000000000) why=0.000000001
+	if ((why>1.0) .or. (why<0.0)) why=abs(why)-float(int(abs(why)))
+	if (why==1.0) why=0.99999 
+	eye=eye+1
+	
+
+end subroutine
 
 
 
@@ -333,12 +194,12 @@ end subroutine read_write
 
 !this function either applies a sigmoid (forward) or inverse sigmoid (reverse) function depending on flow variable
 !note, inverse sigmoid only goes up to 16*range_stretch
-function sigmoid(insig,flow,range_stretch,domain_stretch,range_shift,domain_shift) result(outsig)
-	
+pure function sigmoid(insig,flow,range_stretch,domain_stretch,range_shift,domain_shift) result(outsig)
+ 	!$acc routine seq	
 	real,intent(in) :: insig
 	real,intent(in) :: range_stretch,domain_stretch,range_shift,domain_shift
 	real :: outsig
-	character(len=*) :: flow
+	character(len=*),intent(in) :: flow
 
 	!sigmoid
 	if (flow=="forward") then
@@ -363,8 +224,8 @@ end function sigmoid
 
 
 !this function takes a positional binary array that represents a percentage (-100,100) and returns an approximation of that percentage
-function position_to_percentage(positional) result(percent)
-
+pure function position_to_percentage(positional) result(percent)
+ 	!$acc routine seq
 	integer,dimension(*),intent(in) :: positional(:)
 	integer :: percent,pos
 	real :: data_width
@@ -388,8 +249,8 @@ end function
 !this function takes a binary array and outputs an integer
 !the last bit represents pos (1) or neg (0)
 !note; the binary array must be inputted in format left:smallest to right:highest
-function binary_to_decimal(binary_array) result(decimal)
-
+pure function binary_to_decimal(binary_array) result(decimal)
+ 	!$acc routine seq
 	integer,dimension(*),intent(in) :: binary_array(:)
 	integer :: order, decimal, binary_size
 	
@@ -450,10 +311,10 @@ end function
 
 
 !takes in the column, row position of the input neuron and a pointing number. Outputs the column or row of the output neuron, depending on rowcolumn variable input
-function point_to_neuron(column_in,row_in,point,rowcolumn) result(finder)
-
+pure function point_to_neuron(column_in,row_in,point,rowcolumn) result(finder)
+ 	!$acc routine seq
 	integer,intent(in) :: column_in, row_in, point
-	character(len=*) :: rowcolumn
+	character(len=*),intent(in) :: rowcolumn
 	integer :: finder
 
 	!see data direction map for understanding the numerical pattern below
@@ -488,9 +349,10 @@ end function point_to_neuron
 
 !this function turns the destination label number of the data from it's old home into the origin of the data in it's new home, as per data direction map above
 !assumes 8 directions
-function point_origin(point) result(origin)
-
-	integer :: point, origin
+pure function point_origin(point) result(origin)
+ 	!$acc routine seq
+	integer,intent(in) :: point
+	integer :: origin
 	
 	if (point==1) then
 		origin=8
@@ -516,9 +378,11 @@ end function point_origin
 
 
 !this function takes a weight address (uses 8 directions as assigned in the diagram above) and gives the direction corresponding to that weight
-function weight_direction(weighting) result(resultant)
-
-	integer :: weighting, resultant, modding=8
+pure function weight_direction(weighting) result(resultant)
+ 	!$acc routine seq
+	integer,parameter :: modding=8
+	integer,intent(in) :: weighting
+	integer :: resultant
 
 	resultant=mod(weighting,modding)
 	if (resultant==0) then
@@ -532,9 +396,9 @@ end function weight_direction
 !this function calculates the position of the corresponding brain/array column, given an array/brain column and a socket
 !socket number represents where the middle of the corresponding array meets the brain network
 !label is what is meant to be found, i.e brain label will give the brain column for a given response array position
-function plugin(in_pos,socket,com_length,label) result(out_pos)
-
-	character(len=*) :: label
+pure function plugin(in_pos,socket,com_length,label) result(out_pos)
+ 	!$acc routine seq
+	character(len=*),intent(in) :: label
 	integer,intent(in) :: in_pos,socket,com_length
 	integer :: out_pos
 	
@@ -579,23 +443,26 @@ end function plugin
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(idea,column,row,reward,response,response_socket,printer,image)
-
-	type(mind) :: idea
+pure subroutine selector(idea,column,row,reward,response,response_socket,ran_dom)
+ 	!$acc routine seq
+	type(mind),intent(inout) :: idea
 	integer,allocatable :: connection_translation(:)
-	integer,dimension(*) :: response(:)
+	integer,dimension(*),intent(inout) :: response(:)
 	real,allocatable :: rungs(:)
-	real :: increment, fuck, reward, blood_trans=0.05
+	real :: increment, fuck
+	real,intent(in) :: reward
+	real,parameter :: blood_trans=0.05
 	integer,intent(in) :: row,column,response_socket
+	integer,intent(inout) :: ran_dom
 	integer :: rung, point, connections, data_pos, origin, rank, rank_size
-	integer :: columnmax, rowmax, counter, second_point, response_length, image
-	logical :: printer
+	integer :: columnmax, rowmax, counter, second_point, response_length
 	character(len=20) :: tester
 	
-	!find the image number
-	write(tester,"(A8,I0,A4)") "test_log",image,".txt"	
-	!print*,image,tester	
-	
+	!accelerator subroutine and function declarations		
+	!$acc routine(point_to_neuron) seq	
+	!$acc routine(random_something) seq	
+	!$acc routine(randomised_list) seq
+	!$acc routine(plugin) seq	
 	
 	!brain size
 	rowmax=size(idea%brain_status(1,1,:)); columnmax=size(idea%brain_status(1,:,1)); response_length=size(response)
@@ -614,11 +481,11 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 	!base incrementation of the rungs must be monotonic
 	increment=1.0/float(connections)
 
-	call random_number(fuck)
+	call random_something(fuck,ran_dom)
 
 	!setup connection_translation, a randomising position for the rungs - weights selector
 	allocate(connection_translation(connections))
-	call randomised_list(connection_translation)
+	call randomised_list(connection_translation,ran_dom)
 
 	!set the rungs - ranges for each selection
 	!rungs = increment + weight stored in neuron
@@ -680,21 +547,6 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 	end do
 
 
-	!print test_log data
-	if (printer .eqv. .true.) then
-		open(unit=image,file=tester,access="APPEND")
-		write(image,*)"Maximum Rungs Value, choice value:"
-		write(image,*)rungs(size(rungs)),fuck*rungs(size(rungs))
-		write(image,*)"Weightings from Direction 1 to 8:"
-		write(image,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")idea%brain_weight(:,origin,column,row)
-		write(image,*)"Rungs from Direction 1 to 8:"
-		write(image,"(F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2,F10.2)")rungs(connection_translation(1)),&
-			rungs(connection_translation(2)),rungs(connection_translation(3)),rungs(connection_translation(4)),&
-			rungs(connection_translation(5)),rungs(connection_translation(6)),rungs(connection_translation(7)),&
-			rungs(connection_translation(8))
-		close(image)
-	end if
-
 	!if there is nowhere for the data to go, it has to stay here. Otherwise, find a new home 
 	if (rungs(size(rungs))/=0.0) then
 			
@@ -707,17 +559,6 @@ subroutine selector(idea,column,row,reward,response,response_socket,printer,imag
 				
 				!translate rung into corresponding weight
 				point=connection_translation(rung)
-				
-				!moving diagnostic
-				if (printer .eqv. .true.) then
-					open(unit=image,file=tester,access="APPEND")
-					write(image,*)"Move from:"
-					write(image,*)column,row
-					write(image,*)"Move to:"
-					write(image,*)point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row")
-					write(image,*)" "
-					close(image)
-				end if
 			
 				!add to weight selection. Weight add should overcome global reduction
 				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+reward
@@ -804,14 +645,21 @@ end subroutine selector
 
 
 !this subroutine takes in a neuron from the blood network and moves it around
-subroutine blood_mover(blood,column_num,row_num,gradient)
-
-	real,dimension(*) :: blood(:,:)
+pure subroutine blood_mover(blood,column_num,row_num,gradient,ran_dom)
+ 	!$acc routine seq
+	real,dimension(*),intent(inout) :: blood(:,:)
 	integer,allocatable :: row_randomised(:), column_randomised(:)
-	integer :: column_num,row_num,row_select,column_select
+	integer,intent(in) :: column_num,row_num
+	integer :: row_select,column_select
+	integer,intent(inout) :: ran_dom
 	real :: hope, fear, dist, distil, transition
-	real :: gradient !controls how quickly blood flows. bigger is faster
+	real,intent(in) :: gradient !controls how quickly blood flows. bigger is faster
 	integer :: rows,columns,row_number_2,column_number_2
+
+	!accelerator subroutine and function declarations		
+	!$acc routine(randomised_list) seq
+	!$acc routine(random_something) seq	
+	!$acc routine(sigmoid) seq
 	
 	rows=size(blood(1,:)); columns=size(blood(:,1))
 
@@ -820,22 +668,22 @@ subroutine blood_mover(blood,column_num,row_num,gradient)
 	allocate(column_randomised(columns))
 	
 	!randomise the row array
-	call randomised_list(row_randomised)
+	call randomised_list(row_randomised,ran_dom)
 
 	!engage every blood neuron around the neuron in question
 	do row_select=1,rows
 		!first, randomise the row selection
 		row_number_2=row_randomised(row_select)
 		!before each row pass, randomise the column selection
-		call randomised_list(column_randomised)
+		call randomised_list(column_randomised,ran_dom)
 		
 		do column_select=1,columns
 			!randomise the column selection
 			column_number_2=column_randomised(column_select)
 
 			!set the prospective transitionn value random multipliers
-			call RANDOM_NUMBER(hope)
-			call RANDOM_NUMBER(fear)
+			call random_something(hope,ran_dom)
+			call random_something(fear,ran_dom)
 			!use the distance between the blood channels accordingly
 			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
 			transition=exp(-(dist*(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)**(-1.))/gradient)**2)*&
@@ -876,18 +724,21 @@ end subroutine blood_mover
 
 !This subroutine Initialise the network - ones for all weights only. If zero, that connection will appear as closed
 !data is setup to flow to the bottom
-subroutine initialiser(thought,response,volume,response_socket,response_counter)
+pure subroutine initialiser(thought,volume,response_socket,response_columns)
+ 	!$acc routine seq
+	integer :: row_number, column_number, path_from, path_to, paths
+	integer :: rows, columns, info_ports,blood_rows
+	integer,intent(in) :: response_socket, response_columns
+	real,intent(in) :: volume
+	type(mind),intent(inout) :: thought
 
-	integer,dimension(*) :: response(:),response_counter(:,:)
-	integer :: row_number, column_number, path_from, path_to, paths, response_columns
-	integer :: rows, columns, info_ports,blood_rows,response_socket
-	real :: volume
-	type(mind) :: thought
+	!accelerator subroutine and function declarations		
+	!$acc routine(point_to_neuron) seq	
+	!$acc routine(plugin) seq		
 	
 	rows=size(thought%brain_weight(1,1,1,:)); columns=size(thought%brain_weight(1,1,:,1)) 
 	info_ports=size(thought%brain_status(:,1,1)); paths=size(thought%brain_weight(1,:,1,1))
 	blood_rows=size(thought%blood(1,:))
-	response_columns=size(response)
 	
 	!set the initial brain values first
 	do row_number=1,rows
@@ -961,14 +812,7 @@ subroutine initialiser(thought,response,volume,response_socket,response_counter)
 	!zero out neurochem
 	thought%neurochem=0
 	
-	!zero out response counter
-	response_counter=0
-	
-	!set up empty response array 
-	do column_number=1,size(response)
-		response(column_number)=0
-	end do
-	
+
 end subroutine initialiser
 	
 	
@@ -992,10 +836,11 @@ end subroutine initialiser
 
 !This subroutine takes the neurochem matricies saved in each network and the output of the motivate network and applies a scaling factor to the weights of each network
 !first argument must be the network and the second argument must be the multiplier from the motive network (oddsey)
-subroutine animus(meaning,oddyseus)
-
-	type(mind) :: meaning
-	integer :: oddyseus, row, column, to, from, ladder
+pure subroutine animus(meaning,oddyseus)
+ 	!$acc routine seq
+	type(mind),intent(inout) :: meaning
+	integer,intent(in) :: oddyseus 
+	integer :: row, column, to, from, ladder
 
 	!add to weights based on the neurochem at that node and the scaling 
 	do row=1,size(meaning%brain_weight(1,1,1,:))
@@ -1036,10 +881,11 @@ end subroutine
 
 
 !This subroutine controls the weight reductions per weight per action
-subroutine weight_reducer(weights,column,row)
-
-	real,dimension(*) :: weights(:,:,:,:)
-	integer :: from,to,connections,column,row
+pure subroutine weight_reducer(weights,column,row)
+ 	!$acc routine seq
+	real,dimension(*),intent(inout) :: weights(:,:,:,:)
+	integer :: from,to,connections
+	integer,intent(in) :: column,row
 	real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 	real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 	real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
@@ -1075,34 +921,7 @@ subroutine weight_reducer(weights,column,row)
 	end do
 
 end subroutine weight_reducer
-	
-	
-	
-!this subroutine can be called to set weights, after the initialiser, but before the main loop, so as to direct neurons from the beginning	
-!as of now, breaks the network. Do not use unless you fix it
-subroutine preprogram(weights)
-	
-	real,dimension(*) :: weights(:,:,:,:)
-	integer :: pathfinder, rows,columns
-	
-	rows=size(weights(1,1,1,:)); columns=size(weights(1,1,:,1))
-	
-	!here, I am directing data coming from the extreme left and extreme right to cross the network
-	
 
-	!subsequent nodes on the path from extreme left
-	weights(8,2,1,1)=1000000.0
-	do pathfinder=2,rows
-		weights(8,1,pathfinder,pathfinder)=1000000.0
-	end do	
-	
-	!subsequent nodes on the path from extreme right
-	weights(6,2,columns,1)=1000000.0
-	do pathfinder=2,rows
-		weights(6,3,columns-pathfinder+1,pathfinder)=1000000.0
-	end do	
-	
-end subroutine preprogram
 	
 
 	
