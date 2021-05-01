@@ -136,16 +136,6 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 			call initialiser(think,response,blood_volume,response_socket,response_counter)
 
 
-			
-
-			!inject data from the vission arrays into the networks
-			do column_number=1,vision_length
-				if (vision(column_number)==1) then	
-					think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
-					think%brain_status(2,plugin(column_number,vision_socket,vision_length,"brain"),1)=1
-				end if
-			end do
-
 
 			epoch=0
 			epoch_start=0
@@ -280,23 +270,15 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 			close(image_number)
 
 			!add response counter to will
-			!if this is a motivation network, write the individual oddsey number
-			if (output_switcher=="motive") then
-				call read_write(image_number,image_total,think,epoch,moves,"write",response_record=response_counter,illiad=oddsey)
-			else if (output_switcher=="normal") then
-				call read_write(image_number,image_total,think,epoch,moves,"write",response_record=response_counter)
-			end if
+			call read_write(image_number,image_total,think,epoch,moves,"write",response_record=response_counter)
+
 
 
 		else
 
 			!place all the information network in a text file
-			!if this is a motivation network, write the individual oddsey number
-			if (output_switcher=="motive") then
-				call read_write(image_number,image_total,think,epoch,moves,"write",illiad=oddsey)
-			else if (output_switcher=="normal") then
-				call read_write(image_number,image_total,think,epoch,moves,"write")
-			end if
+			call read_write(image_number,image_total,think,epoch,moves,"write")
+			
 
 
 		end if

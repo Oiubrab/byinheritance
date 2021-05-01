@@ -30,7 +30,7 @@ caf -fbounds-check welcome_to_dying.f95 reign_in_blood.f95 spiritechnology.f95 i
 for i in $(seq 1 $4)
 do
 	
-	cafrun -n 2 --use-hwthread-cpus ./lack_of_comprehension $1 $2
+	cafrun -n 3 --use-hwthread-cpus ./lack_of_comprehension $1 $2
 	cd world_in_a_world
 	python3 test_market.py3 carryon | tee -a "../test_log.txt"
 	cd ..

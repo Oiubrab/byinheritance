@@ -126,8 +126,12 @@ if trigger==True and account[-1]["account_value"]>23000.0:
 #write this dic to a csv file
 write_csv_dic("account.csv",account)
 
-#compute weighted gradient of earnings and place it in a binary array
-weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/abs(this_entry["account_value"]))*100.0)
+#compute weighted gradient of earnings over the last ten steps and place it in a binary array
+#only act if there has been an account change
+if this_entry["account_value"]!=last_entry["account_value"]:
+	weighted_gradient_percentage = int(((this_entry["account_value"] - account[-10]["account_value"])/abs(this_entry["account_value"]))*100.0)
+else:
+	weighted_gradient_percentage=0.0
 #limit growth/decay to the last account volume for now
 if weighted_gradient_percentage>100.0:
 	weighted_gradient_percentage=100.0
@@ -136,7 +140,7 @@ elif weighted_gradient_percentage<-100.0:
 	
 
 	
-#prepare binary array 
+#prepare the motivation binary array 
 
 #this controls the type of interpreting done and must be set in aggreeance with the same setting in the reign_in_blood fortran script
 interpreter_type="positional"
@@ -199,9 +203,18 @@ write_csv_dic("market.csv",markets)
 #place binary representation, followed by listing number, into the pit
 for exam in markets:
 
-	#make binary lists out of the stock and stock_number
+	#make binary lists out of the stock, stock_number and units owned
+	unit_binary = integer_to_binary(exam["units_owned"])
 	stock_binary = integer_to_binary(int(exam["stock_price"]))
 	stock_number_binary = integer_to_binary(exam['stock_number'])
+
+	# ensure unit binaries are deposited in 8 bit chunks by padding
+	#place pos neg label at the end
+	unit_height=8
+	if len(unit_binary)==2:
+		unit_binary = [unit_binary[0]] + [0 for num in range(unit_height-len(unit_binary))] + [unit_binary[-1]]
+	elif len(unit_binary)<unit_height:
+		unit_binary = unit_binary[0:-1] + [0 for num in range(unit_height-len(unit_binary))] + [unit_binary[-1]]
 	
 	# ensure stocks binaries are deposited in 15 bit chunks by padding
 	#place pos neg label at the end
@@ -221,16 +234,29 @@ for exam in markets:
 	
 	#and this is where the resulting array is written into sight.csv
 	#add an extra zero to make list length an odd number
-	sight = numpy.array(stock_number_binary + stock_binary + [0])
-	#print(len(sight))
-	#print(stock_number_binary[0:-2] , [0 for num in range(stock_number_height-len(stock_number_binary))] , [stock_number_binary[-1]])
-	#print(sight,stock_binary,stock_number_binary,exam['stock_identifier'],int(exam["stock_price"]),exam['stock_number'])
+	sight = numpy.array(stock_number_binary + stock_binary + unit_binary + [0])
 	wtr = csv.writer(open ('sight_'+exam['stock_identifier']+'.csv', 'w'), delimiter=',', lineterminator='\n')
 	wtr.writerow(sight)
 
 
 
-	
+
+#this is where the account details are interpreted and folded into sight
+account_binary=integer_to_binary(int(this_entry["account_value"]))
+
+# ensure account binary are deposited in 15 bit chunks by padding
+#place pos neg label at the end
+account_height=19
+if len(stock_binary)==2:
+	account_binary = [account_binary[0]] + [0 for num in range(account_height-len(account_binary))] + [account_binary[-1]]
+elif len(account_binary)<account_height:
+	account_binary = account_binary[0:-1] + [0 for num in range(account_height-len(account_binary))] + [account_binary[-1]]
+
+#and this is where the resulting array is written into sight.csv
+#add an extra zero to make list length an odd number if it needs it
+sight = numpy.array(account_binary)
+wtr = csv.writer(open ('sight_account.csv', 'w'), delimiter=',', lineterminator='\n')
+wtr.writerow(sight)
 
 
 
