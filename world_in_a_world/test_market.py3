@@ -126,12 +126,8 @@ if trigger==True and account[-1]["account_value"]>23000.0:
 #write this dic to a csv file
 write_csv_dic("account.csv",account)
 
-#compute weighted gradient of earnings over the last ten steps and place it in a binary array
-#only act if there has been an account change
-if this_entry["account_value"]!=last_entry["account_value"]:
-	weighted_gradient_percentage = int(((this_entry["account_value"] - account[-10]["account_value"])/abs(this_entry["account_value"]))*100.0)
-else:
-	weighted_gradient_percentage=0.0
+#compute weighted gradient of earnings and place it in a binary array
+weighted_gradient_percentage = int(((this_entry["account_value"] - last_entry["account_value"])/abs(this_entry["account_value"]))*100.0)
 #limit growth/decay to the last account volume for now
 if weighted_gradient_percentage>100.0:
 	weighted_gradient_percentage=100.0
@@ -140,7 +136,7 @@ elif weighted_gradient_percentage<-100.0:
 	
 
 	
-#prepare the motivation binary array 
+#prepare binary array 
 
 #this controls the type of interpreting done and must be set in aggreeance with the same setting in the reign_in_blood fortran script
 interpreter_type="positional"
@@ -246,7 +242,7 @@ account_binary=integer_to_binary(int(this_entry["account_value"]))
 
 # ensure account binary are deposited in 15 bit chunks by padding
 #place pos neg label at the end
-account_height=19
+account_height=27
 if len(stock_binary)==2:
 	account_binary = [account_binary[0]] + [0 for num in range(account_height-len(account_binary))] + [account_binary[-1]]
 elif len(account_binary)<account_height:

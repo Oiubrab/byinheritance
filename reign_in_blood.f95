@@ -8,14 +8,16 @@ contains
 !the think network that is in service of it, not the other way around
 
 !this subroutine applies a special weight to the motivate network based on the size of the binary number represented in it's input
-!first argument must be the network and the second argument must be the input (vision) and the third argument must be the oddsey and the forth must be an image number
-subroutine raining_blood(thinker,stinker,blinker,tinker)
+!the first argument must be the input (vision) and the second argument must be the oddsey and the third must be an image number
+pure subroutine raining_blood(stinker,blinker,tinker)
 
 	!inputs
 	type(mind) :: thinker
-	integer,dimension(*) :: stinker(:)
-	integer :: blinker,tinker
+	integer,dimension(*),intent(in) :: stinker(:)
+	integer,intent(inout) :: blinker
+	integer,intent(in) :: tinker
 	character(len=10) :: interpreter_type
+	!$acc routine seq
 	
 	!this controls the type of interpreting done and must be set in aggreeance with the same setting in the test_market python script
 	interpreter_type="positional"

@@ -8,43 +8,60 @@ contains
 !this is it. This is the brain kernel. In this where the network is controled from. It is here that data is fed into and data comes out from.
 !run this to evolve the network built outside. This will need a handshake and a neurochem value at some point
 
-subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
+pure subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,rows,columns,&
-	node_use_reward,image_number,motivate_nomotivate)
-
+	node_use_reward,motivate_nomotivate,ran_count)
+ 	!$acc routine seq
 	!timing and controlling
-	integer :: epoch=0,epoch_cutoff
+	integer :: epoch 
+	integer,intent(in) :: epoch_cutoff
 	logical :: proaction
-	character(len=6) :: motivate_nomotivate
+	character(len=6),intent(in) :: motivate_nomotivate
 	
 	!blood
-	integer :: blood_rows
-	real :: blood_volume,blood_gradient
-	integer :: blood_rate
+	integer,intent(in) :: blood_rows
+	real,intent(in) :: blood_volume,blood_gradient
+	integer,intent(in) :: blood_rate
 	
 	!brain
-	type(mind) :: thinking
-	integer :: rows,columns
-	real :: node_use_reward
+	type(mind),intent(inout) :: thinking
+	integer,intent(in) :: rows,columns
+	real,intent(in) :: node_use_reward
 	
 	!sense and response
-	integer :: response_socket,response_length,vision_length,vision_socket
-	integer,dimension(*) :: vision(:),response(:)
-	
-	!test log
-	logical :: testing,show_blood
-	real :: delay_time
+	integer,intent(in) :: response_socket,response_length,vision_length,vision_socket
+	integer,dimension(*),intent(in) :: vision(:)
+	integer,dimension(*),intent(inout) :: response(:)
 	
 	!general position
 	integer :: column_number,column_number_2,column_number_3,column_random_number
 	integer :: row_number,row_number_2,row_random_number
 	integer,dimension(columns) :: column_random
 	integer,dimension(rows) :: row_random
+
+	!randomiser
+	integer,intent(inout) :: ran_count
+
+	!accelerator subroutine and function declarations	
+	!$acc routine(randomised_list) seq
+	!$acc routine(random_something) seq
+	!$acc routine(sigmoid) seq
+	!$acc routine(position_to_percentage) seq
+	!$acc routine(binary_to_decimal) seq
+	!$acc routine(point_to_neuron) seq
+	!$acc routine(point_origin) seq
+	!$acc routine(weight_direction) seq
+	!$acc routine(plugin) seq
+	!$acc routine(selector) seq
+	!$acc routine(blood_mover) seq
+	!$acc routine(weight_direction) seq
+	!$acc routine(initialiser) seq
+	!$acc routine(animus) seq
+	!$acc routine(weight_reducer) seq
 	
-	!parallelisation
-	integer :: image_number
+	!initialise the epoch
+	epoch=0
 	
-	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 
 	proaction=.false.
 
@@ -72,15 +89,15 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 			thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
 				thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
 		end do
-		!print*,"made it",this_image()
+
 		!first, randomise random row list
-		call randomised_list(row_random)
+		call randomised_list(row_random,ran_count)
 		 
 		!now I shall send randomly selected neurons to have data moved
 		row_loop: do row_number=1,rows
 
 			!first, randomise column list for each row
-			call randomised_list(column_random)
+			call randomised_list(column_random,ran_count)
 		
 			column_loop: do column_number=1,columns
 			
@@ -89,7 +106,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 				row_random_number=row_random(row_number)
 				
 				!move the blood around
-				call blood_mover(thinking%blood,column_random_number,row_random_number,blood_gradient)
+				call blood_mover(thinking%blood,column_random_number,row_random_number,blood_gradient,ran_count)
 				
 							
 				!only act on neurons that have data in them
@@ -97,8 +114,8 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 
 					!here is the important subroutine call that moves the data depending on how fat the neuron is 
 					!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket)		
-
+					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,ran_count)		
+					
 					
 					!response translation into movement
 					!different rules for motivate and non motivate networks
@@ -138,12 +155,12 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 
 			!move the blood on the extra blood row
 			if (row_number==rows) then
-				call randomised_list(column_random)
+				call randomised_list(column_random,ran_count)
 				do column_number=1,columns
 					!now, assign the random integer positional number to the requisite random number positional number holder number
 					column_random_number=column_random(column_number)	
 					!move the blood around
-					call blood_mover(thinking%blood,column_random_number,blood_rows,blood_gradient)
+					call blood_mover(thinking%blood,column_random_number,blood_rows,blood_gradient,ran_count)
 				end do
 			end if
 			

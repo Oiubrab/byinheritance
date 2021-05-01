@@ -22,13 +22,14 @@ then
 fi
 
 #compile
-caf -fbounds-check welcome_to_dying.f95 reign_in_blood.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
+nvfortran -C -stdpar -Minfo welcome_to_dying.f95 reign_in_blood.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
+#gfortran -fbounds-check -fopenmp -Ofast -ftree-parallelize-loops=3 welcome_to_dying.f95 reign_in_blood.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
 
-#run the network $4 times
+#run the network $2 times
 for i in $(seq 1 $2)
 do
 	
-	cafrun -n 3 --use-hwthread-cpus ./lack_of_comprehension
+	./lack_of_comprehension
 	cd world_in_a_world
 	python3 test_market.py3 carryon | tee -a "../test_log.txt"
 	cd ..
