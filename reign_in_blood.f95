@@ -15,28 +15,24 @@ subroutine raining_blood(thinker,stinker,blinker,tinker)
 	type(mind) :: thinker
 	integer,dimension(*) :: stinker(:)
 	integer :: blinker,tinker
-	character(len=10) :: interpreter_type
-	
-	!this controls the type of interpreting done and must be set in aggreeance with the same setting in the test_market python script
-	interpreter_type="positional"
-	
-	if (interpreter_type=="binary") then
-	
-		if (binary_to_decimal(stinker)<0) then 
-			blinker=binary_to_decimal(stinker)/10
-		else
-			blinker=binary_to_decimal(stinker)/2
-		end if
-	
-	else if (interpreter_type=="positional") then
-	
+
+	!for motivate feel, convert back to a percentage and reward accordingly
+	if (tinker==1) then
 		if (position_to_percentage(stinker)<0) then 
 			blinker=position_to_percentage(stinker)/10
 		else
 			blinker=position_to_percentage(stinker)/2
 		end if
-		
+	!for motivate errors, motivate perfection and punish mistakes
+	else if (tinker==2) then
+		blinker=findloc(stinker,1,dim=1)
+		if (blinker==1) then
+			blinker=90
+		else
+			blinker=-30*blinker
+		end if
 	end if
+
 	
 end subroutine
 

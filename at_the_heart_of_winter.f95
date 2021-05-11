@@ -62,7 +62,7 @@ integer :: count_count,column_number,stage_count
 image_total=num_images()
 image_number=this_image()
 !setup the identity total
-ident_total=5
+ident_total=6
 
 !!!!!!!!!!!!!!!!!!!!!!!!
 !!!end variable setup!!!
@@ -105,11 +105,13 @@ ident_total=5
 
 count_count=1
 
-!!!!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 1 (motivate)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 1 (money motivate)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !this setup is for the motivate network [image 1, ident 1]
-!this network takes in vital information
+!this network takes in money made over the last ten steps
 !the response interfaces with neurochem and with think (1)
 !socket number represents where the middle of the corresponding array meets the brain network
 
@@ -129,9 +131,39 @@ if (image_number==1) then
 	node_use_reward(count_count)=2.0
 end if
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 1 (motivate)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 1 (money motivate)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 2 (error motivate)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the motivate network [image 2, ident 2]
+!this network takes in the amount of invalid trades attempted by the network
+!the response interfaces with neurochem and with think (1)
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==2) then
+	!status
+	output_switch(count_count)="motive"
+	ident_number(count_count)=2
+	!dimensions
+	!brain
+	rows(count_count)=6; columns(count_count)=11
+	vision_length(count_count)=5
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=5
+	response_socket(count_count)=8
+	node_use_reward(count_count)=3.0
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 2 (error motivate)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -165,11 +197,11 @@ count_count=2
 if (image_number==1) then
 	!status
 	output_switch(count_count)="normal"
-	ident_number(count_count)=2
+	ident_number(count_count)=3
 	!dimensions
 	!brain
-	rows(count_count)=21; columns(count_count)=37
-	vision_length(count_count)=27
+	rows(count_count)=21; columns(count_count)=41
+	vision_length(count_count)=35
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=11
 	response_socket(count_count)=(columns(count_count)/2)+1
@@ -199,11 +231,11 @@ end if
 if (image_number==2) then
 	!status
 	output_switch(count_count)="normal"
-	ident_number(count_count)=3
+	ident_number(count_count)=4
 	!dimensions
 	!brain
-	rows(count_count)=21; columns(count_count)=37
-	vision_length(count_count)=27
+	rows(count_count)=21; columns(count_count)=41
+	vision_length(count_count)=35
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=11
 	response_socket(count_count)=(columns(count_count)/2)+1
@@ -222,10 +254,10 @@ end if
 
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!Setup 3 (sight account)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!this setup is for the input of account data [image 3, ident 4]
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 3 (sight hope)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the input hope [image 2, ident 3]
 !this network takes in information, through direct outside interfaces
 !the response interfaces with the think network
 !socket number represents where the middle of the corresponding array meets the brain network
@@ -235,23 +267,53 @@ end if
 if (image_number==3) then
 	!status
 	output_switch(count_count)="normal"
-	ident_number(count_count)=4
+	ident_number(count_count)=5
+	!dimensions
+	!brain
+	rows(count_count)=21; columns(count_count)=41
+	vision_length(count_count)=35
+	vision_socket(count_count)=(columns(count_count)/2)+1
+	response_length(count_count)=11
+	response_socket(count_count)=(columns(count_count)/2)+1
+	node_use_reward(count_count)=10.0
+end if
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 3 (sight hope)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!Setup 4 (sight account)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!this setup is for the input of account data [image 3, ident 4]
+!this network takes in information, through direct outside interfaces
+!the response interfaces with the think network
+!socket number represents where the middle of the corresponding array meets the brain network
+
+
+!allocations
+if (image_number==4) then
+	!status
+	output_switch(count_count)="normal"
+	ident_number(count_count)=6
 	!dimensions
 	!brain
 	rows(count_count)=18; columns(count_count)=31
 	vision_length(count_count)=19
 	vision_socket(count_count)=(columns(count_count)/2)+1
-	response_length(count_count)=11
+	response_length(count_count)=9
 	response_socket(count_count)=(columns(count_count)/2)+1
 	node_use_reward(count_count)=10.0
-!	!allocate the vision and response
-!	allocate(trans(count_count)%vision(vision_length(count_count)))
-!	allocate(trans(count_count)%response(response_length(count_count)))
 end if
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 3 (sight joy)!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!end setup 4 (sight account)!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
@@ -285,13 +347,13 @@ count_count=3
 if (image_number==1) then
 	!status
 	output_switch(count_count)="normal"
-	ident_number(count_count)=5
+	ident_number(count_count)=7
 	!dimensions
 	!brain
-	rows(count_count)=25; columns(count_count)=51
-	vision_length(count_count)=40
+	rows(count_count)=27; columns(count_count)=65
+	vision_length(count_count)=55
 	vision_socket(count_count)=(columns(count_count)/2)+1
-	response_length(count_count)=11
+	response_length(count_count)=23
 	response_socket(count_count)=(columns(count_count)/2)+1
 	node_use_reward(count_count)=10.0
 end if
@@ -363,6 +425,13 @@ if (image_number==1) then
 	read(1,*) trans(stage_count)%vision
 	close(1)
 	
+else if (image_number==2) then
+	
+	!put the array from errors into the vision array
+	open(unit=1,file="world_in_a_world/errors.csv")
+	read(1,*) trans(stage_count)%vision
+	close(1)
+		
 end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -385,11 +454,11 @@ if (output_switch(stage_count)=="motive") then
 		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
 		blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
 end if
-	
+
+!first, calculate the prime oddsey number from the oddsey numbers outputted	
 !send the oddsey number to the other networks
-!image 1 is the prime motive image
 sync all
-oddsey=oddsey[1]
+oddsey=(oddsey[1]+4*oddsey[2])*100
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -469,24 +538,31 @@ stage_count=2
 
 
 
-!sight lust(2) opens the sight lust csv and puts it into it's vision
+!sight lust(1) opens the sight lust csv and puts it into it's vision
 if (image_number==1) then
 
 	!place the sight lust array into vision for the sight lust network
 	open(unit=1,file="world_in_a_world/sight_lust.csv")
 	read(1,*) trans(stage_count)%vision
 	
-!sight joys(3) opens the sight joys csv and puts it into it's vision
+!sight joys(2) opens the sight joys csv and puts it into it's vision
 else if (image_number==2) then
 
 	!place the sight joys array into vision for the sight joys network
 	open(unit=1,file="world_in_a_world/sight_joys.csv")
 	read(1,*) trans(stage_count)%vision
 	
-!sight joys(3) opens the sight joys csv and puts it into it's vision
+!sight hope(3) opens the sight joys csv and puts it into it's vision
 else if (image_number==3) then
 
-	!place the sight joys array into vision for the sight joys network
+	!place the sight hope array into vision for the sight joys network
+	open(unit=1,file="world_in_a_world/sight_hope.csv")
+	read(1,*) trans(stage_count)%vision
+	
+!sight account(4) opens the sight account csv and puts it into it's vision
+else if (image_number==4) then
+
+	!place the sight account array into vision for the sight joys network
 	open(unit=1,file="world_in_a_world/sight_account.csv")
 	read(1,*) trans(stage_count)%vision
 	
@@ -604,19 +680,33 @@ if (image_number==1) then
 	
 
 	!add response from all four networks
-	do count_count=1,response_length(3)
+	!the minus one here is because the vision array has an extra position added that isn't used, it's just for padding to make it odd
+	do count_count=1,vision_length(3)-1
 		!add response from sight lust
 		if (count_count<=response_length(2)[1]) then
 			trans(stage_count)%vision(count_count)=trans(2)[1]%response(count_count)
 		!add response from sight joys
 		else if (count_count<=response_length(2)[1]+response_length(2)[2]) then
-			trans(stage_count)%vision(count_count)=trans(2)[2]%response(count_count)
-		!add response from sight account
+			trans(stage_count)%vision(count_count)=trans(2)[2]%response(count_count-response_length(2)[1])
+		!add response from sight hope
 		else if (count_count<=response_length(2)[1]+response_length(2)[2]+response_length(2)[3]) then
-			trans(stage_count)%vision(count_count)=trans(2)[3]%response(count_count)
-		!add response from motivate
+			trans(stage_count)%vision(count_count)=trans(2)[3]%response(count_count-&
+				(response_length(2)[1]+response_length(2)[2]))
+		!add response from sight account		
+		else if (count_count<=response_length(2)[1]+response_length(2)[2]+response_length(2)[3]+&
+			response_length(2)[4]) then
+			trans(stage_count)%vision(count_count)=trans(2)[3]%response(count_count-&
+				(response_length(2)[1]+response_length(2)[2]+response_length(2)[3]))
+		!add response from motivate feel
+		else if (count_count<=response_length(2)[1]+response_length(2)[2]+response_length(2)[3]+&
+			response_length(2)[4]+response_length(1)[1]) then
+			trans(stage_count)%vision(count_count)=trans(1)[1]%response(count_count-&
+				(response_length(2)[1]+response_length(2)[2]+response_length(2)[3]+response_length(2)[4]))
+		!add response from motivate errors
 		else
-			trans(stage_count)%vision(count_count)=trans(1)[1]%response(count_count)
+			trans(stage_count)%vision(count_count)=trans(1)[2]%response(count_count-&
+				(response_length(2)[1]+response_length(2)[2]+response_length(2)[3]+response_length(2)[4]+&
+				response_length(1)[1]))
 		end if
 	end do
 

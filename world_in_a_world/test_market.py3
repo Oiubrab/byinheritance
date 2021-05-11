@@ -77,11 +77,19 @@ for entry in account:
 #deicide[0:2] is stock selector, deicide[3:5] is number of units, deicide[6] is buy/sell (pos or neg units)
 #0 is sell, 1 is buy
 
+#single stock
 #find the stock numerical identifier
-stock_selection = binary_to_integer(deicide_array_list_numbers[0:3] + [1])
+
+#stock_selection = binary_to_integer(deicide_array_list_numbers[0:3] + [1])
+
 #interpret the number of units and buy/sell choice
-deicide_length = len(deicide_array_list_numbers)
-units = binary_to_integer(deicide_array_list_numbers[3:deicide_length-1])
+
+#deicide_length = len(deicide_array_list_numbers)
+#units = binary_to_integer(deicide_array_list_numbers[3:deicide_length-1])
+
+
+units =[binary_to_integer(deicide_array_list_numbers[0:7]),binary_to_integer(deicide_array_list_numbers[7:15]),binary_to_integer(deicide_array_list_numbers[15:21])]
+
 
 
 #buy/sell controller
@@ -91,18 +99,41 @@ for entry in account:
 	if entry["time"]>old_time:
 		old_time=entry["time"]
 		last_entry=entry
+
+
+#setup errors array, recording the amout of invalid trade attempts
+#from lef to right, 0 to 3 invalid attempts
+#the 5th position is padding to make the array odd
+errors=[0,0,0,0,0]
+trade_errors=0
 		
 #buy/sell algorithm
 #increase/decrease units owned of the selected stock by the number of units selected
 #initialisation of cost at 0 ensures invalid choices by the network are ignored 
 cost=0
-for stock in markets:
-	# second condition (stock+units>-1) ensures network cannot sell more than it has
-	#third condition (last_entry-units*stock>0.0) ensures network cannot go into debt 
-	if stock["stock_number"]==stock_selection and stock["units_owned"]+units>-1 and last_entry["account_value"]-units*stock["stock_price"]>0.0:
+for unit,stock in zip(units,markets):
+	#first condition (stock+units>-1) ensures network cannot sell more than it has
+	#second condition (last_entry-units*stock>0.0) ensures network cannot go into debt 
+	if stock["units_owned"]+unit>-1 and last_entry["account_value"]-unit*stock["stock_price"]-cost>0.0:
 		#buying (positive cost) and selling (negative cost)
-		stock["units_owned"] += units
-		cost = units*stock["stock_price"]
+		stock["units_owned"] += unit
+		cost += unit*stock["stock_price"]
+	else:
+		trade_errors+=1
+
+#place trade_errors positional in the errors array
+errors[trade_errors]=1
+
+print(" ")
+print("Invalid Trades:")
+print(errors)
+print(trade_errors)
+		
+#and this is where the resulting errors is written into errors.csv
+error = numpy.array(errors)
+wtr = csv.writer(open ('errors.csv', 'w'), delimiter=',', lineterminator='\n')
+wtr.writerow(error)
+	
 
 		
 #subtract from account
@@ -110,10 +141,26 @@ for stock in markets:
 this_entry = {"account":"test","account_value":last_entry["account_value"]-cost,"time":t_end}
 account = account + [this_entry]
 
+#Print out the network's choice
+print(" ")
+print("Network Choice:")	
+print(deicide_array_list_numbers[0:7],deicide_array_list_numbers[7:14],deicide_array_list_numbers[14:21])
+print(units)
+print(" ")
+#print out the current status
+print("Market Prices and Info:")
+for market in markets:
+	print(market)
+
+#and the account position
+print(" ")
+print("Account Position:")
+print(this_entry)
+print(" ")
 
 #temporary account drain - pass drained funds to a holding account
-trigger=True
-if trigger==True and account[-1]["account_value"]>23000.0:
+deposit_trigger=False
+if account[-1]["account_value"]>23000.0:
 	to_add = account[-1]["account_value"]-3000.0
 	account[-1]["account_value"]=3000.0
 	summer = open("holding_sum.txt")
@@ -121,6 +168,7 @@ if trigger==True and account[-1]["account_value"]>23000.0:
 	the_sum+=to_add
 	winter = open("holding_sum.txt","w")
 	winter.write(str(the_sum))
+	deposit_trigger=True
 	
 
 #write this dic to a csv file
@@ -128,7 +176,7 @@ write_csv_dic("account.csv",account)
 
 #compute weighted gradient of earnings over the last ten steps and place it in a binary array
 #only act if there has been an account change
-if this_entry["account_value"]!=last_entry["account_value"]:
+if this_entry["account_value"]!=last_entry["account_value"] and deposit_trigger==False:
 	weighted_gradient_percentage = int(((this_entry["account_value"] - account[-10]["account_value"])/abs(this_entry["account_value"]))*100.0)
 else:
 	weighted_gradient_percentage=0.0
@@ -141,25 +189,8 @@ elif weighted_gradient_percentage<-100.0:
 
 	
 #prepare the motivation binary array 
+weighted_gradient_percentage_binary = percentage_to_position(weighted_gradient_percentage,feel_size)
 
-#this controls the type of interpreting done and must be set in aggreeance with the same setting in the reign_in_blood fortran script
-interpreter_type="positional"
-
-if interpreter_type=="positional":
-	weighted_gradient_percentage_binary = percentage_to_position(weighted_gradient_percentage,feel_size)
-elif interpreter_type=="binary":
-	weighted_gradient_percentage_binary = integer_to_binary(weighted_gradient_percentage)
-
-	#if the binary array is smaller than the feel array it's going to, resize the array
-	if len(weighted_gradient_percentage_binary)<feel_size:
-		last_digit=weighted_gradient_percentage_binary[-1]
-		weighted_gradient_percentage_binary[-1]=0
-		difference_lengths=feel_size-len(weighted_gradient_percentage_binary)
-		#pad out thelist with zeros
-		for x in range(difference_lengths-1):
-			weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [0]
-		#restore the pos/neg trigger at the end
-		weighted_gradient_percentage_binary = weighted_gradient_percentage_binary + [last_digit]
 		
 	
 
@@ -172,24 +203,27 @@ wtr.writerow(feel)
 
 
 
-
-
-#alter the stock to replicate a changing market
-for stock in markets:
-	#some stocks will rise, some will fall
-	if stock["stock_number"]%2==1:
-		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))#+(amplitude_2nd*numpy.sin(t_end*0.01))
-	else:
-		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))-(amplitude_2nd*numpy.sin(t_end*0.01))
-	#print(change)
-	#give stocks a floor and a ceiling
-	stock["stock_price"] = change
-	if stock["stock_price"]<10.0:
-		stock["stock_price"]=10.0
-	elif stock["stock_price"]>1000.0:
-		stock["stock_price"]=1000.0
-	
-write_csv_dic("market.csv",markets)
+#only act on the resets
+#I have added real values to the system
+if str(sys.argv[1])=='reset':
+	#alter the stock to replicate a changing market
+	for stock in markets:
+		#some stocks will rise, some will fall
+		if stock["stock_number"]%3==1:
+			change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))
+		elif stock["stock_number"]%3==2:
+			change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))-(amplitude_2nd*numpy.sin(t_end*0.01))
+		else:
+			change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))-(amplitude_2nd*numpy.sin(t_end*0.01))+(amplitude_2nd*numpy.sin(t_end*0.001))
+		#print(change)
+		#give stocks a floor and a ceiling
+		stock["stock_price"] = change
+		if stock["stock_price"]<10.0:
+			stock["stock_price"]=10.0
+		elif stock["stock_price"]>1000.0:
+			stock["stock_price"]=1000.0
+		
+	write_csv_dic("market.csv",markets)
 
 
 
@@ -210,7 +244,7 @@ for exam in markets:
 
 	# ensure unit binaries are deposited in 8 bit chunks by padding
 	#place pos neg label at the end
-	unit_height=8
+	unit_height=16
 	if len(unit_binary)==2:
 		unit_binary = [unit_binary[0]] + [0 for num in range(unit_height-len(unit_binary))] + [unit_binary[-1]]
 	elif len(unit_binary)<unit_height:
@@ -259,6 +293,3 @@ wtr = csv.writer(open ('sight_account.csv', 'w'), delimiter=',', lineterminator=
 wtr.writerow(sight)
 
 
-
-print(markets)
-print(this_entry)
