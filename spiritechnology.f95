@@ -13,7 +13,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	node_use_reward,image_number,motivate_nomotivate)
 
 	!timing and controlling
-	integer :: epoch=0,epoch_cutoff
+	integer :: epoch,epoch_cutoff
 	logical :: proaction
 	character(len=6) :: motivate_nomotivate
 	
@@ -47,6 +47,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 
 	proaction=.false.
+	epoch=0
 
 	!this is the new song
 	do while (proaction .eqv. .false.)
