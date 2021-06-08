@@ -31,6 +31,7 @@ integer,dimension(stages) :: rows,columns
 
 !switches and controls
 character(len=6),dimension(stages) :: output_switch !'motive' for the motivate method and 'normal' for the think method
+integer,parameter :: epoch_cutoff=2000
 
 !coarray image
 integer :: image_total,image_number
@@ -127,7 +128,7 @@ if (image_number==1) then
 	vision_length(count_count)=15
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=7
-	response_socket(count_count)=8
+	response_socket(count_count)=9
 	node_use_reward(count_count)=2.0
 end if
 
@@ -157,7 +158,7 @@ if (image_number==2) then
 	vision_length(count_count)=5
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=5
-	response_socket(count_count)=8
+	response_socket(count_count)=6
 	node_use_reward(count_count)=3.0
 end if
 
@@ -200,8 +201,8 @@ if (image_number==1) then
 	ident_number(count_count)=3
 	!dimensions
 	!brain
-	rows(count_count)=21; columns(count_count)=41
-	vision_length(count_count)=35
+	rows(count_count)=21; columns(count_count)=49
+	vision_length(count_count)=45
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=11
 	response_socket(count_count)=(columns(count_count)/2)+1
@@ -234,8 +235,8 @@ if (image_number==2) then
 	ident_number(count_count)=4
 	!dimensions
 	!brain
-	rows(count_count)=21; columns(count_count)=41
-	vision_length(count_count)=35
+	rows(count_count)=21; columns(count_count)=49
+	vision_length(count_count)=45
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=11
 	response_socket(count_count)=(columns(count_count)/2)+1
@@ -270,8 +271,8 @@ if (image_number==3) then
 	ident_number(count_count)=5
 	!dimensions
 	!brain
-	rows(count_count)=21; columns(count_count)=41
-	vision_length(count_count)=35
+	rows(count_count)=21; columns(count_count)=49
+	vision_length(count_count)=45
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=11
 	response_socket(count_count)=(columns(count_count)/2)+1
@@ -304,7 +305,7 @@ if (image_number==4) then
 	!dimensions
 	!brain
 	rows(count_count)=18; columns(count_count)=31
-	vision_length(count_count)=19
+	vision_length(count_count)=27
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=9
 	response_socket(count_count)=(columns(count_count)/2)+1
@@ -350,11 +351,11 @@ if (image_number==1) then
 	ident_number(count_count)=7
 	!dimensions
 	!brain
-	rows(count_count)=27; columns(count_count)=65
+	rows(count_count)=35; columns(count_count)=61
 	vision_length(count_count)=55
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=23
-	response_socket(count_count)=(columns(count_count)/2)+1
+	response_socket(count_count)=(columns(count_count)/2)-10
 	node_use_reward(count_count)=10.0
 end if
 
@@ -452,13 +453,13 @@ if (output_switch(stage_count)=="motive") then
 		ident_total,rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 		trans(stage_count)%vision,trans(stage_count)%response,&
 		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-		blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
+		blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count))
 end if
 
 !first, calculate the prime oddsey number from the oddsey numbers outputted	
 !send the oddsey number to the other networks
 sync all
-oddsey=(oddsey[1]+4*oddsey[2])*100
+oddsey=(10*oddsey[1]+oddsey[2])*1000
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -542,21 +543,21 @@ stage_count=2
 if (image_number==1) then
 
 	!place the sight lust array into vision for the sight lust network
-	open(unit=1,file="world_in_a_world/sight_lust.csv")
+	open(unit=1,file="world_in_a_world/sight_SE1.csv")
 	read(1,*) trans(stage_count)%vision
 	
 !sight joys(2) opens the sight joys csv and puts it into it's vision
 else if (image_number==2) then
 
 	!place the sight joys array into vision for the sight joys network
-	open(unit=1,file="world_in_a_world/sight_joys.csv")
+	open(unit=1,file="world_in_a_world/sight_ADV.csv")
 	read(1,*) trans(stage_count)%vision
 	
 !sight hope(3) opens the sight joys csv and puts it into it's vision
 else if (image_number==3) then
 
 	!place the sight hope array into vision for the sight joys network
-	open(unit=1,file="world_in_a_world/sight_hope.csv")
+	open(unit=1,file="world_in_a_world/sight_SBR.csv")
 	read(1,*) trans(stage_count)%vision
 	
 !sight account(4) opens the sight account csv and puts it into it's vision
@@ -595,7 +596,7 @@ call insanitorium_deluxe(oddsey,ident_number(stage_count),ident_total,&
 	rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 	trans(stage_count)%vision,trans(stage_count)%response,&
 	vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-	blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
+	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count))
 	
 sync all
 
@@ -736,7 +737,7 @@ if (image_number==1) then
 		ident_total,rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 		trans(stage_count)%vision,trans(stage_count)%response,&
 		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-		blood_volume,blood_gradient,neurodepth,output_switch(stage_count))
+		blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count))
 end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!

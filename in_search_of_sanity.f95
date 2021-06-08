@@ -17,7 +17,7 @@ contains
 
 subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,directions,node_use_reward,&
 	vision,response,vision_socket,response_socket,blood_rate,&
-	blood_volume,blood_gradient,neurodepth,output_switcher)
+	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switcher)
 
 	implicit none
 
@@ -37,11 +37,14 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	integer :: vision_socket, response_socket
 
 	!selecting and moving
-	integer :: column_number, column_number_2
+	integer :: column_number, column_number_2, row_number
 	integer :: moves, epoch, epoch_start
+	integer :: column_random_number, row_random_number
+	integer,dimension(columns) :: column_random
+	integer,dimension(rows) :: row_random
 
 	!from the outside
-	integer :: epoch_cutoff=110 !ubiqutous
+	integer :: epoch_cutoff
 
 	!blood
 	integer :: blood_rate
@@ -101,7 +104,12 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 		response=0
 		!open the test log
 
+		!call cpu_time(start)	
+
 		call read_write(image_number,image_total,think,"read")
+		think%brain_status=0
+		!call cpu_time(finish)
+		!print*,"read",image_number,finish-start
 
 			
 		!this makes the system yearn for happiness
@@ -116,12 +124,42 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!Otherwise, if this is the first time this network is activated, it has to be initialised
 	else
 		
-		
+		print*,"First Move"
 		!initialise the network
-		!for think (1)
 		call initialiser(think,response,blood_volume,response_socket)
 
+		!add the necessary blood to the response and vision input/output 
+		do column_number=1,response_length
+			think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)=&
+				think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)+blood_volume	
+		end do	
+	
+		do column_number=1,vision_length
+			think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
+				think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
+		end do	
 		
+		!setup the blood profile
+		!first, randomise random row list
+		call randomised_list(row_random)
+		 
+		!now I shall send randomly selected neurons to have data moved
+		do row_number=1,rows
+
+			!first, randomise column list for each row
+			call randomised_list(column_random)
+		
+			do column_number=1,columns
+			
+				!now, assign the random integer positional number to the requisite random number positional number holder number
+				column_random_number=column_random(column_number)
+				row_random_number=row_random(row_number)	
+				
+				call blood_mover(think%blood,column_random_number,row_random_number,blood_gradient)
+				
+			end do
+			
+		end do
 
 	end if
 
@@ -144,7 +182,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	
 	
 	
-	
+	call cpu_time(start)	
 
 	!!!!!!!!!!!
 	!!! Die !!!
@@ -155,7 +193,8 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 		vision_socket,blood_rows,epoch_cutoff,blood_gradient,blood_volume,vision,response,&
 		rows,columns,node_use_reward,image_number,output_switcher)
 
-
+	call cpu_time(finish)
+!	print*,"spiritech",image_number,finish-start
 
 
 
@@ -167,23 +206,24 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
 	!oddsey is defined only in the motivate image
 
-	if (output_switcher=="motive") then
-		oddsey=findloc(response,1,dim=1)
-		!if no data comes through, don't change the weights
-		if (oddsey==0) then
-			oddsey=(size(response)/2)+1
-		end if
-		!right is higher motivation, left is lower motivation
-		!midpoint is zero motivation and anything to the left is negative
-		oddsey=oddsey-(size(response)/2)+1
-	end if
+!	if (output_switcher=="motive") then
+!		oddsey=findloc(response,1,dim=1)
+!		!if no data comes through, don't change the weights
+!		if (oddsey==0) then
+!			oddsey=(size(response)/2)+1
+!		end if
+!		!right is higher motivation, left is lower motivation
+!		!midpoint is zero motivation and anything to the left is negative
+!		oddsey=oddsey-(size(response)/2)+1
+!	end if
 
 	
 
-
+	!call cpu_time(start)
 	!place all the information network in a text file
 	call read_write(image_number,image_total,think,"write")
-
+	!call cpu_time(finish)
+	!print*,"write",image_number,finish-start
 
 
 

@@ -1,3 +1,5 @@
+#This places real data from stocks in the stock market
+#if more data points are needed than are available, random values are generated between the highs and lows of each day
 import numpy
 import time
 import sys
@@ -7,8 +9,12 @@ from test_market_functions import *
 step=int(sys.argv[1])-1
 total_steps=int(sys.argv[2])
 
-stock_ranges = [read_csv_dic("stocks/BRN.csv"),read_csv_dic("stocks/SE1.csv"),read_csv_dic("stocks/FMG.csv")]
-markets=read_csv_dic("market.csv")
+stock_ranges = [read_csv_dic("stocks/SE1.csv"),read_csv_dic("stocks/ADV.csv"),read_csv_dic("stocks/SBR.csv")]
+if step==0:
+	markets=[{'stock_identifier': 'SE1', 'stock_number': 1, 'stock_price': 0.0, 'units_owned': 0}, {'stock_identifier': 'ADV', 'stock_number': 2, 'stock_price': 0.0, 'units_owned': 0}, {'stock_identifier': 'SBR', 'stock_number': 3, 'stock_price': 0.0, 'units_owned': 0}]
+else:
+	markets=read_csv_dic("market.csv")
+
 
 random.seed()
 
@@ -22,12 +28,14 @@ def truncate(f, n):
 
 for stock_range,market in zip(stock_ranges,markets):
 	
+	#for the case where there is enough data points
 	if total_steps<len(stock_range)*2:
 		if step%2==0:
 			market["stock_price"]=stock_range[int(step/2)]['Low']
 		else:
 			market["stock_price"]=stock_range[int(step/2)]['High']
-			
+		
+	#otherwise, if there aren't enough data points		
 	else:
 		inbetween=total_steps/len(stock_range)
 		interstep=int(step/inbetween)
