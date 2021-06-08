@@ -118,7 +118,7 @@ end subroutine read_write
 !this subroutine uses a seed to start a random number generation pattern
 !this subroutine is a replacement for fortran's random number generator, that does not
 !work with concurrent loops
-!why is the number to be randomised and seeder is the seed number (passed out for the next call)
+!why is the number to be randomised and eye is the seed number (passed out for the next call)
 pure subroutine random_something(why,eye)
  	!$acc routine seq
 	real,parameter :: pi=asin(1.0)*2.0,stretch=1000.0,knockout=10000.0

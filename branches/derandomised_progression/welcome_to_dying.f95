@@ -383,11 +383,11 @@ end function plugin
 
 !this function selects the neuron to be targeted and sends data from the current neuron (in column,row) to the targeted neuron
 !it also currently handles the increase in weights that correspond to data moving through a specific route 
-subroutine selector(idea,column,row,reward,response,response_socket)
+subroutine selector(idea,column,row,reward,response,response_socket,trans)
 
 	type(mind) :: idea
 	integer,allocatable :: connection_translation(:)
-	integer,dimension(*) :: response(:)
+	integer,dimension(*) :: response(:),trans(:,:)
 	real,allocatable :: rungs(:)
 	real :: increment, fuck, reward, blood_trans=0.05
 	integer,intent(in) :: row,column,response_socket
@@ -424,6 +424,12 @@ subroutine selector(idea,column,row,reward,response,response_socket)
 	!rungs = increment + weight stored in neuron
 	!if brain_status(point)==0 then close possibility off
 	!set the first rung
+	
+	!point <- random number from connection_translation(rung)
+	!i.e. point <- connection_translation(1)=5, so on, till rung=8
+	!point is used to select the weight for the rung element of rungs
+	!one of the rungs is randomly selected
+	!the rung is translated back into a point to be processed
 	
 	!set the subsequent rungs
 	do rung=1,connections
@@ -488,82 +494,86 @@ subroutine selector(idea,column,row,reward,response,response_socket)
 		
 		!take the chosen neuron and move the data to it
 		do rung=1,connections
+			!this if statement selects the rung, and hence the pont, and hence the direction of the datum 
 			if (fuck<=rungs(rung)) then
 				
-				!translate rung into corresponding weight
+				!translate rung back into it's mapped direction
 				point=connection_translation(rung)
 			
-				!add to weight selection. Weight add should overcome global reduction
-				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+reward
-				!remove data and position indicator from current neuron
-				idea%brain_status(data_pos,column,row)=0
-				idea%brain_status(data_pos-1,column,row)=0
-				
-				!add data to neurochem
-				!first, move each rank down one rung and push the last rank off the ladder
-				rank_size=size(idea%neurochem(1,:,1,1))
-				do rank=1,rank_size-1
-					idea%neurochem(1,rank_size-rank+1,column,row)=idea%neurochem(1,rank_size-rank,column,row)
-					idea%neurochem(2,rank_size-rank+1,column,row)=idea%neurochem(2,rank_size-rank,column,row)									
-				end do
-				!now, move the current activation to the top rung
-				idea%neurochem(1,1,column,row)=origin
-				idea%neurochem(2,1,column,row)=point				
-				
-				!if data is moving off the brain, direct it into the response array	
-				!can add more response options here if I want to add more response directions
-				!for instance, something off of the left or right sides of the network
-				if (point_to_neuron(column,row,point,"row")==rowmax+1) then
-					
-					response(plugin(point_to_neuron(column,row,point,"column"),response_socket,response_length,"array"))=1
-					
-				!if the data is not moving off the brain, move it normally
-				else	
-							
-					!add data and position indicator to targeted neuron	
-					idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
-					idea%brain_status(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
-						point_origin(point)
+				!save the choice in the transition array
+				trans(column,row)=point
+			
+!				!add to weight selection. Weight add should overcome global reduction
+!				idea%brain_weight(point,origin,column,row)=idea%brain_weight(point,origin,column,row)+reward
+!				!remove data and position indicator from current neuron
+!				idea%brain_status(data_pos,column,row)=0
+!				idea%brain_status(data_pos-1,column,row)=0
+!				
+!				!add data to neurochem
+!				!first, move each rank down one rung and push the last rank off the ladder
+!				rank_size=size(idea%neurochem(1,:,1,1))
+!				do rank=1,rank_size-1
+!					idea%neurochem(1,rank_size-rank+1,column,row)=idea%neurochem(1,rank_size-rank,column,row)
+!					idea%neurochem(2,rank_size-rank+1,column,row)=idea%neurochem(2,rank_size-rank,column,row)									
+!				end do
+!				!now, move the current activation to the top rung
+!				idea%neurochem(1,1,column,row)=origin
+!				idea%neurochem(2,1,column,row)=point				
+!				
+!				!if data is moving off the brain, direct it into the response array	
+!				!can add more response options here if I want to add more response directions
+!				!for instance, something off of the left or right sides of the network
+!				if (point_to_neuron(column,row,point,"row")==rowmax+1) then
+!					
+!					response(plugin(point_to_neuron(column,row,point,"column"),response_socket,response_length,"array"))=1
+!					
+!				!if the data is not moving off the brain, move it normally
+!				else	
+!							
+!					!add data and position indicator to targeted neuron	
+!					idea%brain_status(data_pos,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
+!					idea%brain_status(data_pos-1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+!						point_origin(point)
 						
 					!add something to blood at that position by taking away blood from channels surrounding it
-					counter=0
-					do second_point=1,connections
-						!first, check if channels around next channel exist
-						if ((point_to_neuron(point_to_neuron(column,row,point,"column"),&
-							point_to_neuron(column,row,point,"row"),second_point,"column")>1) .and. &
-							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
-							point_to_neuron(column,row,point,"row"),second_point,"row")>1) .and. &
-							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
-							point_to_neuron(column,row,point,"row"),second_point,"column")<=columnmax) .and. &
-							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
-							point_to_neuron(column,row,point,"row"),second_point,"row")<=rowmax)) then
-							!then, check if those channels have enough blood to give
-							if (idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
-								point_to_neuron(column,row,point,"row"),second_point,"column"),&
-								point_to_neuron(point_to_neuron(column,row,point,"column"),&
-								point_to_neuron(column,row,point,"row"),second_point,"row"))>blood_trans) then
-						
-								idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
-									point_to_neuron(column,row,point,"row"),second_point,"column"),&
-									point_to_neuron(point_to_neuron(column,row,point,"column"),&
-									point_to_neuron(column,row,point,"row"),second_point,"row"))=&
-									idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
-									point_to_neuron(column,row,point,"row"),second_point,"column"),&
-									point_to_neuron(point_to_neuron(column,row,point,"column"),&
-									point_to_neuron(column,row,point,"row"),second_point,"row"))-blood_trans
-								
-								counter=counter+1
-								
-							end if
-									
-						end if
-						
-					end do	
-					!finally, add the blood taken from surrounding channels into the next channel
-					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
-						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+(blood_trans*float(counter))
+!					counter=0
+!					do second_point=1,connections
+!						!first, check if channels around next channel exist
+!						if ((point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!							point_to_neuron(column,row,point,"row"),second_point,"column")>1) .and. &
+!							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!							point_to_neuron(column,row,point,"row"),second_point,"row")>1) .and. &
+!							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!							point_to_neuron(column,row,point,"row"),second_point,"column")<=columnmax) .and. &
+!							(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!							point_to_neuron(column,row,point,"row"),second_point,"row")<=rowmax)) then
+!							!then, check if those channels have enough blood to give
+!							if (idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!								point_to_neuron(column,row,point,"row"),second_point,"column"),&
+!								point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!								point_to_neuron(column,row,point,"row"),second_point,"row"))>blood_trans) then
+!						
+!								idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!									point_to_neuron(column,row,point,"row"),second_point,"column"),&
+!									point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!									point_to_neuron(column,row,point,"row"),second_point,"row"))=&
+!									idea%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!									point_to_neuron(column,row,point,"row"),second_point,"column"),&
+!									point_to_neuron(point_to_neuron(column,row,point,"column"),&
+!									point_to_neuron(column,row,point,"row"),second_point,"row"))-blood_trans
+!								
+!								counter=counter+1
+!								
+!							end if
+!									
+!						end if
+!						
+!					end do	
+!					!finally, add the blood taken from surrounding channels into the next channel
+!					idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+!						idea%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+(blood_trans*float(counter))
 				
-				end if
+!				end if
 				
 				exit
 				
@@ -574,6 +584,179 @@ subroutine selector(idea,column,row,reward,response,response_socket)
 
 end subroutine selector
 
+
+
+!this subroutine checks if there are any conflicting data moves in teh transitin array and resolves them
+subroutine conflict_check_resolve_move(thinking,transition,reward,response,response_socket)
+	
+	integer,dimension(*) :: transition(:,:),response(:)
+	type(mind) :: thinking
+	real :: fucker,reward
+	integer :: row,column,row2,column2,response_socket,point,origin,rank_size,rank,rowmax
+	logical :: errors
+	
+	errors=.true.
+	
+	!keep it going untill all the errors are solved
+	do while (errors .eqv. .true.)
+		errors=.false.
+		!start window on each position
+		do row=1,size(transition(1,:))
+			do column=1,size(transition(:,1))
+				!if there is a data transition coming from the position, then...
+				if (transition(column,row)/=0) then
+					!check the surrounding positions
+					do row2=row-2,row+2
+						do column2=column-2,column+2
+							!skip positions outside the thinking array
+							if ((row2>=1) .and. (row2<=size(transition(1,:))) .and. (column2>=1) .and. (column2<=size(transition(:,1)))&
+								.and. (row2/=row) .and. (column2/=column)) then
+								 
+								if ((point_to_neuron(column,row,transition(column,row),"row")==&
+									point_to_neuron(column2,row2,transition(column2,row2),"row")) .and. &
+									(point_to_neuron(column,row,transition(column,row),"column")==&
+									point_to_neuron(column2,row2,transition(column2,row2),"column")) .and. &
+									(transition(column2,row2)/=0)) then
+									
+									errors=.true.
+									
+									call random_number(fucker)
+									
+
+!									print*,transition(column2,row2),thinking%brain_status(1,column2,row2),row2,column2,&
+!										"point",point_to_neuron(column,row,transition(column,row),"row"),&
+!										point_to_neuron(column2,row2,transition(column2,row2),"row")
+										
+									!scale fucker to have a range as large as the sum of the two weights										
+									fucker=fucker*(thinking%brain_weight(transition(column,row),thinking%brain_status(1,column,row),column,row)+&
+										thinking%brain_weight(transition(column2,row2),thinking%brain_status(1,column2,row2),column2,row2))
+									!whichever weitht bucket fucker falls in, the other data direction must change
+									if (fucker>thinking%brain_weight(transition(column,row),thinking%brain_status(1,column,row),column,row)) then
+										!temporarily place data in the destination to mask it from the selector
+										thinking%brain_status(2,point_to_neuron(column,row,transition(column,row),"column"),&
+											point_to_neuron(column,row,transition(column,row),"row"))=1
+										!call the selector again on the array position for the losing neuron
+										call selector(thinking,column,row,reward,response,response_socket,transition)
+										!remove temporary data
+										thinking%brain_status(2,point_to_neuron(column,row,transition(column,row),"column"),&
+											point_to_neuron(column,row,transition(column,row),"row"))=0
+									else
+										!temporarily place data in the destination to mask it from the selector
+										thinking%brain_status(2,point_to_neuron(column2,row2,transition(column2,row2),"column"),&
+											point_to_neuron(column2,row2,transition(column2,row2),"row"))=1
+										!call the selector again on the array position for the losing neuron
+										call selector(thinking,column2,row2,reward,response,response_socket,transition)
+										!remove temporary data
+										thinking%brain_status(2,point_to_neuron(column2,row2,transition(column2,row2),"column"),&
+											point_to_neuron(column2,row2,transition(column2,row2),"row"))=0
+									end if
+										
+									
+								end if
+							end if
+						end do
+					end do
+				end if
+			end do
+		end do
+		
+		!if there are no errors, start moving data
+		if (errors .eqv. .false.) then
+			do row=1,size(transition(1,:))
+				do column=1,size(transition(:,1))	
+				
+					!find those positions that are due for moving
+					if (transition(column,row)/=0) then
+						
+						!define common terms
+						origin=thinking%brain_status(1,column,row)
+						point=transition(column,row)
+						rowmax=size(thinking%brain_status(1,1,:))
+					
+						!add to weight selection. Weight add should overcome global reduction
+						thinking%brain_weight(point,origin,column,row)=thinking%brain_weight(point,origin,column,row)+reward
+						!remove data and position indicator from current neuron
+						thinking%brain_status(2,column,row)=0
+						thinking%brain_status(1,column,row)=0
+						
+						!add data to neurochem
+						!first, move each rank down one rung and push the last rank off the ladder
+						rank_size=size(thinking%neurochem(1,:,1,1))
+						do rank=1,rank_size-1
+							thinking%neurochem(1,rank_size-rank+1,column,row)=thinking%neurochem(1,rank_size-rank,column,row)
+							thinking%neurochem(2,rank_size-rank+1,column,row)=thinking%neurochem(2,rank_size-rank,column,row)									
+						end do
+						!now, move the current activation to the top rung
+						thinking%neurochem(1,1,column,row)=origin
+						thinking%neurochem(2,1,column,row)=point				
+						
+						!if data is moving off the brain, direct it into the response array	
+						!can add more response options here if I want to add more response directions
+						!for instance, something off of the left or right sides of the network
+						if (point_to_neuron(column,row,point,"row")==rowmax+1) then
+							
+							response(plugin(point_to_neuron(column,row,point,"column"),response_socket,size(response),"array"))=1
+							
+						!if the data is not moving off the brain, move it normally
+						else	
+									
+							!add data and position indicator to targeted neuron	
+							thinking%brain_status(2,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=1
+							thinking%brain_status(1,point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+								point_origin(point)
+								
+	!						!add something to blood at that position by taking away blood from channels surrounding it
+	!						counter=0
+	!						do second_point=1,connections
+	!							!first, check if channels around next channel exist
+	!							if ((point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!								point_to_neuron(column,row,point,"row"),second_point,"column")>1) .and. &
+	!								(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!								point_to_neuron(column,row,point,"row"),second_point,"row")>1) .and. &
+	!								(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!								point_to_neuron(column,row,point,"row"),second_point,"column")<=columnmax) .and. &
+	!								(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!								point_to_neuron(column,row,point,"row"),second_point,"row")<=rowmax)) then
+	!								!then, check if those channels have enough blood to give
+	!								if (thinking%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!									point_to_neuron(column,row,point,"row"),second_point,"column"),&
+	!									point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!									point_to_neuron(column,row,point,"row"),second_point,"row"))>blood_trans) then
+	!							
+	!									thinking%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!										point_to_neuron(column,row,point,"row"),second_point,"column"),&
+	!										point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!										point_to_neuron(column,row,point,"row"),second_point,"row"))=&
+	!										thinking%blood(point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!										point_to_neuron(column,row,point,"row"),second_point,"column"),&
+	!										point_to_neuron(point_to_neuron(column,row,point,"column"),&
+	!										point_to_neuron(column,row,point,"row"),second_point,"row"))-blood_trans
+	!									
+	!									counter=counter+1
+	!									
+	!								end if
+	!										
+	!							end if
+	!							
+	!						end do	
+	!						!finally, add the blood taken from surrounding channels into the next channel
+	!						thinking%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))=&
+	!							thinking%blood(point_to_neuron(column,row,point,"column"),point_to_neuron(column,row,point,"row"))+(blood_trans*float(counter))
+						
+						end if		
+						
+					end if				
+					
+				end do	
+			end do
+		end if	
+		
+		
+	end do
+			
+			
+end subroutine
+	
 
 
 
@@ -607,7 +790,7 @@ subroutine blood_mover(blood,column_num,row_num,gradient)
 			!randomise the column selection
 			column_number_2=column_randomised(column_select)
 
-			!set the prospective transitionn value random multipliers
+			!set the prospective transition value random multipliers
 			call RANDOM_NUMBER(hope)
 			call RANDOM_NUMBER(fear)
 			!use the distance between the blood channels accordingly

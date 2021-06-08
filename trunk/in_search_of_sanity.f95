@@ -41,7 +41,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	integer :: moves, epoch, epoch_start
 
 	!from the outside
-	integer :: epoch_cutoff=100 !ubiqutous
+	integer :: epoch_cutoff=110 !ubiqutous
 
 	!blood
 	integer :: blood_rate
@@ -171,11 +171,11 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 		oddsey=findloc(response,1,dim=1)
 		!if no data comes through, don't change the weights
 		if (oddsey==0) then
-			oddsey=(size(response)/2)
+			oddsey=(size(response)/2)+1
 		end if
 		!right is higher motivation, left is lower motivation
 		!midpoint is zero motivation and anything to the left is negative
-		oddsey=oddsey-(size(response)/2)	
+		oddsey=oddsey-(size(response)/2)+1
 	end if
 
 	

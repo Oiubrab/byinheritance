@@ -28,11 +28,11 @@ caf -fbounds-check welcome_to_dying.f95 reign_in_blood.f95 spiritechnology.f95 i
 for i in $(seq 1 $2)
 do
 	
-	cafrun -n 3 --use-hwthread-cpus ./lack_of_comprehension
+	echo "run: " $i | tee -a "test_log.txt"
+	cafrun -n 4 --use-hwthread-cpus ./lack_of_comprehension
 	cd world_in_a_world
 	python3 test_market.py3 carryon | tee -a "../test_log.txt"
 	cd ..
-	echo "run: " $i | tee -a "test_log.txt"
 	
 done
 

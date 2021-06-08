@@ -19,9 +19,9 @@ subroutine raining_blood(thinker,stinker,blinker,tinker)
 	!for motivate feel, convert back to a percentage and reward accordingly
 	if (tinker==1) then
 		if (position_to_percentage(stinker)<0) then 
-			blinker=position_to_percentage(stinker)/10
-		else
 			blinker=position_to_percentage(stinker)/2
+		else
+			blinker=position_to_percentage(stinker)
 		end if
 	!for motivate errors, motivate perfection and punish mistakes
 	else if (tinker==2) then
