@@ -16,6 +16,7 @@ It's quite simple, really. just run the `i_am_in_command.zsh arg1 arg2` bash scr
   - `arg1`: (noclean/clean) tell the network whether to use the network from the last run or wipe it and start again
   - `arg2`: (integer) a numerical argument - how many times the network should be run
 
+note: this network makes use of the opencoarrays parralelisation wrapper for fortran. Installation of this wrapper will be necessary to run this software. This wrapper can be found at http://www.opencoarrays.org/ and there are simple use instructions at https://docs.it4i.cz/software/numerical-languages/opencoarrays/.
 
 ## Mainline
 ### Introduction
