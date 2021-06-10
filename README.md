@@ -12,7 +12,7 @@ Currently, the working folder contains several fortran scripts that each control
 
 ### HOW TO RUN?
 
-It's quite simple, really. just run the `i_am_in_command.zsh arg1 arg2 arg3` bash script with two arguments:
+It's quite simple, really. just run the `i_am_in_command.zsh arg1 arg2 arg3` bash script with three arguments:
   - `arg1`: (noclean/clean) tell the network whether to use the network from the last run or wipe it and start again
   - `arg2`: (integer) a numerical argument - how many times the network should be run
   - `arg3`: (test/notest) tell the network to either output printouts of the network activation movements or not
