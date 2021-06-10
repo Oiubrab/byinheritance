@@ -616,7 +616,9 @@ subroutine conflict_check_resolve_move(thinking,transition,reward,response,respo
 									point_to_neuron(column2,row2,transition(column2,row2),"row")) .and. &
 									(point_to_neuron(column,row,transition(column,row),"column")==&
 									point_to_neuron(column2,row2,transition(column2,row2),"column")) .and. &
-									(transition(column2,row2)/=0)) then
+									(transition(column2,row2)/=0) .and. &
+									(point_to_neuron(column,row,transition(column,row),"row")<=size(transition(1,:))) .and. &
+									(point_to_neuron(column2,row2,transition(column2,row2),"row")<=size(transition(1,:)))) then
 									
 									errors=.true.
 									
