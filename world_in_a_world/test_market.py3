@@ -13,6 +13,8 @@ feel_size=15
 #this is where the amplitudes of the market pricing shifts are entered
 amplitude_1st=100.0
 amplitude_2nd=10.0
+#this scales down the divisor for the percentage weight for the account profit/loss
+sensitive=0.001
 
 
 
@@ -21,13 +23,13 @@ amplitude_2nd=10.0
 #open the market, given the correct choices are made
 if len(sys.argv)==2 and (str(sys.argv[1])=='reset' or str(sys.argv[1])=='carryon'):
 	if str(sys.argv[1])=='reset':
-		markets = read_csv_dic("market_reset.csv")
 		account = read_csv_dic("account_reset.csv")
 		deicide = open("sight_response_reset.csv","r")
 	elif str(sys.argv[1])=='carryon':
-		markets = read_csv_dic("market.csv")
 		account = read_csv_dic("account.csv")
 		deicide = open("sight_response.csv","r")
+	#read out the market generated from the stock prices
+	markets = read_csv_dic("market.csv")
 else:
 	print("run application with python3 test_market.py3 start_choice")
 	print("Where:")
@@ -177,7 +179,7 @@ write_csv_dic("account.csv",account)
 #compute weighted gradient of earnings over the last ten steps and place it in a binary array
 #only act if there has been an account change
 if this_entry["account_value"]!=last_entry["account_value"] and deposit_trigger==False:
-	weighted_gradient_percentage = int(((this_entry["account_value"] - account[-10]["account_value"])/abs(this_entry["account_value"]))*100.0)
+	weighted_gradient_percentage = int(((this_entry["account_value"] - account[-10]["account_value"])/abs(this_entry["account_value"]*sensitive))*100.0)
 else:
 	weighted_gradient_percentage=0.0
 #limit growth/decay to the last account volume for now
@@ -199,29 +201,10 @@ feel = numpy.array(weighted_gradient_percentage_binary)
 wtr = csv.writer(open ('feel.csv', 'w'), delimiter=',', lineterminator='\n')
 wtr.writerow(feel)
 
+		
 
 
-
-
-
-
-#alter the stock to replicate a changing market
-for stock in markets:
-	#some stocks will rise, some will fall
-	if stock["stock_number"]%3==1:
-		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))
-	elif stock["stock_number"]%3==2:
-		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))-(amplitude_2nd*numpy.sin(t_end*0.01))
-	else:
-		change = float(stock["stock_price"])+(amplitude_1st*numpy.sin(t_end))-(amplitude_2nd*numpy.sin(t_end*0.01))+(amplitude_2nd*numpy.sin(t_end*0.001))
-	#print(change)
-	#give stocks a floor and a ceiling
-	stock["stock_price"] = change
-	if stock["stock_price"]<10.0:
-		stock["stock_price"]=10.0
-	elif stock["stock_price"]>1000.0:
-		stock["stock_price"]=1000.0
-	
+#write out the market and position in the market
 write_csv_dic("market.csv",markets)
 
 
@@ -238,12 +221,12 @@ for exam in markets:
 
 	#make binary lists out of the stock, stock_number and units owned
 	unit_binary = integer_to_binary(exam["units_owned"])
-	stock_binary = integer_to_binary(int(exam["stock_price"]))
+	stock_binary = integer_to_binary(int(exam["stock_price"]*1000.0))
 	stock_number_binary = integer_to_binary(exam['stock_number'])
 
 	# ensure unit binaries are deposited in 8 bit chunks by padding
 	#place pos neg label at the end
-	unit_height=12
+	unit_height=16
 	if len(unit_binary)==2:
 		unit_binary = [unit_binary[0]] + [0 for num in range(unit_height-len(unit_binary))] + [unit_binary[-1]]
 	elif len(unit_binary)<unit_height:
@@ -251,7 +234,7 @@ for exam in markets:
 	
 	# ensure stocks binaries are deposited in 15 bit chunks by padding
 	#place pos neg label at the end
-	stock_height=15
+	stock_height=25
 	if len(stock_binary)==2:
 		stock_binary = [stock_binary[0]] + [0 for num in range(stock_height-len(stock_binary))] + [stock_binary[-1]]
 	elif len(stock_binary)<stock_height:
@@ -268,6 +251,7 @@ for exam in markets:
 	#and this is where the resulting array is written into sight.csv
 	#add an extra zero to make list length an odd number
 	sight = numpy.array(stock_number_binary + stock_binary + unit_binary + [0])
+	#print(len(sight))
 	wtr = csv.writer(open ('sight_'+exam['stock_identifier']+'.csv', 'w'), delimiter=',', lineterminator='\n')
 	wtr.writerow(sight)
 
@@ -275,11 +259,11 @@ for exam in markets:
 
 
 #this is where the account details are interpreted and folded into sight
-account_binary=integer_to_binary(int(this_entry["account_value"]))
+account_binary=integer_to_binary(int(this_entry["account_value"]*1000.0))
 
 # ensure account binary are deposited in 15 bit chunks by padding
 #place pos neg label at the end
-account_height=19
+account_height=27
 if len(stock_binary)==2:
 	account_binary = [account_binary[0]] + [0 for num in range(account_height-len(account_binary))] + [account_binary[-1]]
 elif len(account_binary)<account_height:
