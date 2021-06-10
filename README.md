@@ -12,9 +12,10 @@ Currently, the working folder contains several fortran scripts that each control
 
 ### HOW TO RUN?
 
-It's quite simple, really. just run the `i_am_in_command.zsh arg1 arg2` bash script with two arguments:
+It's quite simple, really. just run the `i_am_in_command.zsh arg1 arg2 arg3` bash script with two arguments:
   - `arg1`: (noclean/clean) tell the network whether to use the network from the last run or wipe it and start again
   - `arg2`: (integer) a numerical argument - how many times the network should be run
+  - `arg3`: (test/notest) tell the network to either output printouts of the network activation movements or not
 
 note: this network makes use of the opencoarrays parralelisation wrapper for fortran. Installation of this wrapper will be necessary to run this software. This wrapper can be found at http://www.opencoarrays.org/ and there are simple use instructions at https://docs.it4i.cz/software/numerical-languages/opencoarrays/.
 
