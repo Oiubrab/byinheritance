@@ -60,6 +60,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 !	call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
 !		thinking%brain_status,thinking%blood)
 
+
 	!this is the new song
 	do while (proaction .eqv. .false.)
 	

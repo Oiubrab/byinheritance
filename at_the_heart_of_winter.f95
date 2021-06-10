@@ -158,7 +158,9 @@ if (image_number==2) then
 	vision_length(count_count)=5
 	vision_socket(count_count)=(columns(count_count)/2)+1
 	response_length(count_count)=5
+
 	response_socket(count_count)=6
+
 	node_use_reward(count_count)=3.0
 end if
 
@@ -235,6 +237,7 @@ if (image_number==2) then
 	ident_number(count_count)=4
 	!dimensions
 	!brain
+
 	rows(count_count)=21; columns(count_count)=49
 	vision_length(count_count)=45
 	vision_socket(count_count)=(columns(count_count)/2)+1
@@ -259,25 +262,29 @@ end if
 !!!Setup 3 (sight hope)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !this setup is for the input hope [image 2, ident 3]
+
+
 !this network takes in information, through direct outside interfaces
 !the response interfaces with the think network
 !socket number represents where the middle of the corresponding array meets the brain network
 
 
 !allocations
-if (image_number==3) then
+if (image_number==4) then
 	!status
 	output_switch(count_count)="normal"
 	ident_number(count_count)=5
+
 	!dimensions
 	!brain
 	rows(count_count)=21; columns(count_count)=49
 	vision_length(count_count)=45
 	vision_socket(count_count)=(columns(count_count)/2)+1
-	response_length(count_count)=11
+	response_length(count_count)=9
 	response_socket(count_count)=(columns(count_count)/2)+1
 	node_use_reward(count_count)=10.0
 end if
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!end setup 3 (sight hope)!!!
@@ -459,7 +466,9 @@ end if
 !first, calculate the prime oddsey number from the oddsey numbers outputted	
 !send the oddsey number to the other networks
 sync all
+
 oddsey=(10*oddsey[1]+oddsey[2])*1000
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -558,6 +567,7 @@ else if (image_number==3) then
 
 	!place the sight hope array into vision for the sight joys network
 	open(unit=1,file="world_in_a_world/sight_SBR.csv")
+
 	read(1,*) trans(stage_count)%vision
 	
 !sight account(4) opens the sight account csv and puts it into it's vision

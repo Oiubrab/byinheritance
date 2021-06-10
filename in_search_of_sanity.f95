@@ -46,6 +46,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!from the outside
 	integer :: epoch_cutoff
 
+
 	!blood
 	integer :: blood_rate
 	integer :: blood_rows
@@ -205,7 +206,6 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	
 	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
 	!oddsey is defined only in the motivate image
-
 !	if (output_switcher=="motive") then
 !		oddsey=findloc(response,1,dim=1)
 !		!if no data comes through, don't change the weights
@@ -216,6 +216,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 !		!midpoint is zero motivation and anything to the left is negative
 !		oddsey=oddsey-(size(response)/2)+1
 !	end if
+
 
 	
 

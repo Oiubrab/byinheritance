@@ -203,6 +203,7 @@ wtr.writerow(feel)
 
 		
 
+
 #write out the market and position in the market
 write_csv_dic("market.csv",markets)
 
