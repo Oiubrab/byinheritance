@@ -270,7 +270,7 @@ end if
 
 
 !allocations
-if (image_number==4) then
+if (image_number==3) then
 	!status
 	output_switch(count_count)="normal"
 	ident_number(count_count)=5
@@ -280,7 +280,7 @@ if (image_number==4) then
 	rows(count_count)=21; columns(count_count)=49
 	vision_length(count_count)=45
 	vision_socket(count_count)=(columns(count_count)/2)+1
-	response_length(count_count)=9
+	response_length(count_count)=11
 	response_socket(count_count)=(columns(count_count)/2)+1
 	node_use_reward(count_count)=10.0
 end if
@@ -805,7 +805,7 @@ end if
 !!!!!!!!!!!!!!!!!!!!
 
 
-!print*,"three end",image_number
+
 
 sync all
 

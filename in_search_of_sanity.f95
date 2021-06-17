@@ -125,7 +125,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!Otherwise, if this is the first time this network is activated, it has to be initialised
 	else
 		
-		print*,"First Move"
+		print*,"First Move",image_number
 		!initialise the network
 		call initialiser(think,response,blood_volume,response_socket)
 
