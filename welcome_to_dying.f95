@@ -593,6 +593,7 @@ subroutine conflict_check_resolve_move(thinking,transition,reward,response,respo
 	type(mind) :: thinking
 	real :: fucker,reward
 	integer :: row,column,row2,column2,response_socket,point,origin,rank_size,rank,rowmax
+	integer :: row_fix
 	logical :: errors
 	
 	errors=.true.
@@ -635,22 +636,26 @@ subroutine conflict_check_resolve_move(thinking,transition,reward,response,respo
 									!whichever weitht bucket fucker falls in, the other data direction must change
 									if (fucker>thinking%brain_weight(transition(column,row),thinking%brain_status(1,column,row),column,row)) then
 										!temporarily place data in the destination to mask it from the selector
+										!fix for error in row placement
+										row_fix=point_to_neuron(column,row,transition(column,row),"row")
 										thinking%brain_status(2,point_to_neuron(column,row,transition(column,row),"column"),&
 											point_to_neuron(column,row,transition(column,row),"row"))=1
 										!call the selector again on the array position for the losing neuron
 										call selector(thinking,column,row,reward,response,response_socket,transition)
 										!remove temporary data
 										thinking%brain_status(2,point_to_neuron(column,row,transition(column,row),"column"),&
-											point_to_neuron(column,row,transition(column,row),"row"))=0
+											row_fix)=0
 									else
 										!temporarily place data in the destination to mask it from the selector
+										!fix for error in row placement
+										row_fix=point_to_neuron(column2,row2,transition(column2,row2),"row")
 										thinking%brain_status(2,point_to_neuron(column2,row2,transition(column2,row2),"column"),&
 											point_to_neuron(column2,row2,transition(column2,row2),"row"))=1
 										!call the selector again on the array position for the losing neuron
 										call selector(thinking,column2,row2,reward,response,response_socket,transition)
 										!remove temporary data
 										thinking%brain_status(2,point_to_neuron(column2,row2,transition(column2,row2),"column"),&
-											point_to_neuron(column2,row2,transition(column2,row2),"row"))=0
+											row_fix)=0
 									end if
 										
 									

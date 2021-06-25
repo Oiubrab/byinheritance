@@ -7,7 +7,16 @@
 #third argument: includes the test output (test/notest)
 
 #first, remove the old binary and module files
-reset
+
+#test for printing
+if [[ $4 != "print" && $4 != "noprint" ]]
+then
+	exit
+elif [[ $4 = "print" ]]
+then
+	reset
+fi
+
 if [[ $3 = "test" ]]
 then
 	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod reign_in_blood.mod darkness.mod
@@ -28,7 +37,7 @@ then
 	setopt extended_glob && rm -- ^*(.py3|.py|reset.csv|stocks|__pycache__)
 	echo 0.0 > holding_sum.txt
 	python3 real_price_generator.py3 1 $2
-	python3 test_market.py3 reset
+	python3 test_market.py3 reset $4
 	cd ..
 	#remove the previous network and logs
 	rm *.txt
@@ -49,12 +58,14 @@ fi
 #run the network $4 times
 for i in $(seq 1 $2)
 do
-	
-	echo "run: " $i | tee -a "test_log.txt"
+	if [[ $4 = "print" ]]
+	then 
+		echo "run: " $i | tee -a "test_log.txt"
+	fi
 	cafrun -n 4 --use-hwthread-cpus ./lack_of_comprehension
 	cd world_in_a_world
 	python3 real_price_generator.py3 $i $2 carryon
-	python3 test_market.py3 carryon | tee -a "../test_log.txt"
+	python3 test_market.py3 carryon $4 | tee -a "../test_log.txt"
 	cd ..
 	
 done

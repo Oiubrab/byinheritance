@@ -21,7 +21,7 @@ sensitive=0.001
 
 
 #open the market, given the correct choices are made
-if len(sys.argv)==2 and (str(sys.argv[1])=='reset' or str(sys.argv[1])=='carryon'):
+if len(sys.argv)==3 and (str(sys.argv[1])=='reset' or str(sys.argv[1])=='carryon') and (str(sys.argv[2])=='print' or str(sys.argv[2])=='noprint'):
 	if str(sys.argv[1])=='reset':
 		account = read_csv_dic("account_reset.csv")
 		deicide = open("sight_response_reset.csv","r")
@@ -31,10 +31,12 @@ if len(sys.argv)==2 and (str(sys.argv[1])=='reset' or str(sys.argv[1])=='carryon
 	#read out the market generated from the stock prices
 	markets = read_csv_dic("market.csv")
 else:
-	print("run application with python3 test_market.py3 start_choice")
+	print("run application with python3 test_market.py3 start_choice print_choice")
 	print("Where:")
 	print("Start_choice=reset - resets the market")
 	print("start_choice=carryon - carries on the market")
+	print("print_choice=print - prints the market")
+	print("print_choice=noprint - market is not printed")	
 	sys.exit()
 
 #open the sight_response.csv array and prepare it to affect it's position in the market
@@ -126,10 +128,11 @@ for unit,stock in zip(units,markets):
 #place trade_errors positional in the errors array
 errors[trade_errors]=1
 
-print(" ")
-print("Invalid Trades:")
-print(errors)
-print(trade_errors)
+if str(sys.argv[2])=="print":
+	print(" ")
+	print("Invalid Trades:")
+	print(errors)
+	print(trade_errors)
 		
 #and this is where the resulting errors is written into errors.csv
 error = numpy.array(errors)
@@ -144,21 +147,22 @@ this_entry = {"account":"test","account_value":last_entry["account_value"]-cost,
 account = account + [this_entry]
 
 #Print out the network's choice
-print(" ")
-print("Network Choice:")	
-print(deicide_array_list_numbers[0:7],deicide_array_list_numbers[7:14],deicide_array_list_numbers[14:21])
-print(units)
-print(" ")
-#print out the current status
-print("Market Prices and Info:")
-for market in markets:
-	print(market)
+if str(sys.argv[2])=="print":
+	print(" ")
+	print("Network Choice:")	
+	print(deicide_array_list_numbers[0:7],deicide_array_list_numbers[7:14],deicide_array_list_numbers[14:21])
+	print(units)
+	print(" ")
+	#print out the current status
+	print("Market Prices and Info:")
+	for market in markets:
+		print(market)
 
-#and the account position
-print(" ")
-print("Account Position:")
-print(this_entry)
-print(" ")
+	#and the account position
+	print(" ")
+	print("Account Position:")
+	print(this_entry)
+	print(" ")
 
 #temporary account drain - pass drained funds to a holding account
 deposit_trigger=False
