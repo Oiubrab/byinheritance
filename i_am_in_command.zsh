@@ -19,10 +19,10 @@ fi
 
 if [[ $3 = "test" ]]
 then
-	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod reign_in_blood.mod darkness.mod
+	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod the_sound_of_perserverance.mod darkness.mod
 elif [[ $3 = "notest" ]]
 then
-	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod reign_in_blood.mod
+	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod the_sound_of_perserverance.mod
 else
 	exit
 fi
@@ -47,22 +47,20 @@ then
 fi
 
 #compile
-if [[ $3 = "test" ]]
-then
-	caf -fbounds-check welcome_to_dying.f95 reign_in_blood.f95 darkness.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
-elif [[ $3 = "notest" ]]
-then
-	caf -fbounds-check welcome_to_dying.f95 reign_in_blood.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
-fi
+caf -fbounds-check welcome_to_dying.f95 the_sound_of_perserverance.f95 darkness.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
+
 
 #run the network $4 times
 for i in $(seq 1 $2)
 do
+
 	if [[ $4 = "print" ]]
 	then 
 		echo "run: " $i | tee -a "test_log.txt"
 	fi
-	cafrun -n 4 --use-hwthread-cpus ./lack_of_comprehension
+
+	cafrun -n 4 --use-hwthread-cpus ./lack_of_comprehension $3
+
 	cd world_in_a_world
 	python3 real_price_generator.py3 $i $2 carryon
 	python3 test_market.py3 carryon $4 | tee -a "../test_log.txt"

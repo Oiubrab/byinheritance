@@ -1,4 +1,4 @@
-module reign_in_blood
+module the_sound_of_perserverance
 use welcome_to_dying
 contains
 
@@ -9,7 +9,7 @@ contains
 
 !this subroutine applies a special weight to the motivate network based on the size of the binary number represented in it's input
 !first argument must be the network and the second argument must be the input (vision) and the third argument must be the oddsey and the forth must be an image number
-subroutine raining_blood(thinker,stinker,blinker,tinker)
+subroutine flesh_and_the_power_it_holds(thinker,stinker,blinker,tinker)
 
 	!inputs
 	type(mind) :: thinker

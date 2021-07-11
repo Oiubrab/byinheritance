@@ -1,6 +1,6 @@
 module spiritechnology
 use welcome_to_dying
-!use darkness
+use darkness
 implicit none
 contains
 
@@ -11,7 +11,7 @@ contains
 
 subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,rows,columns,&
-	node_use_reward,image_number,motivate_nomotivate)
+	node_use_reward,image_number,motivate_nomotivate,testicle)
 
 	!timing and controlling
 	integer :: epoch,epoch_cutoff
@@ -49,6 +49,9 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	!parallelisation
 	integer :: image_number
 	
+	!testing
+	character(len=6) :: testicle
+	
 	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 	select_time=0.0
 
@@ -57,8 +60,10 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	
 	allocate(transition(columns,rows))
 
-!	call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
-!		thinking%brain_status,thinking%blood)
+	if (testicle=="test") then
+		call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
+			thinking%brain_status,thinking%blood)
+	end if
 
 
 	!this is the new song
@@ -138,7 +143,7 @@ select_time=select_time+(finish-start)
 				
 				!the choosing weights reduce by one if they are not used and increase by node_use_reward-1 if they are used
 				!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
-				call weight_reducer(thinking%brain_weight,column_random_number,row_random_number)
+				
 
 
 				
@@ -161,10 +166,14 @@ select_time=select_time+(finish-start)
 			
 		end do row_loop
 		
+		call weight_reducer(thinking%brain_weight)
+		
 		call conflict_check_resolve_move(thinking,transition,node_use_reward,response,response_socket)
 
-!		call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
-!			thinking%brain_status,thinking%blood)
+		if (testicle=="test") then
+			call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
+				thinking%brain_status,thinking%blood)
+		end if
 
 		!response translation into movement
 		!different rules for motivate and non motivate networks

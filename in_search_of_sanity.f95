@@ -1,7 +1,7 @@
 module in_search_of_sanity
 use welcome_to_dying
 use spiritechnology
-use reign_in_blood
+use the_sound_of_perserverance
 contains
 
 !this subroutine is the main kernalised routine for brain creation and action
@@ -17,7 +17,7 @@ contains
 
 subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,directions,node_use_reward,&
 	vision,response,vision_socket,response_socket,blood_rate,&
-	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switcher)
+	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switcher,test)
 
 	implicit none
 
@@ -61,6 +61,9 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!coarray specific
 	integer :: image_number,image_total
 	character(len=20) :: will_file
+	
+	!testing
+	character(len=6) :: test
 
 
 	!blood rows is always rows +1
@@ -116,7 +119,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 		!this makes the system yearn for happiness
 		!must be run for each network
 		if (output_switcher=="motive") then
-			call raining_blood(think,vision,oddsey,image_number)
+			call flesh_and_the_power_it_holds(think,vision,oddsey,image_number)
 		end if
 		call animus(think,oddsey)
 
@@ -192,7 +195,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!this subroutine moves through the network and blood and propogates all data movement
 	call spiritech(think,blood_rate,response_socket,response_length,vision_length,&
 		vision_socket,blood_rows,epoch_cutoff,blood_gradient,blood_volume,vision,response,&
-		rows,columns,node_use_reward,image_number,output_switcher)
+		rows,columns,node_use_reward,image_number,output_switcher,test)
 
 	call cpu_time(finish)
 !	print*,"spiritech",image_number,finish-start

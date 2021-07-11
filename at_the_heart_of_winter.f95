@@ -58,6 +58,11 @@ real,parameter :: blood_volume=0.8,blood_gradient=0.6
 !do loop counters
 integer :: count_count,column_number,stage_count
 
+!testing
+character(len=6) :: tester
+
+!import the tester
+call get_command_argument(1,tester)
 
 !setup the images
 image_total=num_images()
@@ -460,7 +465,7 @@ if (output_switch(stage_count)=="motive") then
 		ident_total,rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 		trans(stage_count)%vision,trans(stage_count)%response,&
 		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-		blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count))
+		blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count),tester)
 end if
 
 !first, calculate the prime oddsey number from the oddsey numbers outputted	
@@ -606,7 +611,7 @@ call insanitorium_deluxe(oddsey,ident_number(stage_count),ident_total,&
 	rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 	trans(stage_count)%vision,trans(stage_count)%response,&
 	vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count))
+	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count),tester)
 	
 sync all
 
@@ -747,7 +752,7 @@ if (image_number==1) then
 		ident_total,rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 		trans(stage_count)%vision,trans(stage_count)%response,&
 		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-		blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count))
+		blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switch(stage_count),tester)
 end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!

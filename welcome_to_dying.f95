@@ -997,10 +997,10 @@ end subroutine
 
 
 !This subroutine controls the weight reductions per weight per action
-subroutine weight_reducer(weights,column,row)
+subroutine weight_reducer(weights)
 
 	real,dimension(*) :: weights(:,:,:,:)
-	integer :: from,to,connections,column,row
+	integer :: from,to,connections,column,row,row_total,column_total
 	real,parameter :: first_height=1.0-(27.825/34.0), first_gradient=27.825/34.0 !1st stage linear parameters
 	real,parameter :: height=-3.3, gradient=1.0 !2nd stage linear parameters
 	real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
@@ -1009,29 +1009,35 @@ subroutine weight_reducer(weights,column,row)
 	real,parameter :: overload=5.0
 	
 	connections=size(weights(:,1,1,1))
+	row_total=size(weights(1,1,1,:))
+	column_total=size(weights(1,1,:,1))
 
-	do from=1, connections
-		do to=1, connections
-			if (weights(to,from,column,row)>1.) then
-				!between 1 and 35, scaling is linear
-				if (weights(to,from,column,row)<=35.0) then
-					weights(to,from,column,row)=first_gradient*weights(to,from,column,row)+first_height
-				!between 35 and 1050, scaling is a non linear function
-				else if ((weights(to,from,column,row)>35.0) .and. (weights(to,from,column,row)<1050.0)) then
-					!weight is scaled down by a gaussian (smalll numbers), plus a linear (general shape), plus a quadratic (limiter), plus a sinusoid (variation)
-					!range within the effective domain (1,big) must stay below the y=x line and above the y=1 line 
-					weights(to,from,column,row)=amplitude*sin(0.1*period*weights(to,from,column,row))+&
-						gradient*weights(to,from,column,row)+height-&
-						second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
-						normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
-				!if weight is between 1050 and 1000000, just do a constant reduction
-				else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=1000000.0)) then
-					weights(to,from,column,row)=weights(to,from,column,row)-overload
-				!limit weight to 1000000
-				else
-					weights(to,from,column,row)=1000000.0
-				end if
-			end if
+	do row=1,row_total
+		do column=1,column_total
+			do from=1, connections
+				do to=1, connections
+					if (weights(to,from,column,row)>1.) then
+						!between 1 and 35, scaling is linear
+						if (weights(to,from,column,row)<=35.0) then
+							weights(to,from,column,row)=first_gradient*weights(to,from,column,row)+first_height
+						!between 35 and 1050, scaling is a non linear function
+						else if ((weights(to,from,column,row)>35.0) .and. (weights(to,from,column,row)<1050.0)) then
+							!weight is scaled down by a gaussian (smalll numbers), plus a linear (general shape), plus a quadratic (limiter), plus a sinusoid (variation)
+							!range within the effective domain (1,big) must stay below the y=x line and above the y=1 line 
+							weights(to,from,column,row)=amplitude*sin(0.1*period*weights(to,from,column,row))+&
+								gradient*weights(to,from,column,row)+height-&
+								second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
+								normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
+						!if weight is between 1050 and 1000000, just do a constant reduction
+						else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=1000000.0)) then
+							weights(to,from,column,row)=weights(to,from,column,row)-overload
+						!limit weight to 1000000
+						else
+							weights(to,from,column,row)=1000000.0
+						end if
+					end if
+				end do
+			end do
 		end do
 	end do
 

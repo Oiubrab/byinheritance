@@ -5,24 +5,27 @@ implicit none
 !at this point, the network is really becoming a simulacrum of biology
 !note: simul_cut_cutoff must be an integer multiple of simul_total 
 
-integer,parameter :: simul_total=30,simul_cut_cutoff=3,epoch=100,dream_theatre=50
-integer :: simul,account_entries,simul_cut,simul_cut_counter,regen,simul_check_counter,dream
-logical,dimension(simul_total) :: simul_check
-real,dimension(simul_total) :: account_delta
+integer,parameter :: simul_total=30,simul_cut_cutoff=3,epoch=100,dream_theatre=30
+integer :: simul,account_entries,simul_cut,simul_cut_counter,regen,simul_check_counter,dream,simul_check
+real,dimension(2,simul_total) :: account_delta !(1,x) is account difference, (2,x) is simul
+real,dimension(2) :: account_sort,account_swap
 real :: account_start,account_finish
 character(len=7),dimension(simul_total) :: files
 character(len=7) :: file_survive
 character(len=5) :: epoch_name
 character(len=4) :: dummy_acc
 
-
 write(epoch_name,"(I0)") epoch
 
 call execute_command_line("rm -r ~/Documents/evolutionary/test*")
 call execute_command_line("rm -r ~/Documents/evolutionary/new_song")
 
+!label
+print "(A7,I0,A4,I0)","Dream: ",0," of:",dream_theatre
+
 !copy the first examples into their folders
 do simul=1,simul_total
+	print "(A17,I0,A4,I0)","Running Network: ",simul," of:",simul_total
 	write(files(simul),"(A5,I0)") "test_",simul
 	call execute_command_line("cp -r ../trunk ~/Documents/evolutionary/"//files(simul))
 	call execute_command_line("cd ~/Documents/evolutionary/"//files(simul)//" && ./i_am_in_command.zsh clean "&
@@ -57,55 +60,32 @@ do dream=1,dream_theatre
 		!read the last entry
 		read(1,*) dummy_acc,account_finish
 		!calculate the account delta (simple difference)
-		account_delta(simul)=account_finish-account_start
+		account_delta(1,simul)=account_finish-account_start
+		account_delta(2,simul)=float(simul)+0.01
 		close(1)
 	end do
 
 	!for each test, count how many other tests have made more money over time. If there are more than simul_cut_cutoff, delete the test
-	simul_check=.true.
-	simul_check_counter=simul_total
-	do simul=1,simul_total
-		simul_cut_counter=0
-		do simul_cut=1,simul_total
-			if ((simul/=simul_cut) .and. (account_delta(simul)<account_delta(simul_cut))) simul_cut_counter=simul_cut_counter+1
-			if (simul_cut_counter>=simul_cut_cutoff) then
-				call execute_command_line("rm -r ~/Documents/evolutionary/"//files(simul))
-				simul_check(simul)=.false.
-				simul_check_counter=simul_check_counter-1
-				exit
+	!sort the list
+	print*," "
+	do simul=1,simul_total-1
+		account_sort=account_delta(:,simul)
+		do simul_check=simul+1,simul_total
+			if (account_delta(1,simul_check)>account_sort(1)) then
+				account_delta(:,simul)=account_delta(:,simul_check)
+				account_delta(:,simul_check)=account_sort
+				account_sort=account_delta(:,simul)
 			end if
 		end do
 	end do
-
-
-
-	!if there are too many, remove untill down to expected number of test cases
-	do while (simul_check_counter>simul_cut_cutoff)
-		!check through the tests
-		do simul=1,simul_total
-			if (simul_check(simul) .eqv. .true.) then
-				!check against all the other cases
-				do simul_cut=1,simul_total
-					!find an example of the lowest account delta
-					!if there is an account delta this simul is above, skip this simul
-					if (simul_check(simul_cut) .eqv. .true.) then
-						if (account_delta(simul)>account_delta(simul_cut)) then
-							exit
-						end if
-					end if
-					!if the loop han't beenm exited by the end of the cases, remove the test
-					if (simul_cut==simul_total) then
-						call execute_command_line("rm -r ~/Documents/evolutionary/"//files(simul))
-						simul_check(simul)=.false.
-						simul_check_counter=simul_check_counter-1
-					end if
-				end do
-			end if
-		end do
+	!now, remove all the networks undr the simul_cut_cutoff threshold
+	do simul=simul_cut_cutoff+1,simul_total
+		call execute_command_line("rm -r ~/Documents/evolutionary/"//files(int(account_delta(2,simul))))
 	end do
+			
 				
 	!save a list of the tests that survived
-	call system('ls ~/Documents/evolutionary > fileContents.txt')
+	call execute_command_line('ls ~/Documents/evolutionary > fileContents.txt')
 	call execute_command_line("mkdir ~/Documents/evolutionary/new_song")
 
 
