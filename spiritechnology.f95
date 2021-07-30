@@ -75,100 +75,10 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	
 		!increment epoch
 		epoch=epoch+1
-
-		!add the blood volume, i.e
-		! 00000000
-		! 00000000
-		! 00000000
-		! 01111110
-!		if (epoch==1) then
-!			!print*,size(thinking%blood(:,1)),3,response_length,response_socket,"spiritech"
-!			do column_number=1,response_length
-!				thinking%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)=&
-!					thinking%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)+blood_volume	
-!			end do	
-!		
-!			do column_number=1,vision_length
-!				thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)=&
-!					thinking%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
-!			end do
-!		end if
-
-		!print*,"made it",this_image()
-		!first, randomise random row list
-		call randomised_list(row_random)
-		 
-		!now I shall send randomly selected neurons to have data moved
-		row_loop: do row_number=1,rows
-
-
-
-			!first, randomise column list for each row
-			call randomised_list(column_random)
 		
-			column_loop: do column_number=1,columns
-			
-
-			
-				!now, assign the random integer positional number to the requisite random number positional number holder number
-				column_random_number=column_number!column_random(column_number)
-				row_random_number=row_number!row_random(row_number)
-	
-
-				
-				!move the blood around
-				
-!				if (epoch==1) call blood_mover(thinking%blood,column_random_number,row_random_number,blood_gradient)
-
-call cpu_time(start)					
-							
-				!only act on neurons that have data in them
-				if (thinking%brain_status(2,column_random_number,row_random_number)==1) then
-
-					!here is the important subroutine call that moves the data depending on how fat the neuron is 
-					!individual data may move several times each loop. Loop these loops for a truly random movement (feature, not bug) 
-					call selector(thinking,column_random_number,row_random_number,node_use_reward,response,response_socket,transition)		
-
-					!print*,select_time
-
-
-					
-
-					
-					
-				end if
-
-call cpu_time(finish)
-select_time=select_time+(finish-start)
-				
-				!the choosing weights reduce by one if they are not used and increase by node_use_reward-1 if they are used
-				!this is done by subtracting one from all weights and adding node_use_reward to weights that are used
-				
-
-
-				
-			end do column_loop
-
-
-
-!			!move the blood on the extra blood row
-!			if (row_number==rows) then
-!				call randomised_list(column_random)
-!				do column_number=1,columns
-!					!now, assign the random integer positional number to the requisite random number positional number holder number
-!					column_random_number=column_random(column_number)	
-!					!move the blood around
-!					call blood_mover(thinking%blood,column_random_number,blood_rows,blood_gradient)
-!				end do
-!			end if
-		
-
-			
-		end do row_loop
+		call new_song(thinking,response,response_socket,response_length,rows,columns,node_use_reward)
 		
 		call weight_reducer(thinking%brain_weight)
-		
-		call conflict_check_resolve_move(thinking,transition,node_use_reward,response,response_socket)
 
 		if (testicle=="test") then
 			call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&

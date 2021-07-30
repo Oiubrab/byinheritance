@@ -209,16 +209,16 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	
 	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
 	!oddsey is defined only in the motivate image
-!	if (output_switcher=="motive") then
-!		oddsey=findloc(response,1,dim=1)
-!		!if no data comes through, don't change the weights
-!		if (oddsey==0) then
-!			oddsey=(size(response)/2)+1
-!		end if
-!		!right is higher motivation, left is lower motivation
-!		!midpoint is zero motivation and anything to the left is negative
-!		oddsey=oddsey-(size(response)/2)+1
-!	end if
+	if (output_switcher=="motive") then
+		oddsey=findloc(response,1,dim=1)
+		!if no data comes through, don't change the weights
+		if (oddsey==0) then
+			oddsey=(size(response)/2)+1
+		end if
+		!right is higher motivation, left is lower motivation
+		!midpoint is zero motivation and anything to the left is negative
+		oddsey=oddsey-(size(response)/2)+1
+	end if
 
 
 	
