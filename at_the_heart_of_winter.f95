@@ -452,9 +452,9 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-!if (image_number==4) then
-	print*,"fuck",image_number
-!end if
+
+print*,"image number:",image_number
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!run motivate networks!!!
@@ -762,9 +762,7 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-if (image_number==4) then
-	print*,"you",image_number
-end if
+
 
 
 
