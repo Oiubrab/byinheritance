@@ -68,7 +68,7 @@ call get_command_argument(1,tester)
 image_total=num_images()
 image_number=this_image()
 !setup the identity total
-ident_total=6
+ident_total=7
 
 !!!!!!!!!!!!!!!!!!!!!!!!
 !!!end variable setup!!!
@@ -452,9 +452,9 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-
-
-
+!if (image_number==4) then
+	print*,"fuck",image_number
+!end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!run motivate networks!!!
@@ -599,7 +599,9 @@ end if
 
 
 
-
+if (image_number==4) then
+	print*,"fuck",image_number
+end if
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!
@@ -760,7 +762,9 @@ end if
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-
+if (image_number==4) then
+	print*,"you",image_number
+end if
 
 
 
