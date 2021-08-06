@@ -453,7 +453,7 @@ end if
 
 
 
-print*,"image number:",image_number
+print*,"image number:",image_number,"Place:",1
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -599,9 +599,7 @@ end if
 
 
 
-if (image_number==4) then
-	print*,"fuck",image_number
-end if
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!
@@ -635,7 +633,7 @@ sync all
 
 
 
-
+print*,"image number:",image_number,"Place:",2
 
 
 
