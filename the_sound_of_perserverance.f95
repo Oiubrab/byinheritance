@@ -2,6 +2,7 @@ module the_sound_of_perserverance
 use welcome_to_dying
 contains
 
+!work, damn
 !this module defines the pure motivation of the system
 !it controls the fundamental motivation the motive network is acting on
 !it is important to remember, the motive network is in charge, and it is

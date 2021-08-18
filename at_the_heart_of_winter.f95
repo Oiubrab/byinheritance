@@ -453,7 +453,7 @@ end if
 
 
 
-print*,"image number:",image_number,"Place:",1
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -472,7 +472,7 @@ end if
 !send the oddsey number to the other networks
 sync all
 
-oddsey=(10*oddsey[1]+oddsey[2])*1000
+oddsey=(10*oddsey[1]+oddsey[2])*10000
 
 
 
@@ -633,7 +633,7 @@ sync all
 
 
 
-print*,"image number:",image_number,"Place:",2
+
 
 
 
