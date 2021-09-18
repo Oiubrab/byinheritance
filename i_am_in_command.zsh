@@ -31,14 +31,6 @@ fi
 if [[ $1 = "clean" ]]
 then
 
-	#reset the market
-	cd world_in_a_world
-	python3 account_clean.py3
-	setopt extended_glob && rm -- ^*(.py3|.py|reset.csv|stocks|__pycache__)
-	echo 0.0 > holding_sum.txt
-	python3 real_price_generator.py3 1 $2
-	python3 test_market.py3 reset $4
-	cd ..
 	#remove the previous network and logs
 	rm *.txt
 elif [[ $1 != "noclean" ]]
@@ -61,10 +53,6 @@ do
 
 	cafrun -n 4 --use-hwthread-cpus ./lack_of_comprehension $3
 
-	cd world_in_a_world
-	python3 real_price_generator.py3 $i $2 carryon
-	python3 test_market.py3 carryon $4 | tee -a "../test_log.txt"
-	cd ..
 	
 done
 
