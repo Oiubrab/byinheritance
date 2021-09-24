@@ -51,7 +51,7 @@ do
 		echo "run: " $i | tee -a "test_log.txt"
 	fi
 
-	cafrun -n 4 --use-hwthread-cpus ./lack_of_comprehension $3
+	cafrun -n 2 --use-hwthread-cpus ./lack_of_comprehension $3
 
 	
 done

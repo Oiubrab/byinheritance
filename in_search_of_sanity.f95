@@ -65,7 +65,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!testing
 	character(len=6) :: test
 
-
+	
 	!blood rows is always rows +1
 	blood_rows=rows+1
 	!print*,"search1",rows,blood_rows,this_image(),response_socket

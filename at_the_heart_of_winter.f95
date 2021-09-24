@@ -522,7 +522,6 @@ end if
 !!!run sight networks!!!
 !!!!!!!!!!!!!!!!!!!!!!!!
 
-
 call insanitorium_deluxe(oddsey,ident_number(stage_count),ident_total,&
 	rows(stage_count),columns(stage_count),directions,node_use_reward(stage_count),&
 	trans(stage_count)%vision,trans(stage_count)%response,&
