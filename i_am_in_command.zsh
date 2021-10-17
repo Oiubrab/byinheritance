@@ -40,7 +40,9 @@ fi
 
 #compile
 caf -fbounds-check welcome_to_dying.f95 the_sound_of_perserverance.f95 darkness.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension
-
+cd exponential_uncertainty_death_machine
+./exponential_uncertainty_death_machine.x86_64 &
+cd ..
 
 #run the network $4 times
 for i in $(seq 1 $2)

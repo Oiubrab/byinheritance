@@ -25,10 +25,15 @@ end subroutine delay
 
 
 !prints the network and input/output arrays to a text file that is numerically labelled
-subroutine print_network(imager,moves,vision,vision_socket,response,response_socket,brain,blood)
+subroutine print_network(imager,moves,vision,vision_socket,response,response_socket,brain,blood,starter,finisher)
 
 	integer,dimension(*) :: brain(:,:,:),vision(:),response(:)
 	real,optional,dimension(*) :: blood(:,:)
+	
+	real,optional :: starter,finisher
+	real :: t_sec, total_time
+	integer :: t_hr, t_min	
+	
 	integer :: row_counter,column_counter,rows,columns,info_ports,blood_rows,blood_columns,vision_columns,response_columns,imager
 	integer,intent(in) :: vision_socket,response_socket,moves
 	!printing
@@ -41,7 +46,7 @@ subroutine print_network(imager,moves,vision,vision_socket,response,response_soc
 	character(len=:),allocatable :: print_row
 	
 	
-	!Who is your sanity-daddy and what does he do?
+	!Who is your daddy and what does he do?
 	write(tester,"(A8,I0,A4)") "test_log",imager,".txt"	
 	open(unit=imager,file=tester,access="APPEND")
 
@@ -152,10 +157,19 @@ subroutine print_network(imager,moves,vision,vision_socket,response,response_soc
 	write(imager,*)print_row
 	write(imager,*)" "
 	
+	if ((present(starter)) .and. (present(finisher))) then
+		total_time=finisher-starter
+		t_hr = floor(total_time/3600)
+		t_min = (total_time-t_hr*3600)/60
+		t_sec = total_time-t_hr*3600-t_min*60
+		write(imager,'(A24,I2,A5,I2,A7,F7.4,A4)')"simulator time elapsed =",t_hr,' hrs, ',t_min,' mins, ',t_sec,' sec'
+	end if	
+	
 	!close this shit down
 	close(imager)
 	
 end subroutine print_network
+
 
 
 

@@ -9,8 +9,8 @@ contains
 !this is it. This is the brain kernel. In this where the network is controled from. It is here that data is fed into and data comes out from.
 !run this to evolve the network built outside. This will need a handshake and a neurochem value at some point
 
-subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,blood_rows,epoch_cutoff,&
-	blood_gradient,blood_volume,vision,response,rows,columns,&
+subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,epoch_cutoff,&
+	blood_gradient,blood_volume,vision,response,&
 	node_use_reward,image_number,motivate_nomotivate,testicle)
 
 	!timing and controlling
@@ -22,13 +22,11 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	real :: start, finish, select_time
 	
 	!blood
-	integer :: blood_rows
 	real :: blood_volume,blood_gradient
 	integer :: blood_rate
 	
 	!brain
 	type(mind) :: thinking
-	integer :: rows,columns
 	real :: node_use_reward
 	integer,allocatable :: transition(:,:)
 	
@@ -43,8 +41,8 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	!general position
 	integer :: column_number,column_number_2,column_number_3,column_random_number
 	integer :: row_number,row_number_2,row_random_number
-	integer,dimension(columns) :: column_random
-	integer,dimension(rows) :: row_random
+	integer,allocatable :: column_random(:)
+	integer,allocatable :: row_random(:)
 	
 	!parallelisation
 	integer :: image_number
@@ -55,12 +53,16 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 	select_time=0.0
 
+	!allocate the randomisers
+	allocate(row_random(size(thinking%brain_status(1,1,:))))
+	allocate(column_random(size(thinking%brain_status(1,:,1))))	
+
 	proaction=.false.
 	epoch=0
 	
-	allocate(transition(columns,rows))
 
 	if (testicle=="test") then
+		call cpu_time(start)
 		call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
 			thinking%brain_status,thinking%blood)
 	end if
@@ -69,21 +71,16 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	!this is the new song
 	do while (proaction .eqv. .false.)
 	
-		transition=0
-	
 		!print*,size(thinking%blood(:,1)),1,"spiritech"
 	
 		!increment epoch
 		epoch=epoch+1
 		
-		call new_song(thinking,response,response_socket,response_length,rows,columns,node_use_reward)
+		call new_song(thinking,response,response_socket,response_length,node_use_reward)
 		
 		call weight_reducer(thinking%brain_weight)
 
-		if (testicle=="test") then
-			call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
-				thinking%brain_status,thinking%blood)
-		end if
+
 
 		!response translation into movement
 		!different rules for motivate and non motivate networks
@@ -118,7 +115,17 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 			proaction=.true.
 		end if
 		
-
+		if (testicle=="test") then
+			if (proaction .eqv. .true.) then
+				call cpu_time(finish)
+				!print*,image_number,start,finish
+				call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
+					thinking%brain_status,thinking%blood,start,finish)
+			else
+				call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
+					thinking%brain_status,thinking%blood)
+			end if
+		end if
 		
 	end do
 
