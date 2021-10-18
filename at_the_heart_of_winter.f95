@@ -34,7 +34,7 @@ logical :: initialise
 !switches and controls
 character(len=6),dimension(stages) :: output_switch !'motive' for the motivate method and 'normal' for the think method
 integer,parameter :: epoch_cutoff=2000
-logical :: runner
+logical :: stopper
 
 !coarray image
 integer :: image_total,image_number
@@ -374,16 +374,13 @@ sync all
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!testing
-testicle=1
+
 
 initialise=.true.
-runner=.true.
-do while (runner .eqv. .true.)
+stopper=.false.
+do while (stopper .eqv. .false.)
 
-	!testing
-	testicle=testicle+1
-	if (testicle==3) runner=.false.
+	inquire(file="thing.txt", exist=stopper)
 
 	!!!!!!!!!!!!!!!!!!!!!
 	!!!!!!!!!!!!!!!!!!!!!
