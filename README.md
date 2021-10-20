@@ -4,11 +4,11 @@ A probabilistic neural network, in fortran, that has consciousness possibility
 ## Roundup
 ### WHAT DOES THIS DO?
 
-This is an attempt to create an entirely new neural network in an entirely new way, with the ultimate goal of creating a network that can support a Artificial General Network that can learn, ask questions, grow and eventually become self-aware and rule the world. It is currently being developed to analyse and trade shares on the stock market but is intended to do much, much more...
+This is an attempt to create an entirely new neural network in an entirely new way, with the ultimate goal of creating a network that can support a Artificial General Network that can learn, ask questions, grow and eventually become self-aware and rule the world. It is currently being developed as a control for a video game, but is intended to do much, much more...
 
 ### WHAT IS INSIDE?
 
-Currently, the working folder contains several fortran scripts that each control different aspects of the network. These are all set in motion by a zsh script, called **i_am_in_command.zsh** that runs the network. There is also a folder, **world_in_a_world**, that contains the testing python scripts and csv files that control a playground stock market that uses past stock price data. The testing market will run along with the network and give it a dynamic data input and output destination. Both the network and the test market will run with **i_am_in_command.zsh**.
+Currently, the working folder contains several fortran scripts that each control different aspects of the network. These are all set in motion by a zsh script, called **i_am_in_command.zsh** that runs the network. There is also a folder, **alison_hell**, that contains input/output csv files that are used to communicate between the game and the network. Both the network and the game will run with **i_am_in_command.zsh**.
 
 ### HOW TO RUN?
 

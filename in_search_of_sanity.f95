@@ -15,22 +15,22 @@ contains
 !Normal - input feeds in and output keeps building until the stop output is activated
 !output_switcher is the feed in switch that determines whether the network is normal or motive 
 
-subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,directions,node_use_reward,&
+subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward,&
 	vision,response,vision_socket,response_socket,blood_rate,&
-	blood_volume,blood_gradient,neurodepth,epoch_cutoff,output_switcher,test)
+	blood_volume,blood_gradient,epoch_cutoff,output_switcher,test)
 
 	implicit none
 
 	!network setup and reading
-	integer :: rows, columns, directions, neurodepth
 	type(mind) :: think !think is the vision and response, motivate is the cash flow and neurochem controller
-	logical :: file_exists
+	logical :: initial
 	real :: node_use_reward
 
 	!sensing and response setup
 	!think array interfaces
 	integer,dimension(*) :: vision(:), response(:)
 	!motivate array interfaces
+	character(len=6) :: output_switcher
 	integer :: oddsey
 	!ubiquitous
 	integer :: vision_length, response_length
@@ -40,8 +40,9 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	integer :: column_number, column_number_2, row_number
 	integer :: moves, epoch, epoch_start
 	integer :: column_random_number, row_random_number
-	integer,dimension(columns) :: column_random
-	integer,dimension(rows) :: row_random
+	integer,allocatable :: column_random(:)
+	integer,allocatable :: row_random(:)
+	integer,allocatable :: blood_row_random(:)
 
 	!from the outside
 	integer :: epoch_cutoff
@@ -49,48 +50,28 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 
 	!blood
 	integer :: blood_rate
-	integer :: blood_rows
 	real :: blood_volume, blood_gradient
 
 	!timing
 	real :: start, finish, delay_time=0.0
-
-	!output
-	character(len=6) :: output_switcher !the switch for normal and motivation networks
-
+	
 	!coarray specific
-	integer :: image_number,image_total
-	character(len=20) :: will_file
+	integer :: image_number
 	
 	!testing
 	character(len=6) :: test
 
+	allocate(column_random(size(think%brain_status(1,:,1))))
+	allocate(row_random(size(think%brain_status(1,1,:))))
+	allocate(blood_row_random(size(think%blood(1,:))))
 
-	!blood rows is always rows +1
-	blood_rows=rows+1
-	!print*,"search1",rows,blood_rows,this_image(),response_socket
+	!print*,"search1",rows,size(think%blood(1,:)),this_image(),response_socket
 
 	!define the size of the vision and response arrays
 	vision_length=size(vision); response_length=size(response)
 
-
-	!allocate the network to the dimensions fed into the subroutione
-	allocate(think%brain_status(2,columns,rows)) !allocate the brain data and direction status, 1 is for the origin direction of data, 2 is for data status
-	allocate(think%brain_weight(directions,directions,columns,rows)) !allocate the brain direction weighting. 8,:,:,: holds the weights from origin :,x,:,: to point x,:,:,:
-	allocate(think%blood(columns,blood_rows)) !allocate the gradient variable, extra row for response array
-	allocate(think%neurochem(2,neurodepth,columns,rows)) !allocate the reward variable, 1,:,:,: is for origin, 2,:,:,: is for point. :,10,:,: is the weight ladder
-
-
-	!print*,size(think%blood(1,:))
-
-
-
-
 	!this is it
-	
-	
 
-	write(will_file,"(A4,I0,A4)") "will",image_number,".txt"
 
 	!fuck you
 	call random_seed()
@@ -98,11 +79,9 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 
 	!took sight and feel input from here into "at the heart of winter"
 	
-	
-	!if this is is a continuation of the algorithm, then load the previous cycle
-	INQUIRE(FILE=will_file, EXIST=file_exists)
-	!file_exists=.false.
-	if (file_exists .eqv. .true.) then
+	!print*,initial,image_number
+
+	if (initial .eqv. .false.) then
 		!zero out the response first
 		!for think (1)
 		response=0
@@ -110,10 +89,8 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 
 		!call cpu_time(start)	
 
-		call read_write(image_number,image_total,think,"read")
-		think%brain_status=0
-		!call cpu_time(finish)
-		!print*,"read",image_number,finish-start
+		call cpu_time(start)
+
 
 			
 		!this makes the system yearn for happiness
@@ -130,12 +107,20 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 		
 		!print*,"First Move",image_number
 		!initialise the network
+!		print*,size(think%brain_weight(:,1,1,1)),size(think%brain_weight(1,:,1,1)),&
+!		size(think%brain_weight(1,1,:,1)),size(think%brain_weight(1,1,1,:)),&
+!		image_number,"weight"
+!		
+!		print*,size(think%neurochem(:,1,1,1)),size(think%neurochem(1,:,1,1)),&
+!		size(think%neurochem(1,1,:,1)),size(think%neurochem(1,1,1,:)),&
+!		image_number,"neurochem"
+		
 		call initialiser(think,response,blood_volume,response_socket)
-
+		call cpu_time(start)
 		!add the necessary blood to the response and vision input/output 
 		do column_number=1,response_length
-			think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)=&
-				think%blood(plugin(column_number,response_socket,response_length,"brain"),blood_rows)+blood_volume	
+			think%blood(plugin(column_number,response_socket,response_length,"brain"),size(think%blood(1,:)))=&
+				think%blood(plugin(column_number,response_socket,response_length,"brain"),size(think%blood(1,:)))+blood_volume	
 		end do	
 	
 		do column_number=1,vision_length
@@ -145,25 +130,27 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 		
 		!setup the blood profile
 		!first, randomise random row list
-		call randomised_list(row_random)
+		call randomised_list(blood_row_random)
 		 
 		!now I shall send randomly selected neurons to have data moved
-		do row_number=1,rows
+		do row_number=1,size(think%brain_status(1,1,:))
 
 			!first, randomise column list for each row
 			call randomised_list(column_random)
 		
-			do column_number=1,columns
+			do column_number=1,size(think%brain_status(1,:,1))
 			
 				!now, assign the random integer positional number to the requisite random number positional number holder number
 				column_random_number=column_random(column_number)
-				row_random_number=row_random(row_number)	
+				row_random_number=blood_row_random(row_number)	
 				
 				call blood_mover(think%blood,column_random_number,row_random_number,blood_gradient)
 				
 			end do
 			
 		end do
+
+
 
 	end if
 
@@ -186,7 +173,7 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	
 	
 	
-	call cpu_time(start)	
+		
 
 	!!!!!!!!!!!
 	!!! Die !!!
@@ -194,10 +181,10 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 	!This is the kernal, the grand daddy of this whole rotten affair
 	!this subroutine moves through the network and blood and propogates all data movement
 	call spiritech(think,blood_rate,response_socket,response_length,vision_length,&
-		vision_socket,blood_rows,epoch_cutoff,blood_gradient,blood_volume,vision,response,&
-		rows,columns,node_use_reward,image_number,output_switcher,test)
+		vision_socket,epoch_cutoff,blood_gradient,blood_volume,vision,response,&
+		node_use_reward,image_number,output_switcher,test)
 
-	call cpu_time(finish)
+	
 !	print*,"spiritech",image_number,finish-start
 
 
@@ -225,9 +212,10 @@ subroutine insanitorium_deluxe(oddsey,image_number,image_total,rows,columns,dire
 
 	!call cpu_time(start)
 	!place all the information network in a text file
-	call read_write(image_number,image_total,think,"write")
-	!call cpu_time(finish)
-	!print*,"write",image_number,finish-start
+	call cpu_time(finish)
+	!call print_interval(start,finish)
+	!print*,image_number
+
 
 
 

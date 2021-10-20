@@ -457,11 +457,11 @@ end subroutine
 
 
 !this subroutine takes in the network and propogates the next battery of movements
-subroutine new_song(think,response,response_socket,response_length,rows,columns,reward)
+subroutine new_song(think,response,response_socket,response_length,reward)
 
 	type(mind) :: think
 	integer,dimension(*) :: response
-	integer :: response_socket,response_length,rows,columns
+	integer :: response_socket,response_length
 	real :: reward,fuck_me
 	integer,allocatable :: transition(:,:)
 	integer,dimension(2,8) :: conflict_list !(1,x) is column, (2,x) is row
@@ -469,12 +469,12 @@ subroutine new_song(think,response,response_socket,response_length,rows,columns,
 	integer :: rung,column_count,row_count,column_check,row_check,error_count,rank_size,rank
 	logical :: error_check,catch
 	
-	allocate(transition(columns,rows))
+	allocate(transition(size(think%brain_status(1,:,1)),size(think%brain_status(1,1,:))))
 	
 	!selector
 	transition=0
-	do row_count=1,rows
-		do column_count=1, columns
+	do row_count=1,size(think%brain_status(1,1,:))
+		do column_count=1, size(think%brain_status(1,:,1))
 			
 			if( think%brain_status(2,column_count,row_count)==1 ) then
 				
@@ -491,8 +491,8 @@ subroutine new_song(think,response,response_socket,response_length,rows,columns,
 	error_check=.true.
 	do while (error_check .eqv. .true.)
 		error_check=.false.
-		do row_count=1, rows, 1
-			do column_count=1, columns, 1
+		do row_count=1, size(think%brain_status(1,1,:)), 1
+			do column_count=1, size(think%brain_status(1,:,1)), 1
 				if( think%brain_status(2,column_count,row_count)==1 ) then
 				
 					!reset error checking variables
@@ -503,8 +503,8 @@ subroutine new_song(think,response,response_socket,response_length,rows,columns,
 						do column_check=column_count-2, column_count+2, 1
 						
 							!check if the chcek is in the network
-							if( (row_check>=1) .and. (column_check>=1) .and. (row_check<=rows) .and. (column_check<=columns) &
-								.and. ((row_check/=row_count) .or. (column_check/=column_count)) ) then
+							if( (row_check>=1) .and. (column_check>=1) .and. (row_check<=size(think%brain_status(1,1,:))) .and. &
+								(column_check<=size(think%brain_status(1,:,1))) .and. ((row_check/=row_count) .or. (column_check/=column_count)) ) then
 								
 								!check if there is a datum that is going to the same place
 								if ( (point_to_neuron(column_check,row_check,transition(column_check,row_check),"row")==&
@@ -637,9 +637,13 @@ subroutine new_song(think,response,response_socket,response_length,rows,columns,
 						
 		!response changes
 		do column_check=1,size(transition(:,1))
-			if (point_to_neuron(column_check,rows,transition(column_check,rows),"row")==rows+1) then
-				response(plugin(point_to_neuron(column_check,rows,transition(column_check,rows),"column"),&
+			if (point_to_neuron(column_check,size(think%brain_status(1,1,:)),transition(column_check,&
+				size(think%brain_status(1,1,:))),"row")==size(think%brain_status(1,1,:))+1) then
+				
+				response(plugin(point_to_neuron(column_check,size(think%brain_status(1,1,:)),&
+					transition(column_check,size(think%brain_status(1,1,:))),"column"),&
 					response_socket,response_length,"array"))=1
+					
 			end if
 		end do
 			
@@ -931,31 +935,7 @@ end subroutine weight_reducer
 	
 	
 	
-!this subroutine can be called to set weights, after the initialiser, but before the main loop, so as to direct neurons from the beginning	
-!as of now, breaks the network. Do not use unless you fix it
-subroutine preprogram(weights)
-	
-	real,dimension(*) :: weights(:,:,:,:)
-	integer :: pathfinder, rows,columns
-	
-	rows=size(weights(1,1,1,:)); columns=size(weights(1,1,:,1))
-	
-	!here, I am directing data coming from the extreme left and extreme right to cross the network
-	
 
-	!subsequent nodes on the path from extreme left
-	weights(8,2,1,1)=1000000.0
-	do pathfinder=2,rows
-		weights(8,1,pathfinder,pathfinder)=1000000.0
-	end do	
-	
-	!subsequent nodes on the path from extreme right
-	weights(6,2,columns,1)=1000000.0
-	do pathfinder=2,rows
-		weights(6,3,columns-pathfinder+1,pathfinder)=1000000.0
-	end do	
-	
-end subroutine preprogram
 	
 
 	
