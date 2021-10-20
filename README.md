@@ -14,8 +14,7 @@ Currently, the working folder contains several fortran scripts that each control
 
 It's quite simple, really. just run the `i_am_in_command.zsh arg1 arg2 arg3` bash script with three arguments:
   - `arg1`: (noclean/clean) tell the network whether to use the network from the last run or wipe it and start again
-  - `arg2`: (integer) a numerical argument - how many times the network should be run
-  - `arg3`: (test/notest) tell the network to either output printouts of the network activation movements or not
+  - `arg2`: (test/notest) tell the network to either output printouts of the network activation movements or not
 
 note: this network makes use of the opencoarrays parralelisation wrapper for fortran. Installation of this wrapper will be necessary to run this software. This wrapper can be found at http://www.opencoarrays.org/ and there are simple use instructions at https://docs.it4i.cz/software/numerical-languages/opencoarrays/.
 
@@ -79,18 +78,4 @@ As above, the x represents a node. The first layer is an input layer (top) that 
 
 The input and output arrays control information moving into and out from the network. The array system is coded to work best when the array size is an odd number, but can work at any length. As previously stated, the input array can be of any length, but the output array needs to be smaller than the number of columns in the array.
 
-
-##### Current issues
-
-1. random actioning of data movement of data through the network means that interaction between data is random or, at least, happens at random points, which makes set structure difficult to emerge.
-3. The oddsey given to networks from the motivate array is tiny compared to the effect necessary needed to be lasting
-
-##### Current settings
-
-1. i_am_in_command.zsh has two necessary arguments:
-      1. the first argument (clean/noclean) determines whether a new network is generated or a previous one is used
-      2. the third argument is a numerical (integer) argument that determines how many cycles the network and test market will run for
-2. In network creation, there are two types of network:
-      1. Motive: designed for simple motivation determination of the greater network, this network determines the motivation factor for the larger network. It's mode of information is positional
-      2. Normal: the network takes in the motive factor from the motive network and vision data and computes as normal
 
