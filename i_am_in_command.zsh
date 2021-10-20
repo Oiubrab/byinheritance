@@ -6,21 +6,13 @@
 #second argument: runs the system this many times
 #third argument: includes the test output (test/notest)
 
+reset
+
 #first, remove the old binary and module files
-
-#test for printing
-if [[ $4 != "print" && $4 != "noprint" ]]
-then
-	exit
-elif [[ $4 = "print" ]]
-then
-	reset
-fi
-
-if [[ $3 = "test" ]]
+if [[ $2 = "test" ]]
 then
 	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod the_sound_of_perserverance.mod darkness.mod
-elif [[ $3 = "notest" ]]
+elif [[ $2 = "notest" ]]
 then
 	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod the_sound_of_perserverance.mod
 else
@@ -45,17 +37,5 @@ cd exponential_uncertainty_death_machine
 ./exponential_uncertainty_death_machine.x86_64 &
 cd ..
 
-#run the network $4 times
-for i in $(seq 1 $2)
-do
-
-	if [[ $4 = "print" ]]
-	then 
-		echo "run: " $i | tee -a "test_log.txt"
-	fi
-
-	cafrun -n 2 --use-hwthread-cpus ./lack_of_comprehension $3
-
-	
-done
-
+#the last trapped fury
+cafrun -n 2 --use-hwthread-cpus ./lack_of_comprehension $2

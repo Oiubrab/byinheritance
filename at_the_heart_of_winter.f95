@@ -34,7 +34,7 @@ logical :: initialise
 !switches and controls
 character(len=6),dimension(stages) :: output_switch !'motive' for the motivate method and 'normal' for the think method
 integer,parameter :: epoch_cutoff=2000
-logical :: stopper
+logical :: stopper,pauser
 
 !coarray image
 integer :: image_total,image_number
@@ -381,370 +381,374 @@ stopper=.false.
 do while (stopper .eqv. .false.)
 
 	inquire(file="thing.txt", exist=stopper)
-
-	!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!
-	!!!Motivation Step!!!
-	!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!
-
-	stage_count=1
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!motivate communication structure construct!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-	!motivate(1) opens feel and puts it into it's vision
-	if (image_number==1) then
+	inquire(file="machine.txt", exist=pauser)
+	if (pauser .eqv. .true.) then
 		
-		!put the array from feel into the vision array
-		open(unit=1,file="alison_hell/sight.csv")
-		read(1,*) trans(stage_count)%vision
-		close(1)
-		
-	else if (image_number==2) then
-		
-		!put the array from errors into the vision array
-		open(unit=1,file="alison_hell/food.csv")
-		read(1,*) trans(stage_count)%vision
-		close(1)
+
+		!!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!!
+		!!!Motivation Step!!!
+		!!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!!
+
+		stage_count=1
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!motivate communication structure construct!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+		!motivate(1) opens feel and puts it into it's vision
+		if (image_number==1) then
 			
-	end if
+			!put the array from feel into the vision array
+			open(unit=1,file="alison_hell/sight.csv")
+			read(1,*) trans(stage_count)%vision
+			close(1)
+			
+		else if (image_number==2) then
+			
+			!put the array from errors into the vision array
+			open(unit=1,file="alison_hell/food.csv")
+			read(1,*) trans(stage_count)%vision
+			close(1)
+				
+		end if
 
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!end motivate communication structure construct!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!end motivate communication structure construct!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
-!	do testicles=1,3
-!		print*,size(mission(testicles)%brain_weight(:,1,1,1)),size(mission(testicles)%brain_weight(1,:,1,1)),&
-!		size(mission(testicles)%brain_weight(1,1,:,1)),size(mission(testicles)%brain_weight(1,1,1,:)),&
-!		testicles,image_number,"weight"
-!		print*,size(mission(testicles)%neurochem(:,1,1,1)),size(mission(testicles)%neurochem(1,:,1,1)),&
-!		size(mission(testicles)%neurochem(1,1,:,1)),size(mission(testicles)%neurochem(1,1,1,:)),&
-!		testicles,image_number,"neurochem"
-!	end do
+	!	do testicles=1,3
+	!		print*,size(mission(testicles)%brain_weight(:,1,1,1)),size(mission(testicles)%brain_weight(1,:,1,1)),&
+	!		size(mission(testicles)%brain_weight(1,1,:,1)),size(mission(testicles)%brain_weight(1,1,1,:)),&
+	!		testicles,image_number,"weight"
+	!		print*,size(mission(testicles)%neurochem(:,1,1,1)),size(mission(testicles)%neurochem(1,:,1,1)),&
+	!		size(mission(testicles)%neurochem(1,1,:,1)),size(mission(testicles)%neurochem(1,1,1,:)),&
+	!		testicles,image_number,"neurochem"
+	!	end do
 
 
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!run motivate networks!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!run motivate networks!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-	if (output_switch(stage_count)=="motive") then
+		if (output_switch(stage_count)=="motive") then
+			call insanitorium_deluxe(initialise,mission(stage_count),oddsey,ident_number(stage_count),&
+				node_use_reward(stage_count),trans(stage_count)%vision,trans(stage_count)%response,&
+				vision_socket(stage_count),response_socket(stage_count),blood_rate,&
+				blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
+		end if
+
+		!first, calculate the prime oddsey number from the oddsey numbers outputted	
+		!send the oddsey number to the other networks
+		sync all
+
+		oddsey=(10*oddsey[1]+oddsey[2])*10000
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!end run motivate networks!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!End Motivation Step!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!
+		!!!Sight Step!!!
+		!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+		stage_count=2
+
+
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!Input and motivate communication structure construct!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+		!sight lust(1) opens the sight lust csv and puts it into it's vision
+		if (image_number==1) then
+
+			!place the sight lust array into vision for the sight lust network
+			open(unit=1,file="alison_hell/sight_left.csv")
+			read(1,*) trans(stage_count)%vision
+			
+		!sight joys(2) opens the sight joys csv and puts it into it's vision
+		else if (image_number==2) then
+
+			!place the sight joys array into vision for the sight joys network
+			open(unit=1,file="alison_hell/sight_right.csv")
+			read(1,*) trans(stage_count)%vision
+			
+			
+		end if
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!end Input and motivate communication structure construct!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!run sight networks!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!
+
 		call insanitorium_deluxe(initialise,mission(stage_count),oddsey,ident_number(stage_count),&
 			node_use_reward(stage_count),trans(stage_count)%vision,trans(stage_count)%response,&
 			vision_socket(stage_count),response_socket(stage_count),blood_rate,&
 			blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
+			
+		sync all
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!end run sight networks!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!
+		!!!End Sight Step!!!
+		!!!!!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!
+		!!!Think Step!!!
+		!!!!!!!!!!!!!!!!
+		!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+		stage_count=3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!place out put from sight networks and motivate network into think!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+		sync all
+
+
+		!think(1) opens sight and feel_response and puts them into it's vision
+		if (image_number==1) then
+			
+			
+
+			
+
+			!add response from all four networks
+			!the minus one here is because the vision array has an extra position added that isn't used, it's just for padding to make it odd
+			do count_count=1,vision_length(3)-1
+				!add response from sight left
+				if (count_count<=response_length(2)[1]) then
+					trans(stage_count)%vision(count_count)=trans(2)[1]%response(count_count)
+				!add response from sight jright
+				else if (count_count<=response_length(2)[1]+response_length(2)[2]) then
+					trans(stage_count)%vision(count_count)=trans(2)[2]%response(count_count-response_length(2)[1])
+				!add response from sight motivate 
+				else if (count_count<=response_length(2)[1]+response_length(2)[2]+&
+					response_length(1)[1]) then
+					trans(stage_count)%vision(count_count)=trans(1)[1]%response(count_count-&
+						(response_length(2)[1]+response_length(2)[2]))
+				!add response from food motivate 
+				else
+					trans(stage_count)%vision(count_count)=trans(1)[2]%response(count_count-&
+						(response_length(2)[1]+response_length(2)[2]+&
+						response_length(1)[1]))
+				end if
+			end do
+
+
+		end if
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!end place out put from sight networks and motivate network into think!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!
+		!!!run think network!!!
+		!!!!!!!!!!!!!!!!!!!!!!!
+
+		!note: here, the think network is run on image one but is given the label of image 4 (image total)
+		!this is done in order to reuse images, freeing up computing spaces for future activities
+		if (image_number==1) then
+			call insanitorium_deluxe(initialise,mission(stage_count),oddsey,ident_number(stage_count),&
+				node_use_reward(stage_count),trans(stage_count)%vision,trans(stage_count)%response,&
+				vision_socket(stage_count),response_socket(stage_count),blood_rate,&
+				blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
+		end if
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!!end run think network!!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!! Output and inter-put !!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+		!open csv files for output saving
+		!place response array into a csv file (sight_response.csv)
+		if (image_number==1) then
+			open(unit=1,file="alison_hell/response.csv")
+
+			!take the arrays and put them into the csv file
+			!write each element of the csv file independantly
+			do column_number=1,response_length(stage_count)-1
+				write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') trans(stage_count)%response(column_number),','
+			end do
+			write(csv_outputter((response_length(stage_count)*2)-1:response_length(stage_count)*2),'(I1)') &
+				trans(stage_count)%response(response_length(stage_count))
+			write(1,*) csv_outputter
+			close(1)
+			
+		end if
+			
+
+
+
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		!!! end Output and inter-put !!!
+		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+		initialise=.false.
+		!print*,"farewell",image_number
+		sync all
 	end if
-
-	!first, calculate the prime oddsey number from the oddsey numbers outputted	
-	!send the oddsey number to the other networks
-	sync all
-
-	oddsey=(10*oddsey[1]+oddsey[2])*10000
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!end run motivate networks!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!End Motivation Step!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!
-	!!!Sight Step!!!
-	!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-	stage_count=2
-
-
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!Input and motivate communication structure construct!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-	!sight lust(1) opens the sight lust csv and puts it into it's vision
-	if (image_number==1) then
-
-		!place the sight lust array into vision for the sight lust network
-		open(unit=1,file="alison_hell/sight_left.csv")
-		read(1,*) trans(stage_count)%vision
-		
-	!sight joys(2) opens the sight joys csv and puts it into it's vision
-	else if (image_number==2) then
-
-		!place the sight joys array into vision for the sight joys network
-		open(unit=1,file="alison_hell/sight_right.csv")
-		read(1,*) trans(stage_count)%vision
-		
-		
-	end if
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!end Input and motivate communication structure construct!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!run sight networks!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!
-
-	call insanitorium_deluxe(initialise,mission(stage_count),oddsey,ident_number(stage_count),&
-		node_use_reward(stage_count),trans(stage_count)%vision,trans(stage_count)%response,&
-		vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-		blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
-		
-	sync all
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!end run sight networks!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!
-	!!!End Sight Step!!!
-	!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!
-	!!!Think Step!!!
-	!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-	stage_count=3
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!place out put from sight networks and motivate network into think!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	sync all
-
-
-	!think(1) opens sight and feel_response and puts them into it's vision
-	if (image_number==1) then
-		
-		
-
-		
-
-		!add response from all four networks
-		!the minus one here is because the vision array has an extra position added that isn't used, it's just for padding to make it odd
-		do count_count=1,vision_length(3)-1
-			!add response from sight left
-			if (count_count<=response_length(2)[1]) then
-				trans(stage_count)%vision(count_count)=trans(2)[1]%response(count_count)
-			!add response from sight jright
-			else if (count_count<=response_length(2)[1]+response_length(2)[2]) then
-				trans(stage_count)%vision(count_count)=trans(2)[2]%response(count_count-response_length(2)[1])
-			!add response from sight motivate 
-			else if (count_count<=response_length(2)[1]+response_length(2)[2]+&
-				response_length(1)[1]) then
-				trans(stage_count)%vision(count_count)=trans(1)[1]%response(count_count-&
-					(response_length(2)[1]+response_length(2)[2]))
-			!add response from food motivate 
-			else
-				trans(stage_count)%vision(count_count)=trans(1)[2]%response(count_count-&
-					(response_length(2)[1]+response_length(2)[2]+&
-					response_length(1)[1]))
-			end if
-		end do
-
-
-	end if
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!end place out put from sight networks and motivate network into think!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!
-	!!!run think network!!!
-	!!!!!!!!!!!!!!!!!!!!!!!
-
-	!note: here, the think network is run on image one but is given the label of image 4 (image total)
-	!this is done in order to reuse images, freeing up computing spaces for future activities
-	if (image_number==1) then
-		call insanitorium_deluxe(initialise,mission(stage_count),oddsey,ident_number(stage_count),&
-			node_use_reward(stage_count),trans(stage_count)%vision,trans(stage_count)%response,&
-			vision_socket(stage_count),response_socket(stage_count),blood_rate,&
-			blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
-	end if
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!end run think network!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!! Output and inter-put !!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-	!open csv files for output saving
-	!place response array into a csv file (sight_response.csv)
-	if (image_number==1) then
-		open(unit=1,file="alison_hell/response.csv")
-
-		!take the arrays and put them into the csv file
-		!write each element of the csv file independantly
-		do column_number=1,response_length(stage_count)-1
-			write(csv_outputter((column_number*2)-1:column_number*2),'(I1,A1)') trans(stage_count)%response(column_number),','
-		end do
-		write(csv_outputter((response_length(stage_count)*2)-1:response_length(stage_count)*2),'(I1)') &
-			trans(stage_count)%response(response_length(stage_count))
-		write(1,*) csv_outputter
-		close(1)
-		
-	end if
-		
-
-
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!! end Output and inter-put !!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-	initialise=.false.
-	!print*,"farewell",image_number
-	sync all
 end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -759,6 +763,7 @@ end do
 !!!End Think Step!!!
 !!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!
+
 
 
 end program
