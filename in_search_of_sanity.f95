@@ -53,7 +53,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	real :: blood_volume, blood_gradient
 
 	!timing
-	real :: start, finish, delay_time=0.0
+	real :: start, finish
 	
 	!coarray specific
 	integer :: image_number
@@ -87,7 +87,6 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		response=0
 		!open the test log
 
-		!call cpu_time(start)	
 
 		call cpu_time(start)
 
@@ -105,15 +104,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	!Otherwise, if this is the first time this network is activated, it has to be initialised
 	else
 		
-		!print*,"First Move",image_number
-		!initialise the network
-!		print*,size(think%brain_weight(:,1,1,1)),size(think%brain_weight(1,:,1,1)),&
-!		size(think%brain_weight(1,1,:,1)),size(think%brain_weight(1,1,1,:)),&
-!		image_number,"weight"
-!		
-!		print*,size(think%neurochem(:,1,1,1)),size(think%neurochem(1,:,1,1)),&
-!		size(think%neurochem(1,1,:,1)),size(think%neurochem(1,1,1,:)),&
-!		image_number,"neurochem"
+
 		
 		call initialiser(think,response,blood_volume,response_socket)
 		call cpu_time(start)

@@ -1,12 +1,12 @@
 #!/bin/zsh
 
 #this runner runs the finance version of the brain
-# three arguments: 
-#first argument: cleans prior runs (clean/noclean)
-#second argument: runs the system this many times
-#third argument: includes the test output (test/notest)
+#two arguments:
+ 
 
 reset
+
+broke=0
 
 #first, remove the old binary and module files
 if [[ $2 = "test" ]]
@@ -16,7 +16,7 @@ elif [[ $2 = "notest" ]]
 then
 	rm lack_of_comprehension in_search_of_sanity.mod spiritechnology.mod welcome_to_dying.mod the_sound_of_perserverance.mod
 else
-	exit
+	broke=1	
 fi
 
 # this option removes all prior brain and market data, allowing a brand new run to take place
@@ -27,8 +27,23 @@ then
 	rm *.txt
 elif [[ $1 != "noclean" ]]
 then
-	exit
+	broke=1
 fi
+
+#tell the user what to do if they fuck up
+if [[ $broke = 1 ]]
+then
+	echo "run this with two arguments like:"
+	echo "./i_am_in_command arg1 arg2"
+	echo "where:"
+	echo "arg1=clean/noclean (removes all txt files in the rooting directory"
+	echo "arg2=test/notest (causes the AI to generated testing txt files)"
+	unset $broke
+	exit
+else
+	unset $broke
+fi
+	
 
 #compile
 caf -fbounds-check welcome_to_dying.f95 the_sound_of_perserverance.f95 darkness.f95 spiritechnology.f95 in_search_of_sanity.f95 at_the_heart_of_winter.f95 -o lack_of_comprehension

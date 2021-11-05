@@ -33,7 +33,7 @@ logical :: initialise
 
 !switches and controls
 character(len=6),dimension(stages) :: output_switch !'motive' for the motivate method and 'normal' for the think method
-integer,parameter :: epoch_cutoff=2000
+integer,parameter :: epoch_cutoff=50
 logical :: stopper,pauser
 
 !coarray image
@@ -48,6 +48,7 @@ type(see_saw),dimension(stages) :: trans[*]
 integer,dimension(stages),codimension[*] :: vision_length=2,response_length=2
 integer,dimension(stages) :: vision_socket,response_socket
 character(len=:),allocatable :: csv_outputter
+integer :: error
 
 !reward control
 real,dimension(stages) :: node_use_reward
@@ -63,6 +64,7 @@ integer :: count_count,column_number,stage_count
 
 !testing
 character(len=6) :: tester
+logical :: testing
 integer :: testicle,testicles
 
 !import the tester
@@ -375,15 +377,24 @@ sync all
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-
+testicle=0
 initialise=.true.
 stopper=.false.
 do while (stopper .eqv. .false.)
+
+
+	
+
 
 	inquire(file="thing.txt", exist=stopper)
 	inquire(file="machine.txt", exist=pauser)
 	if (pauser .eqv. .true.) then
 		
+!	testicle=testicle+1
+!	if (testicle==8) then
+!		stopper=.true.
+!	end if
+
 
 		!!!!!!!!!!!!!!!!!!!!!
 		!!!!!!!!!!!!!!!!!!!!!
@@ -402,16 +413,22 @@ do while (stopper .eqv. .false.)
 		if (image_number==1) then
 			
 			!put the array from feel into the vision array
-			open(unit=1,file="alison_hell/sight.csv")
-			read(1,*) trans(stage_count)%vision
-			close(1)
+			error=-1
+			do while (error/=0)
+				open(unit=1,file="alison_hell/sight.csv")
+				read(1,*,iostat=error) trans(stage_count)%vision
+				close(1)
+			end do
 			
 		else if (image_number==2) then
 			
 			!put the array from errors into the vision array
-			open(unit=1,file="alison_hell/food.csv")
-			read(1,*) trans(stage_count)%vision
-			close(1)
+			error=-1
+			do while (error/=0)
+				open(unit=1,file="alison_hell/food.csv")
+				read(1,*,iostat=error) trans(stage_count)%vision
+				close(1)
+			end do
 				
 		end if
 
@@ -448,7 +465,8 @@ do while (stopper .eqv. .false.)
 
 		oddsey=(10*oddsey[1]+oddsey[2])*10000
 
-
+		inquire(file="thing.txt", exist=stopper)
+		if (stopper .eqv. .true.) exit
 
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		!!!end run motivate networks!!!
@@ -531,17 +549,23 @@ do while (stopper .eqv. .false.)
 		if (image_number==1) then
 
 			!place the sight lust array into vision for the sight lust network
-			open(unit=1,file="alison_hell/sight_left.csv")
-			read(1,*) trans(stage_count)%vision
+			error=-1
+			do while (error/=0)
+				open(unit=1,file="alison_hell/sight_left.csv")
+				read(1,*,iostat=error) trans(stage_count)%vision
+				close(1)
+			end do
 			
 		!sight joys(2) opens the sight joys csv and puts it into it's vision
 		else if (image_number==2) then
 
 			!place the sight joys array into vision for the sight joys network
-			open(unit=1,file="alison_hell/sight_right.csv")
-			read(1,*) trans(stage_count)%vision
-			
-			
+			error=-1
+			do while (error/=0)
+				open(unit=1,file="alison_hell/sight_right.csv")
+				read(1,*,iostat=error) trans(stage_count)%vision
+				close(1)
+			end do
 		end if
 
 
@@ -572,6 +596,9 @@ do while (stopper .eqv. .false.)
 			blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
 			
 		sync all
+
+		inquire(file="thing.txt", exist=stopper)
+		if (stopper .eqv. .true.) exit
 
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		!!!end run sight networks!!!
@@ -703,6 +730,9 @@ do while (stopper .eqv. .false.)
 				blood_volume,blood_gradient,epoch_cutoff,output_switch(stage_count),tester)
 		end if
 
+		inquire(file="thing.txt", exist=stopper)
+		if (stopper .eqv. .true.) exit
+
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		!!!end run think network!!!
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -746,7 +776,7 @@ do while (stopper .eqv. .false.)
 
 
 		initialise=.false.
-		!print*,"farewell",image_number
+
 		sync all
 	end if
 end do

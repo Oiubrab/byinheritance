@@ -17,23 +17,14 @@ subroutine flesh_and_the_power_it_holds(thinker,vision,oddsey,image)
 	integer,dimension(*) :: vision(:)
 	integer :: oddsey,image
 
-	!for motivate feel, convert back to a percentage and reward accordingly
+	!for motivate sight
 	if (image==1) then
-		if (position_to_percentage(vision)<0) then 
-
-			oddsey=position_to_percentage(vision)/2
-		else
-			oddsey=position_to_percentage(vision)
-		end if
-	!for motivate errors, motivate perfection and punish mistakes
+		!0 to 50
+		oddsey=50-50*abs(((size(vision)/2)+1)-findloc(vision,1,dim=1))/((size(vision)/2)+1)
+	!for motivate food
 	else if (image==2) then
-		oddsey=findloc(vision,1,dim=1)
-		if (oddsey==1) then
-			oddsey=90
-		else
-			oddsey=-30*oddsey
-		end if
-
+		!0 to 100
+		oddsey=findloc(vision,1,dim=1)*20
 	end if
 
 	

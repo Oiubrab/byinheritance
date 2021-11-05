@@ -87,12 +87,13 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 		if (motivate_nomotivate=="normal") then
 		
 			!this condition picks up whether some response has been fed into the stop position (last position in the array)
-			if (response(response_length)==1) then
-				!stop the main loop
-				proaction=.true.
+			do column_number_2=1,size(response)
+				if (response(column_number_2)==1) then
+					!stop the main loop
+					proaction=.true.
 
-			end if
-		
+				end if
+			end do
 		else if (motivate_nomotivate=="motive") then
 		
 			!response translation into movement
