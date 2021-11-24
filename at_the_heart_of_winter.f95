@@ -390,10 +390,6 @@ do while (stopper .eqv. .false.)
 	inquire(file="machine.txt", exist=pauser)
 	if (pauser .eqv. .true.) then
 		
-!	testicle=testicle+1
-!	if (testicle==8) then
-!		stopper=.true.
-!	end if
 
 
 		!!!!!!!!!!!!!!!!!!!!!
@@ -438,14 +434,6 @@ do while (stopper .eqv. .false.)
 
 
 
-	!	do testicles=1,3
-	!		print*,size(mission(testicles)%brain_weight(:,1,1,1)),size(mission(testicles)%brain_weight(1,:,1,1)),&
-	!		size(mission(testicles)%brain_weight(1,1,:,1)),size(mission(testicles)%brain_weight(1,1,1,:)),&
-	!		testicles,image_number,"weight"
-	!		print*,size(mission(testicles)%neurochem(:,1,1,1)),size(mission(testicles)%neurochem(1,:,1,1)),&
-	!		size(mission(testicles)%neurochem(1,1,:,1)),size(mission(testicles)%neurochem(1,1,1,:)),&
-	!		testicles,image_number,"neurochem"
-	!	end do
 
 
 		!!!!!!!!!!!!!!!!!!!!!!!!!!!
