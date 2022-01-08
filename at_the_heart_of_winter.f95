@@ -453,6 +453,9 @@ do while (stopper .eqv. .false.)
 
 		oddsey=(10*oddsey[1]+oddsey[2])*10000
 
+		testicle=testicle+1
+		print*,testicle
+
 		inquire(file="thing.txt", exist=stopper)
 		if (stopper .eqv. .true.) exit
 

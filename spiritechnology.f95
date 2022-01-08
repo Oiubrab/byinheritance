@@ -36,7 +36,6 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	
 	!test log
 	logical :: testing,show_blood
-	real :: delay_time
 	
 	!general position
 	integer :: column_number,column_number_2,column_number_3,column_random_number
@@ -49,9 +48,13 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	
 	!testing
 	character(len=6) :: testicle
+	character(len=100) :: network_tit
 	
 	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 	select_time=0.0
+
+	!setup the network title
+	write(network_tit,"(A5,I0,A4)")"think",image_number,".txt"
 
 	!allocate the randomisers
 	allocate(row_random(size(thinking%brain_status(1,1,:))))
@@ -59,28 +62,29 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 
 	proaction=.false.
 	epoch=0
-	
-
-	if (testicle=="test") then
-		call cpu_time(start)
-		call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
-			thinking%brain_status,thinking%blood)
-	end if
 
 
 	!this is the new song
 	do while (proaction .eqv. .false.)
-	
-		!print*,size(thinking%blood(:,1)),1,"spiritech"
 	
 		!increment epoch
 		epoch=epoch+1
 		
 		call new_song(thinking,response,response_socket,response_length,node_use_reward)
 		
+		!data printing
+		if (testicle=="test") then
+			open(unit=image_number, file=network_tit)
+			do row_number=1,size(thinking%brain_status(1,1,:))
+				write(image_number,*) thinking%brain_status(2,:,row_number)
+			end do
+			close(image_number)
+		end if
+		
 		call weight_reducer(thinking%brain_weight)
 
-
+		!count the active neurons and apply a function to regulate the number
+		call regulators(thinking)
 
 		!response translation into movement
 		!different rules for motivate and non motivate networks
@@ -116,17 +120,6 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 			proaction=.true.
 		end if
 		
-		if (testicle=="test") then
-			if (proaction .eqv. .true.) then
-				call cpu_time(finish)
-				!print*,image_number,start,finish
-				call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
-					thinking%brain_status,thinking%blood,start,finish)
-			else
-				call print_network(image_number,epoch,vision,vision_socket,response,response_socket,&
-					thinking%brain_status,thinking%blood)
-			end if
-		end if
 		
 	end do
 

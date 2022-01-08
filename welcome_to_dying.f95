@@ -379,6 +379,18 @@ end function plugin
 
 
 
+!this subroutine regulates the amount of data passing through the network
+subroutine regulators(thunk)
+
+	type(mind) :: thunk
+	
+	if (sum(thunk%brain_status(2,:,:))>20) then
+		!do something
+	end if
+	
+end subroutine
+
+
 
 
 !this subroutine will take a position and roll on a direction for the data
