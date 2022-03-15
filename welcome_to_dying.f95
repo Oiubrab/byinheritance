@@ -675,7 +675,7 @@ subroutine blood_mover(blood,column_num,row_num,gradient)
 	real,dimension(*) :: blood(:,:)
 	integer,allocatable :: row_randomised(:), column_randomised(:)
 	integer :: column_num,row_num,row_select,column_select
-	real :: hope, fear, dist, distil, transition
+	real :: hope, fear, dist, distil, transition, transition_normal, transition_combine, transition_square
 	real :: gradient !controls how quickly blood flows. bigger is faster
 	integer :: rows,columns,row_number_2,column_number_2
 	
@@ -704,8 +704,14 @@ subroutine blood_mover(blood,column_num,row_num,gradient)
 			call RANDOM_NUMBER(fear)
 			!use the distance between the blood channels accordingly
 			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
-			transition=exp(-(dist*(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)**(-1.))/gradient)**2)*&
-				blood(column_number_2,row_number_2)	
+			transition_combine=dist/(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)*gradient)
+			transition_square=transition_combine**2
+			if (transition_square>50.0) then
+				transition_normal=0.0
+			else
+				transition_normal=exp(-1.0*transition_square)
+			end if
+			transition=transition_normal*blood(column_number_2,row_number_2)	
 			
 			!don't act on yo-self
 			if ((column_number_2/=column_num) .and. (row_number_2/=row_num)) then

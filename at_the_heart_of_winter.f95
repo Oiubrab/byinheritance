@@ -152,7 +152,7 @@ if (image_number==1) then
 end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 1 (money motivate)!!!
+!!!end setup 1 (sight motivate)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -182,7 +182,7 @@ if (image_number==2) then
 end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!end setup 2 (error motivate)!!!
+!!!end setup 2 (food motivate)!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -390,7 +390,7 @@ do while (stopper .eqv. .false.)
 	inquire(file="machine.txt", exist=pauser)
 	if (pauser .eqv. .true.) then
 		
-
+		
 
 		!!!!!!!!!!!!!!!!!!!!!
 		!!!!!!!!!!!!!!!!!!!!!
@@ -415,6 +415,12 @@ do while (stopper .eqv. .false.)
 				read(1,*,iostat=error) trans(stage_count)%vision
 				close(1)
 			end do
+			
+!			print"(15I3)",trans(stage_count)%vision
+!			
+!			do testicles=1,size(mission(stage_count)%brain_status(2,1,:))
+!				print'(17I3)',mission(stage_count)%brain_status(2,:,testicles)
+!			end do
 			
 		else if (image_number==2) then
 			
@@ -454,7 +460,7 @@ do while (stopper .eqv. .false.)
 		oddsey=(10*oddsey[1]+oddsey[2])*10000
 
 		testicle=testicle+1
-		print*,testicle
+		!print*,testicle,"step one"
 
 		inquire(file="thing.txt", exist=stopper)
 		if (stopper .eqv. .true.) exit

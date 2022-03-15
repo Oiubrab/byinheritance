@@ -38,7 +38,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 
 	!selecting and moving
 	integer :: column_number, column_number_2, row_number
-	integer :: moves, epoch, epoch_start
+	integer :: moves
 	integer :: column_random_number, row_random_number
 	integer,allocatable :: column_random(:)
 	integer,allocatable :: row_random(:)
@@ -60,6 +60,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	
 	!testing
 	character(len=6) :: test
+	integer :: testicles
 
 	allocate(column_random(size(think%brain_status(1,:,1))))
 	allocate(row_random(size(think%brain_status(1,1,:))))
@@ -99,7 +100,6 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		end if
 		call animus(think,oddsey)
 
-		epoch_start=epoch
 		
 	!Otherwise, if this is the first time this network is activated, it has to be initialised
 	else
@@ -148,10 +148,11 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	
 
 
-
+!	print*,vision
 
 	!injection, from vision into brain
 	!inject data from the vission arrays into the networks
+
 	do column_number=1,vision_length
 		if (vision(column_number)==1) then	
 			think%brain_status(1,plugin(column_number,vision_socket,vision_length,"brain"),1)=2
@@ -159,7 +160,12 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		end if
 	end do
 
-
+	if ((image_number==1) .and. (vision_length==15)) then
+		print*,image_number,vision_socket,vision
+		do testicles=1,size(think%brain_status(2,1,:))
+				print'(17I3)',think%brain_status(2,:,testicles)
+		end do
+	end if
 	
 	
 	

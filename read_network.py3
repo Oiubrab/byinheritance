@@ -62,7 +62,7 @@ class GridWindow(Gtk.Window):
 			for columner,datum in enumerate(line):
 				labelx=Gtk.Label(label=" "+datum+" ")
 				grid.attach(labelx,columner,rower,1,1)
-		self.add(grid)
+		
 		
 winner = GridWindow()
 winner.connect("destroy", Gtk.main_quit)
