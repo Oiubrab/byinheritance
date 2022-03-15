@@ -165,6 +165,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		do testicles=1,size(think%brain_status(2,1,:))
 				print'(17I3)',think%brain_status(2,:,testicles)
 		end do
+		print*,response
 	end if
 	
 	

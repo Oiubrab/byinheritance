@@ -1,6 +1,5 @@
 module spiritechnology
 use welcome_to_dying
-use darkness
 implicit none
 contains
 
