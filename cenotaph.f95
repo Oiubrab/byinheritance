@@ -10,7 +10,7 @@ type(mind) :: think
 logical,parameter :: motivator=.false.,test=.false.
 logical :: initial=.true.
 real,parameter :: blood_volume=0.8,blood_gradient=0.6
-integer,parameter :: image_number=1,vision_socket=7,response_socket=7,blood_rate=20,epoch_cutoff=100
+integer,parameter :: image_number=1,vision_socket=7,response_socket=7,blood_rate=20,epoch_cutoff=75
 integer,parameter :: neurodepth=10,columns=15,rows=10
 integer :: oddsey,repeater
 real :: node_use_reward=10.0,finish,start
