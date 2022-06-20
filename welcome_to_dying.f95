@@ -542,7 +542,7 @@ subroutine new_song(think,response,response_socket,response_length,reward)
 									
 									!signal an error
 									error_check=.true.
-																							
+									
 								end if
 							end if
 							
@@ -600,20 +600,20 @@ subroutine new_song(think,response,response_socket,response_length,reward)
 
 						
 			!neurochem changes
-			if (transition(column_count,row_count)>0) then			
+			if (transition(column_count,row_count)>0) then
 			
 				!add data to neurochem
 				!first, move each rank down one rung and push the last rank off the ladder
 				rank_size=size(think%neurochem(1,:,1,1))
 				do rank=1,rank_size-1
 					think%neurochem(1,rank_size-rank+1,column_count,row_count)=think%neurochem(1,rank_size-rank,column_count,row_count)
-					think%neurochem(2,rank_size-rank+1,column_count,row_count)=think%neurochem(2,rank_size-rank,column_count,row_count)									
+					think%neurochem(2,rank_size-rank+1,column_count,row_count)=think%neurochem(2,rank_size-rank,column_count,row_count)
 				end do
 				!now, move the current activation to the top rung
 				think%neurochem(1,1,column_count,row_count)=think%brain_status(1,column_count,row_count)
 				think%neurochem(2,1,column_count,row_count)=transition(column_count,row_count)	
 			
-			end if			
+			end if
 			
 			
 			
@@ -670,73 +670,86 @@ end subroutine
 
 
 !this subroutine takes in a neuron from the blood network and moves it around
-subroutine blood_mover(blood,column_num,row_num,gradient)
+subroutine blood_mover(blood,gradient)
 
 	real,dimension(*) :: blood(:,:)
-	integer,allocatable :: row_randomised(:), column_randomised(:)
+	integer,allocatable :: row_randomised(:), column_randomised(:),row_step(:),column_step(:)
 	integer :: column_num,row_num,row_select,column_select
 	real :: hope, fear, dist, distil, transition, transition_normal, transition_combine, transition_square
 	real :: gradient !controls how quickly blood flows. bigger is faster
-	integer :: rows,columns,row_number_2,column_number_2
+	integer :: rows,columns,row_number_2,column_number_2,row_number_1,column_number_1
 	
 	rows=size(blood(1,:)); columns=size(blood(:,1))
 
 	!make the random arrays as big as columns and rows
 	allocate(row_randomised(rows))
 	allocate(column_randomised(columns))
+	allocate(row_step(rows))
+	allocate(column_step(columns))
 	
-	!randomise the row array
-	call randomised_list(row_randomised)
-
-	!engage every blood neuron around the neuron in question
-	do row_select=1,rows
-		!first, randomise the row selection
-		row_number_2=row_randomised(row_select)
-		!before each row pass, randomise the column selection
-		call randomised_list(column_randomised)
-		
-		do column_select=1,columns
-			!randomise the column selection
-			column_number_2=column_randomised(column_select)
-
-			!set the prospective transition value random multipliers
-			call RANDOM_NUMBER(hope)
-			call RANDOM_NUMBER(fear)
-			!use the distance between the blood channels accordingly
-			dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
-			transition_combine=dist/(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)*gradient)
-			transition_square=transition_combine**2
-			if (transition_square>50.0) then
-				transition_normal=0.0
-			else
-				transition_normal=exp(-1.0*transition_square)
-			end if
-			transition=transition_normal*blood(column_number_2,row_number_2)	
+	!pick a random row
+	call randomised_list(row_step)
+	do row_number_1=1,rows
+	row_num=row_step(row_number_1)
+	
+		!pick a random column
+		call randomised_list(column_step)
+		do column_number_1=1,columns
+		column_num=column_step(column_number_1)
+			!randomise the row array
+			call randomised_list(row_randomised)
 			
-			!don't act on yo-self
-			if ((column_number_2/=column_num) .and. (row_number_2/=row_num)) then
-
-			
-				!check if the operation will drain more than the origin channel has
-				if (transition<blood(column_number_2,row_number_2)) then
-							
-					!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z channel
-					blood(column_num,row_num)=blood(column_num,row_num)+transition
-
-					!this takes away the transition amount of data, transferred to the current neuron, from the z channel
-					blood(column_number_2,row_number_2)=blood(column_number_2,row_number_2)-transition
+			!engage every blood neuron around the neuron in question
+			do row_select=1,rows
+				!first, randomise the row selection
+				row_number_2=row_randomised(row_select)
+				!before each row pass, randomise the column selection
+				call randomised_list(column_randomised)
 				
-					!otherwise, drain channel dry
-				else if (transition>=blood(column_number_2,row_number_2)) then
-					!all of the data from the z neuron is taken
-					blood(column_num,row_num)=blood(column_num,row_num)+blood(column_number_2,row_number_2)
-				
-					!this takes away all the data, transferred to the current channel, from the z channel
-					blood(column_number_2,row_number_2)=0.0
-				end if
-			
-			end if
-			
+				do column_select=1,columns
+					!randomise the column selection
+					column_number_2=column_randomised(column_select)
+
+					!set the prospective transition value random multipliers
+					call RANDOM_NUMBER(hope)
+					call RANDOM_NUMBER(fear)
+					!use the distance between the blood channels accordingly
+					dist=sqrt((float(row_num-row_number_2)**2)+(float(column_num-column_number_2)**2))
+					transition_combine=dist/(sigmoid(blood(column_number_2,row_number_2),"forward",1.0,1.0,0.0,0.0)*gradient)
+					transition_square=transition_combine**2
+					if (transition_square>50.0) then
+						transition_normal=0.0
+					else
+						transition_normal=exp(-1.0*transition_square)
+					end if
+					transition=transition_normal*blood(column_number_2,row_number_2)	
+					
+					!don't act on yo-self
+					if ((column_number_2/=column_num) .and. (row_number_2/=row_num)) then
+
+					
+						!check if the operation will drain more than the origin channel has
+						if (transition<blood(column_number_2,row_number_2)) then
+									
+							!the equation below is: blood(entry holding data for this position) = blood(entry holding data for this position) + amount of data from the z channel
+							blood(column_num,row_num)=blood(column_num,row_num)+transition
+
+							!this takes away the transition amount of data, transferred to the current neuron, from the z channel
+							blood(column_number_2,row_number_2)=blood(column_number_2,row_number_2)-transition
+						
+							!otherwise, drain channel dry
+						else if (transition>=blood(column_number_2,row_number_2)) then
+							!all of the data from the z neuron is taken
+							blood(column_num,row_num)=blood(column_num,row_num)+blood(column_number_2,row_number_2)
+						
+							!this takes away all the data, transferred to the current channel, from the z channel
+							blood(column_number_2,row_number_2)=0.0
+						end if
+					
+					end if
+					
+				end do
+			end do
 		end do
 	end do
 
@@ -914,6 +927,7 @@ subroutine weight_reducer(weights)
 	real,parameter :: period=2.3,amplitude=-2.4 !sinusoid parameters
 	real,parameter :: second_period_inverse=10.0,second_amplitude=0.0008,second_sin_shift=300.0 !2nd sinusoid, 2nd stage, parameters
 	real,parameter :: normal_height=4.3,normal_distance=2.6,normal_width=5.205 !gaussian parameters
+	real :: normalise,normalise_exp
 	real,parameter :: overload=5.0
 	
 	connections=size(weights(:,1,1,1))
@@ -932,10 +946,17 @@ subroutine weight_reducer(weights)
 						else if ((weights(to,from,column,row)>35.0) .and. (weights(to,from,column,row)<1050.0)) then
 							!weight is scaled down by a gaussian (smalll numbers), plus a linear (general shape), plus a quadratic (limiter), plus a sinusoid (variation)
 							!range within the effective domain (1,big) must stay below the y=x line and above the y=1 line 
-							weights(to,from,column,row)=amplitude*sin(0.1*period*weights(to,from,column,row))+&
-								gradient*weights(to,from,column,row)+height-&
-								second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
-								normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
+							normalise=(((weights(to,from,column,row)-normal_distance)/normal_width)**2)
+							if (normalise>50.0) then
+								weights(to,from,column,row)=amplitude*sin(0.1*period*weights(to,from,column,row))+&
+									gradient*weights(to,from,column,row)+height-&
+									second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)
+							else
+								weights(to,from,column,row)=amplitude*sin(0.1*period*weights(to,from,column,row))+&
+									gradient*weights(to,from,column,row)+height-&
+									second_amplitude*sin((weights(to,from,column,row)+second_sin_shift)/second_period_inverse)+&
+									normal_height*exp(-1.0*(((weights(to,from,column,row)-normal_distance)/normal_width)**2))
+							end if
 						!if weight is between 1050 and 1000000, just do a constant reduction
 						else if ((weights(to,from,column,row)>1050.0) .and. (weights(to,from,column,row)<=1000000.0)) then
 							weights(to,from,column,row)=weights(to,from,column,row)-overload

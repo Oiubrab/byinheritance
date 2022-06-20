@@ -10,12 +10,11 @@ contains
 
 subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,&
-	node_use_reward,image_number,motivate_nomotivate,testicle)
+	node_use_reward,image_number,motivate_network,testicle)
 
 	!timing and controlling
 	integer :: epoch,epoch_cutoff
-	logical :: proaction
-	character(len=6) :: motivate_nomotivate
+	logical :: proaction,motivate_network
 	
 	!test timing
 	real :: start, finish, select_time
@@ -46,8 +45,10 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	integer :: image_number
 	
 	!testing
-	character(len=6) :: testicle
+	logical :: testicle
+	integer :: testicles
 	character(len=100) :: network_tit
+	character(len=100) :: network_columns
 	
 	!print*,"spirit",this_image(),rows,columns,blood_rows,response_socket
 	select_time=0.0
@@ -69,15 +70,41 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 		!increment epoch
 		epoch=epoch+1
 		
-		call new_song(thinking,response,response_socket,response_length,node_use_reward)
+	if ((image_number==1) .and. (vision_length==15)) then
+		print*,image_number,vision_socket,vision
+		do testicles=1,size(thinking%brain_status(2,1,:))
+				print'(17I3)',thinking%brain_status(2,:,testicles)
+		end do
+		print*,response
+	end if
 		
+		call new_song(thinking,response,response_socket,response_length,node_use_reward)
+!		call blood_mover(thinking%blood,blood_gradient)
+		
+	if ((image_number==1) .and. (vision_length==15)) then
+		print*,image_number,vision_socket,vision
+		do testicles=1,size(thinking%brain_status(2,1,:))
+				print'(17I3)',thinking%brain_status(2,:,testicles)
+		end do
+		print*,response
+	end if
+		
+		write(network_columns,*) size(thinking%brain_status(2,:,1))
 		!data printing
-		if (testicle=="test") then
-			open(unit=image_number, file=network_tit)
+		if (testicle .eqv. .true.) then
+!			call sleep(1)
+!			open(unit=image_number, file=network_tit,access='append')
 			do row_number=1,size(thinking%brain_status(1,1,:))
-				write(image_number,*) thinking%brain_status(2,:,row_number)
+				print'('//trim(network_columns)//'I2)', thinking%brain_status(2,:,row_number)
+!				write(image_number,*) thinking%brain_status(2,:,row_number)
 			end do
-			close(image_number)
+			print*," "
+			do row_number=1,size(thinking%brain_status(1,1,:))
+				print'('//trim(network_columns)//'F5.2)', thinking%blood(:,row_number)
+			end do
+			print*," "
+!			write(image_number,*) " "
+!			close(image_number)
 		end if
 		
 		call weight_reducer(thinking%brain_weight)
@@ -87,7 +114,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 
 		!response translation into movement
 		!different rules for motivate and non motivate networks
-		if (motivate_nomotivate=="normal") then
+		if (motivate_network .eqv. .false.) then
 		
 			!this condition picks up whether some response has been fed into the stop position (last position in the array)
 			do column_number_2=1,size(response)
@@ -97,7 +124,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 
 				end if
 			end do
-		else if (motivate_nomotivate=="motive") then
+		else if (motivate_network .eqv. .true.) then
 		
 			!response translation into movement
 			!this do loop picks up whether some response has been fed into 

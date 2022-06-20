@@ -13,11 +13,11 @@ contains
 !Note, there are two versons here:
 !Motive - input feeds into a single data output
 !Normal - input feeds in and output keeps building until the stop output is activated
-!output_switcher is the feed in switch that determines whether the network is normal or motive 
+!motivate_network is the feed in switch that determines whether the network is normal or motive 
 
 subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward,&
 	vision,response,vision_socket,response_socket,blood_rate,&
-	blood_volume,blood_gradient,epoch_cutoff,output_switcher,test)
+	blood_volume,blood_gradient,epoch_cutoff,motivate_network,test)
 
 	implicit none
 
@@ -30,7 +30,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	!think array interfaces
 	integer,dimension(*) :: vision(:), response(:)
 	!motivate array interfaces
-	character(len=6) :: output_switcher
+	logical :: motivate_network
 	integer :: oddsey
 	!ubiquitous
 	integer :: vision_length, response_length
@@ -59,7 +59,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	integer :: image_number
 	
 	!testing
-	character(len=6) :: test
+	logical ::  test
 	integer :: testicles
 
 	allocate(column_random(size(think%brain_status(1,:,1))))
@@ -95,7 +95,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 			
 		!this makes the system yearn for happiness
 		!must be run for each network
-		if (output_switcher=="motive") then
+		if (motivate_network .eqv. .true.) then
 			call flesh_and_the_power_it_holds(think,vision,oddsey,image_number)
 		end if
 		call animus(think,oddsey)
@@ -119,27 +119,9 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 				think%blood(plugin(column_number,vision_socket,vision_length,"brain"),1)*0.7
 		end do	
 		
-		!setup the blood profile
-		!first, randomise random row list
-		call randomised_list(blood_row_random)
-		 
-		!now I shall send randomly selected neurons to have data moved
-		do row_number=1,size(think%brain_status(1,1,:))
 
-			!first, randomise column list for each row
-			call randomised_list(column_random)
-		
-			do column_number=1,size(think%brain_status(1,:,1))
-			
-				!now, assign the random integer positional number to the requisite random number positional number holder number
-				column_random_number=column_random(column_number)
-				row_random_number=blood_row_random(row_number)	
-				
-				call blood_mover(think%blood,column_random_number,row_random_number,blood_gradient)
-				
-			end do
-			
-		end do
+		!initialise the blood
+		call blood_mover(think%blood,blood_gradient)
 
 
 
@@ -160,13 +142,13 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		end if
 	end do
 
-	if ((image_number==1) .and. (vision_length==15)) then
-		print*,image_number,vision_socket,vision
-		do testicles=1,size(think%brain_status(2,1,:))
-				print'(17I3)',think%brain_status(2,:,testicles)
-		end do
-		print*,response
-	end if
+!	if ((image_number==1) .and. (vision_length==15)) then
+!		print*,image_number,vision_socket,vision
+!		do testicles=1,size(think%brain_status(2,1,:))
+!				print'(17I3)',think%brain_status(2,:,testicles)
+!		end do
+!		print*,response
+!	end if
 	
 	
 	
@@ -180,7 +162,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	!this subroutine moves through the network and blood and propogates all data movement
 	call spiritech(think,blood_rate,response_socket,response_length,vision_length,&
 		vision_socket,epoch_cutoff,blood_gradient,blood_volume,vision,response,&
-		node_use_reward,image_number,output_switcher,test)
+		node_use_reward,image_number,motivate_network,test)
 
 	
 !	print*,"spiritech",image_number,finish-start
@@ -194,7 +176,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	
 	!oddsey is the multiplier for the neurochem effect, as defined by the motivate network
 	!oddsey is defined only in the motivate image
-	if (output_switcher=="motive") then
+	if (motivate_network .eqv. .true.) then
 		oddsey=findloc(response,1,dim=1)
 		!if no data comes through, don't change the weights
 		if (oddsey==0) then
