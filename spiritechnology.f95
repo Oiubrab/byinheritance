@@ -1,5 +1,6 @@
 module spiritechnology
 use welcome_to_dying
+use the_sound_of_perserverance
 implicit none
 contains
 
@@ -10,10 +11,10 @@ contains
 
 subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_length,vision_socket,epoch_cutoff,&
 	blood_gradient,blood_volume,vision,response,&
-	node_use_reward,image_number,motivate_network,testicle)
+	node_use_reward,image_number,motivate_network,testicle,oddsey)
 
 	!timing and controlling
-	integer :: epoch,epoch_cutoff
+	integer :: epoch,epoch_cutoff,oddsey
 	logical :: proaction,motivate_network
 	
 	!test timing
@@ -78,8 +79,15 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 		print*,response
 	end if
 		
+		!run the netwirk
 		call new_song(thinking,response,response_socket,response_length,node_use_reward)
 !		call blood_mover(thinking%blood,blood_gradient)
+		!if this is a motivator, run the base motivator
+		if (motivate_network .eqv. .true.) then
+			call flesh_and_the_power_it_holds(thinking,vision,oddsey,image_number)
+		end if
+		!run the motivator
+		call animus(thinking,oddsey)
 		
 	if ((image_number==1) .and. (vision_length==15)) then
 		print*,image_number,vision_socket,vision

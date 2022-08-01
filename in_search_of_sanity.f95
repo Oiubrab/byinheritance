@@ -142,13 +142,13 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		end if
 	end do
 
-!	if ((image_number==1) .and. (vision_length==15)) then
+	if (image_number==1) then
 !		print*,image_number,vision_socket,vision
-!		do testicles=1,size(think%brain_status(2,1,:))
-!				print'(17I3)',think%brain_status(2,:,testicles)
-!		end do
+		do testicles=1,size(think%brain_status(2,1,:))
+				print'(15I3)',think%brain_status(2,:,testicles)
+		end do
 !		print*,response
-!	end if
+	end if
 	
 	
 	
@@ -162,7 +162,7 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 	!this subroutine moves through the network and blood and propogates all data movement
 	call spiritech(think,blood_rate,response_socket,response_length,vision_length,&
 		vision_socket,epoch_cutoff,blood_gradient,blood_volume,vision,response,&
-		node_use_reward,image_number,motivate_network,test)
+		node_use_reward,image_number,motivate_network,test,oddsey)
 
 	
 !	print*,"spiritech",image_number,finish-start

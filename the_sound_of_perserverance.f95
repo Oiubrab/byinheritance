@@ -20,7 +20,7 @@ subroutine flesh_and_the_power_it_holds(thinker,vision,oddsey,image)
 	!for motivate sight
 	if (image==1) then
 		!0 to 50
-		oddsey=50-50*abs(((size(vision)/2)+1)-findloc(vision,1,dim=1))/((size(vision)/2)+1)
+		oddsey=findloc(vision,1,dim=1)
 	!for motivate food
 	else if (image==2) then
 		!0 to 100
