@@ -142,13 +142,12 @@ subroutine insanitorium_deluxe(initial,think,oddsey,image_number,node_use_reward
 		end if
 	end do
 
-	if (image_number==1) then
-!		print*,image_number,vision_socket,vision
-		do testicles=1,size(think%brain_status(2,1,:))
-				print'(15I3)',think%brain_status(2,:,testicles)
-		end do
-!		print*,response
-	end if
+!network printer
+!	if (image_number==1) then
+!		do testicles=1,size(think%brain_status(2,1,:))
+!				print'(15I3)',think%brain_status(2,:,testicles)
+!		end do
+!	end if
 	
 	
 	
