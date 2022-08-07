@@ -15,7 +15,7 @@ integer,parameter :: vision_socket=7,response_socket=7,blood_rate=20,epoch_cutof
 integer,parameter :: neurodepth=10,columns=15,rows=10,vision_response_size=10
 integer :: oddsey,repeater,num_img,image_number,layer,slot,choice
 real :: node_use_reward=10.0,finish,start,pick
-integer,dimension(vision_response_size=),codimension[*] :: vision,response
+integer,dimension(vision_response_size),codimension[*] :: vision,response
 integer,allocatable,codimension[:] :: shotgun(:)
 num_img = num_images()
 image_number = this_image ()
