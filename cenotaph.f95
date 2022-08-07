@@ -12,10 +12,10 @@ logical,parameter :: motivator=.true.,test=.false.
 logical :: initial=.true.
 real,parameter :: blood_volume=0.8,blood_gradient=0.6
 integer,parameter :: vision_socket=7,response_socket=7,blood_rate=20,epoch_cutoff=75
-integer,parameter :: neurodepth=10,columns=15,rows=10
-integer :: oddsey,repeater,num_img,image_number,layer
-real :: node_use_reward=10.0,finish,start
-integer,dimension(10),codimension[*] :: vision,response
+integer,parameter :: neurodepth=10,columns=15,rows=10,vision_response_size=10
+integer :: oddsey,repeater,num_img,image_number,layer,slot,choice
+real :: node_use_reward=10.0,finish,start,pick
+integer,dimension(vision_response_size=),codimension[*] :: vision,response
 integer,allocatable,codimension[:] :: shotgun(:)
 num_img = num_images()
 image_number = this_image ()
@@ -33,7 +33,16 @@ allocate(shotgun(num_img*10)[*])
 
 call cpu_time(start)
 do repeater=1,153
-	vision=[0,0,0,0,1,0,0,0,0,0]
+	!random data
+	vision=[0,0,0,0,0,0,0,0,0,0]
+	call random_number(pick)
+	slot=(pick*vision_response_size)+1
+	do choice=1,vision_response_size
+	if( choice==slot ) then
+		vision(choice)=1
+	end if
+	
+	end do
 	do layer=1,5
 		if (repeater == 1) then 
 			initial=.true. 
