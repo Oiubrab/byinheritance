@@ -32,17 +32,20 @@ end do
 allocate(shotgun(num_img*10)[*])
 
 call cpu_time(start)
-do repeater=1,153
+do repeater=1,100
 	!random data
 	vision=[0,0,0,0,0,0,0,0,0,0]
 	call random_number(pick)
 	slot=(pick*vision_response_size)+1
 	do choice=1,vision_response_size
-	if( choice==slot ) then
-		vision(choice)=1
-	end if
-	
+		if( choice==slot ) then
+			vision(choice)=1
+			print"(10I2)",vision
+		end if
+		
 	end do
+	
+	
 	do layer=1,5
 		if (repeater == 1) then 
 			initial=.true. 
@@ -84,7 +87,7 @@ do repeater=1,153
 	!pull everything together into an output
 	shotgun(1+10*(image_number-1):10+10*(image_number-1))[1]=response
 	if (image_number==1) then
-		print"(80I2)",shotgun
+		print"(160I2)",shotgun
 	end if
 end do
 call cpu_time(finish)
