@@ -21,10 +21,6 @@ subroutine flesh_and_the_power_it_holds(thinker,vision,oddsey,image)
 	if (image==1) then
 		!0 to 50
 		oddsey=findloc(vision,1,dim=1)
-	!for motivate food
-	else if (image==2) then
-		!0 to 100
-		oddsey=findloc(vision,1,dim=1)*20
 	end if
 
 	
