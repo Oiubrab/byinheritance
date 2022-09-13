@@ -149,7 +149,6 @@ anchor_right = 0.875
 anchor_bottom = 0.16
 margin_left = 0.511993
 margin_right = -0.00012207
-margin_bottom = -7.62939e-06
 custom_fonts/normal_font = SubResource( 5 )
 text = "this is a test"
 scroll_active = false

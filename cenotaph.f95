@@ -101,8 +101,11 @@ do repeater=1,100
 	sync all
 	!pull everything together into an output
 	shotgun(1+10*(image_number-1):10+10*(image_number-1))[1]=response
+	sync all
 	if (image_number==1) then
-		print"(160I2)",shotgun
+		open(unit=1,file="response.csv")
+		write (1, '(1x, I1, 159(",", I1))') shotgun
+		close(1)
 	end if
 end do
 call cpu_time(finish)

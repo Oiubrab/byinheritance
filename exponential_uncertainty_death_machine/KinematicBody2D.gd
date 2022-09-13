@@ -245,7 +245,7 @@ func _physics_process(_delta):
 		if human==false:
 			human=true
 			#notify the ai that human is now on
-			crazy = OS.execute("rm", ["../machine.txt"])
+			crazy = OS.execute("rm", ["./machine.txt"])
 			
 		elif human==true:
 			human=false
@@ -283,20 +283,20 @@ func _physics_process(_delta):
 			
 			#input response getter
 			locker = File.new()
-			locker.open("../response_lock.txt", File.WRITE)
+			locker.open("./response_lock.txt", File.WRITE)
 			locker.close()
 			var testicle=File.new()
-			testicle.open("../alison_hell/response.csv",File.READ)
+			testicle.open("../response.csv",File.READ)
 			var tester=testicle.get_csv_line()
 			testicle.close()
 			crazy = OS.execute("rm", ["../response_lock.txt"])
 			
 			#left array builder
 			locker = File.new()
-			locker.open("../sight_left_lock.txt", File.WRITE)
+			locker.open("./sight_left_lock.txt", File.WRITE)
 			locker.close()
 			var fuck_left = File.new()
-			fuck_left.open("../alison_hell/sight_left.csv", File.WRITE)
+			fuck_left.open("./sight_left.csv", File.WRITE)
 			var mouse_left=[]
 			var trigger=false
 			for halycon in range(45):
@@ -308,14 +308,14 @@ func _physics_process(_delta):
 					
 			fuck_left.store_csv_line(mouse_left)
 			fuck_left.close()
-			crazy = OS.execute("rm", ["../sight_left_lock.txt"])
+			crazy = OS.execute("rm", ["./sight_left_lock.txt"])
 			
 			#right array builder
 			locker = File.new()
-			locker.open("../sight_right_lock.txt", File.WRITE)
+			locker.open("./sight_right_lock.txt", File.WRITE)
 			locker.close()
 			var fuck_right = File.new()
-			fuck_right.open("../alison_hell/sight_right.csv", File.WRITE)
+			fuck_right.open("./sight_right.csv", File.WRITE)
 			var mouse_right=[]
 			trigger=false
 			for halycon in range(45):
@@ -327,14 +327,14 @@ func _physics_process(_delta):
 					
 			fuck_right.store_csv_line(mouse_right)
 			fuck_right.close()
-			crazy = OS.execute("rm", ["../sight_right_lock.txt"])
+			crazy = OS.execute("rm", ["./sight_right_lock.txt"])
 			
 			#food array builder
 			locker = File.new()
-			locker.open("../food_lock.txt", File.WRITE)
+			locker.open("./food_lock.txt", File.WRITE)
 			locker.close()
 			var titfuck = File.new()
-			titfuck.open("../alison_hell/food.csv",File.WRITE)
+			titfuck.open("./food.csv",File.WRITE)
 			var food_array=[]
 			for halycon in range(5):
 				if halycon==times_eaten or (halycon==4 and times_eaten>4):
@@ -343,7 +343,7 @@ func _physics_process(_delta):
 					food_array=food_array+[0]
 			titfuck.store_csv_line(food_array)
 			titfuck.close()
-			crazy = OS.execute("rm", ["../food_lock.txt"])
+			crazy = OS.execute("rm", ["./food_lock.txt"])
 			
 			#find the shift
 			for pos in range(20):

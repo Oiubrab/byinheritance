@@ -93,7 +93,7 @@ subroutine read_write(imagine,imagination,think,direction)
 		read(imagination+imagine,*) think%brain_status
 		read(imagination+imagine,*) think%brain_weight
 		read(imagination+imagine,*) think%blood
-		read(imagination+imagine,*) think%neurochem				
+		read(imagination+imagine,*) think%neurochem
 		close(imagination+imagine)
 		
 	else if (direction=="write") then
@@ -103,7 +103,7 @@ subroutine read_write(imagine,imagination,think,direction)
 		write(2*imagination+imagine,*) think%brain_status
 		write(2*imagination+imagine,*) think%brain_weight
 		write(2*imagination+imagine,*) think%blood
-		write(2*imagination+imagine,*) think%neurochem		
+		write(2*imagination+imagine,*) think%neurochem
 		close(2*imagination+imagine)
 	
 	end if
