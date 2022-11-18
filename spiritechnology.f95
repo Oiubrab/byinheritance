@@ -74,7 +74,7 @@ subroutine spiritech(thinking,blood_rate,response_socket,response_length,vision_
 	if ((image_number==1) .and. (vision_length==15)) then
 		print*,image_number,vision_socket,vision
 		do testicles=1,size(thinking%brain_status(2,1,:))
-				print'(17I3)',thinking%brain_status(2,:,testicles)
+			print'(17I3)',thinking%brain_status(2,:,testicles)
 		end do
 		print*,response
 	end if

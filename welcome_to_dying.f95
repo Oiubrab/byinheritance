@@ -11,7 +11,7 @@ end type mind
 !define input output type
 type see_saw
 	integer,allocatable :: vision(:),response(:)
-end type see_saw	
+end type see_saw
 
 contains
 
